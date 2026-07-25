@@ -32,7 +32,7 @@
 - [x] 5.1 Implement `--version` output reporting both converter version and pinned Swift toolchain version
 - [x] 5.2 Write README covering install, usage, macOS-host requirement, and known limitations
 - [x] 5.3 Set up CI on a macOS runner (build + test on every push)
-- [ ] 5.4 Publish a tagged release with a prebuilt macOS binary (GitHub Releases, optionally Homebrew)
+- [x] 5.4 Publish a tagged release with a prebuilt macOS binary (GitHub Releases, optionally Homebrew) — https://github.com/phuongddx/scip-swift/releases/tag/v0.1.0 (macOS arm64 only; no Homebrew formula yet)
 
 ## 6. Infra decision (tracked, not blocking v1)
 
