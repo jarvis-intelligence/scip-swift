@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    # Requirement: macOS host — building/indexing Apple-platform code needs Xcode + the iOS SDK,
+    # which Apple does not ship for Linux (design.md Risks).
+    runs-on: macos-15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain versions
+        run: |
+          swift --version
+          xcodebuild -version
+          echo "Pinned Swift version (.swift-version): $(cat .swift-version)"
+
+      - name: Build
+        run: swift build --configuration debug
+
+      - name: Test
+        run: swift test --configuration debug

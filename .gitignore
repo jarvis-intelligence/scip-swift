@@ -1,0 +1,10 @@
+.build/
+.swiftpm/
+*.scip
+.DS_Store
+Fixtures/MiniSwiftPackage/.build/
+
+# The user's global gitignore has a bare `build` pattern that (on a case-insensitive filesystem)
+# also matches our Sources/scip-swift/Build/ directory. Un-ignore it explicitly.
+!/Sources/scip-swift/Build/
+!/Sources/scip-swift/Build/**

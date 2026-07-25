@@ -38,10 +38,20 @@ Real-world iOS-style repos may not build via SwiftPM at all. Accept an explicit 
 | `Symbol.name` | `Symbol.display_name` |
 | `Symbol.usr` | `Symbol.scip_symbol` (mangling scheme — TBD, see Open Questions) |
 | occurrence role `.definition` | `Occurrence.symbol_roles: Definition` |
-| occurrence role `.reference` | `Occurrence.symbol_roles: ReadAccess` |
-| occurrence role `.call` | `Occurrence.symbol_roles: ForwardCall` |
+| occurrence role `.write` | `Occurrence.symbol_roles: WriteAccess` |
+| occurrence role `.reference` (without `.write`) | `Occurrence.symbol_roles: ReadAccess` |
+| occurrence role `.call` | no dedicated bit — real `scip.proto`'s `SymbolRole` enum has no call-specific role (see correction below); rides along on whatever `.reference`/`.write` already map to |
 | `Symbol.kind` | SCIP `Symbol.kind` enum |
 | `SymbolOccurrence.location` | `Occurrence.range` |
+
+**Correction (found during implementation, task 3.3):** the table above originally claimed
+`.call → ForwardCall`. Fetching the real `scip.proto` from `sourcegraph/scip` shows its
+`SymbolRole` enum is only `Definition | Import | WriteAccess | ReadAccess | Generated | Test |
+ForwardDefinition` — there is no call-related bit. SCIP's call-hierarchy story is meant to be
+derived from `Relationship`/enclosing-range data, not `symbol_roles`, and IndexStoreDB's `.call`
+role always co-occurs with `.reference`/`.read` on the same occurrence, so no information is lost
+by not inventing a bit for it. `specs/swift-indexstore-to-scip/spec.md` has been corrected to
+match.
 
 **Decision 4 — Distribute as a compiled binary release, not "clone and `swift build`."**
 Consumers (e.g. `codeintel`) expect language indexers to be installable on `PATH` without needing the language's own toolchain (nobody installs a JDK to use `scip-java`). Ship prebuilt macOS binaries via GitHub Releases (and/or Homebrew) so a Python-only or Node-only consumer project never needs the Swift toolchain just to call this CLI.
@@ -69,6 +79,25 @@ Swift's USR format is compiler-version-sensitive. Pinning avoids silent symbol-c
 
 ## Open Questions
 
-- What exact string-mangling scheme should `Symbol.scip_symbol` use to encode a Swift USR?
-- Should the CLI auto-detect SwiftPM vs. Xcode-project repos, or require an explicit build-command flag from the caller?
-- What's the concrete macOS build-host setup for CI/releases — self-hosted Mac mini, a cloud Mac CI runner (GitHub Actions macOS runners, MacStadium), or manual releases from a developer machine? (Infra decision, not a code-architecture one.)
+- ~~What exact string-mangling scheme should `Symbol.scip_symbol` use to encode a Swift USR?~~
+  **Resolved** (task 3.1): see `SCIPSymbolFormatter` — scheme `scip-swift`, package manager is the
+  build tool used (`swiftpm`/`xcodebuild`), package name is the IndexStoreDB `moduleName`, and the
+  Swift USR is carried verbatim as a single escaped `Term` descriptor (Swift's USR is already a
+  compiler-guaranteed, project-wide-unique stable string; full USR demangling into a
+  namespace/type/method descriptor chain is not attempted in v1 — see Risks). Symbols carrying the
+  `local` property are emitted as SCIP local symbols (`local <n>`, numbered per-document) instead,
+  per SCIP's own local-symbol rule.
+- ~~Should the CLI auto-detect SwiftPM vs. Xcode-project repos, or require an explicit build-command
+  flag from the caller?~~ **Resolved** (task 2.3): auto-detect by default (`Package.swift` present →
+  `swiftpm`; `.xcworkspace`/`.xcodeproj` present → `xcodebuild`), overridable with `--build-tool`.
+- **Implementation note on Decisions 1/2**: neither `swift build` nor `xcodebuild` actually has an
+  `-index-store-path`/`--index-store-path` flag (verified against `swift build --help` and
+  `xcodebuild -help` on Swift 6.2.4 / Xcode 26.3) — the proposal's original invocation sketch was
+  approximate. The real mechanism: `swift build --scratch-path <dir> --enable-index-store` writes
+  the store to `<dir>/<triple>/<configuration>/index/store`; `xcodebuild -derivedDataPath <dir>
+  COMPILER_INDEX_STORE_ENABLE=YES` writes it to `<dir>/Index.noindex/DataStore` (the same location
+  SourceKit-LSP and Xcode's own "jump to definition" read from). Both runners pass an explicit,
+  caller-controlled output directory so the resulting path is deterministic rather than guessed.
+- What's the concrete macOS build-host setup for CI/releases — self-hosted Mac mini, a cloud Mac CI
+  runner (GitHub Actions macOS runners, MacStadium), or manual releases from a developer machine?
+  (Infra decision, not a code-architecture one — tracked as task 6.1, not resolved here.)

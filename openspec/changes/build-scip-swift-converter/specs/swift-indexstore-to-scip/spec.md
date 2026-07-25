@@ -22,9 +22,13 @@ The system SHALL read the generated IndexStore via `swiftlang/indexstore-db`'s `
 - **WHEN** a valid IndexStore is read
 - **THEN** the CLI SHALL emit a SCIP index whose `Document`/`Symbol`/`Occurrence` messages validate against `scip.proto` and are consumable by standard SCIP tooling (e.g. the `scip` CLI's own validation/inspection commands)
 
-#### Scenario: Definition, reference, and call roles map correctly
-- **WHEN** an IndexStoreDB occurrence has role `.definition`, `.reference`, or `.call`
-- **THEN** the corresponding SCIP `Occurrence.symbol_roles` SHALL be `Definition`, `ReadAccess`, or `ForwardCall` respectively
+#### Scenario: Definition, write, and reference roles map correctly
+- **WHEN** an IndexStoreDB occurrence has role `.definition`, `.write`, or `.reference` (without `.write`)
+- **THEN** the corresponding SCIP `Occurrence.symbol_roles` SHALL be `Definition`, `WriteAccess`, or `ReadAccess` respectively
+
+#### Scenario: Call role rides along on the occurrence's other roles
+- **WHEN** an IndexStoreDB occurrence has role `.call` (a call site, which IndexStoreDB always pairs with `.reference` and/or `.read` on the same occurrence)
+- **THEN** the CLI SHALL NOT invent a SCIP role bit for it — real `scip.proto`'s `SymbolRole` enum has no call-specific bit (call hierarchy in SCIP is derived from `Relationship`/enclosing-range data, not `symbol_roles`) — and the occurrence SHALL still carry whichever of `ReadAccess`/`WriteAccess`/`Definition` its other IndexStoreDB roles map to
 
 ### Requirement: Toolchain version pinning
 The system SHALL pin the Swift toolchain version used to build and run the converter, and SHALL surface that pinned version in the CLI's own version output.
