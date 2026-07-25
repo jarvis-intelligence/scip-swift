@@ -36,4 +36,4 @@
 
 ## 6. Infra decision (tracked, not blocking v1)
 
-- [ ] 6.1 Decide macOS build-host topology for ongoing CI/releases (self-hosted Mac mini vs. cloud Mac CI runner) — out of scope for code, but needed before recurring releases
+- [x] 6.1 Decide macOS build-host topology for ongoing CI/releases (self-hosted Mac mini vs. cloud Mac CI runner) — decided: GitHub Actions macOS runners (already wired up in `.github/workflows/ci.yml`), see design.md

@@ -98,6 +98,10 @@ Swift's USR format is compiler-version-sensitive. Pinning avoids silent symbol-c
   COMPILER_INDEX_STORE_ENABLE=YES` writes it to `<dir>/Index.noindex/DataStore` (the same location
   SourceKit-LSP and Xcode's own "jump to definition" read from). Both runners pass an explicit,
   caller-controlled output directory so the resulting path is deterministic rather than guessed.
-- What's the concrete macOS build-host setup for CI/releases — self-hosted Mac mini, a cloud Mac CI
-  runner (GitHub Actions macOS runners, MacStadium), or manual releases from a developer machine?
-  (Infra decision, not a code-architecture one — tracked as task 6.1, not resolved here.)
+- ~~What's the concrete macOS build-host setup for CI/releases — self-hosted Mac mini, a cloud Mac
+  CI runner (GitHub Actions macOS runners, MacStadium), or manual releases from a developer
+  machine?~~ **Resolved** (task 6.1): GitHub Actions macOS runners (`.github/workflows/ci.yml` uses
+  `macos-15`) — no self-managed hardware, already wired up for build+test on every push. Trade-off
+  accepted: GH's macOS images can lag a few weeks behind the very latest Xcode/Swift release, which
+  is fine for this project's cadence. Revisit only if release cadence or bleeding-edge-Xcode needs
+  change.
