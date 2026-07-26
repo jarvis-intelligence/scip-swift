@@ -16,7 +16,7 @@ Code standards and architectural patterns observed throughout the project.
 
 Mapping logic that has no state is organized as enums with static functions. This pattern avoids unnecessary class instantiation and clarifies intent:
 
-**Examples**: `SymbolKindMapping`, `SymbolRoleMapping`, `PositionMapping`, `SCIPSymbolFormatter`, `BuildBackendDetector`, `LocalSymbolNumberer`.
+**Examples**: `SymbolKindMapping`, `SymbolRoleMapping`, `PositionMapping`, `SCIPSymbolFormatter`, `BuildBackendDetector`.
 
 ```swift
 enum SymbolKindMapping {

@@ -26,13 +26,12 @@ scip-swift/
 │   │   ├── BuildBackendDetector.swift      # Auto-detects SwiftPM vs Xcode projects
 │   │   ├── BuildTool.swift                 # BuildTool enum (swiftpm, xcodebuild)
 │   │   ├── BuildConfiguration.swift        # BuildConfiguration enum (debug, release)
-│   │   ├── BuildRunner.swift               # BuildRunner protocol definition (in IndexStoreBuildResult.swift)
 │   │   ├── SwiftPMBuildRunner.swift        # SwiftPM build orchestration
 │   │   ├── XcodebuildBuildRunner.swift     # Xcode build orchestration
 │   │   ├── XcodeProjectLocator.swift       # Locates .xcworkspace/.xcodeproj and resolves schemes
 │   │   ├── SubprocessRunner.swift          # Process spawning with safe pipe handling
 │   │   ├── BuildError.swift                # Build error enum with CustomStringConvertible
-│   │   └── IndexStoreBuildResult.swift     # BuildRunner protocol and result struct
+│   │   └── IndexStoreBuildResult.swift     # BuildRunner protocol + result struct
 │   │
 │   ├── IndexStore/                         # IndexStore discovery and querying
 │   │   ├── IndexStoreLoader.swift          # Opens IndexStore via IndexStoreDB
@@ -40,8 +39,7 @@ scip-swift/
 │   │
 │   ├── SCIPMapping/                        # IndexStoreDB → SCIP protobuf conversion
 │   │   ├── SCIPIndexBuilder.swift          # Main orchestrator: queries IndexStore, builds SCIP Index
-│   │   ├── SCIPSymbolFormatter.swift       # Converts compiler USR to SCIP symbol string
-│   │   ├── LocalSymbolNumberer.swift       # Assigns per-document IDs to .local symbols
+│   │   ├── SCIPSymbolFormatter.swift       # Converts USR to SCIP symbol string + LocalSymbolNumberer struct
 │   │   ├── SymbolKindMapping.swift         # Maps IndexStoreDB Symbol.kind to SCIP SymbolInformation.Kind
 │   │   ├── SymbolRoleMapping.swift         # Maps IndexStoreDB SymbolRole bits to SCIP SymbolRole bits
 │   │   └── PositionMapping.swift           # Converts 1-based point to 0-based range in SCIP
@@ -62,12 +60,6 @@ scip-swift/
 │   └── MiniSwiftPackage/                   # Small SwiftPM package for integration tests
 │       ├── Package.swift
 │       └── Sources/Greeter.swift           # Single test source file
-│
-└── openspec/                               # Spec-driven change management
-    └── changes/build-scip-swift-converter/
-        ├── proposal.md                     # Problem, goals, alternatives, decision
-        ├── design.md                       # Architecture, implementation, decisions, limitations
-        └── tasks.md                        # Task breakdown, each linked to design decisions
 ```
 
 ## Key Modules

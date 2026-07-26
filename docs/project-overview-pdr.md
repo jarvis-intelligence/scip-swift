@@ -75,6 +75,4 @@ See [README.md](../README.md) for detailed limitations and platform requirements
 
 ## References
 
-- Design & Rationale: `openspec/changes/build-scip-swift-converter/design.md`
-- Implementation Plan: `openspec/changes/build-scip-swift-converter/tasks.md`
 - Codebase Architecture: [docs/system-architecture.md](./system-architecture.md)

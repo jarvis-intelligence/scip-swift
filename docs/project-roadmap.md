@@ -219,8 +219,6 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) (if applicable) or open an issue on Gi
 - **Design & Architecture**: [docs/system-architecture.md](./system-architecture.md)
 - **Implementation Standards**: [docs/code-standards.md](./code-standards.md)
 - **Project PDR**: [docs/project-overview-pdr.md](./project-overview-pdr.md)
-- **Design Decision Log**: `openspec/changes/build-scip-swift-converter/design.md`
-- **Original Proposal**: `openspec/changes/build-scip-swift-converter/proposal.md`
 
 ## How to Contribute to the Roadmap
 
