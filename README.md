@@ -14,6 +14,13 @@ that powers Xcode's own "jump to definition" and SourceKit-LSP.
 2. It reads the resulting IndexStore via `IndexStoreDB`'s `SymbolOccurrence` query API.
 3. It maps each occurrence to a SCIP `Occurrence`/`SymbolInformation` and emits a `.scip` file.
 
+## Architecture
+
+![scip-swift system architecture](docs/diagrams/system-architecture.png)
+
+See [docs/system-architecture.md](docs/system-architecture.md) for the component-by-component
+breakdown.
+
 ## Install
 
 Build system requires: Swift toolchain, matching the pinned version in `.swift-version`.
