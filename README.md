@@ -32,6 +32,13 @@ scip-swift /path/to/your/swift/repo
 # writes /path/to/your/swift/repo/index.scip
 ```
 
+The `index` subcommand is equivalent — useful for tools that always pass an explicit subcommand
+name (`index` is also `scip-swift`'s `defaultSubcommand`, so the bare form above dispatches to it):
+
+```sh
+scip-swift index /path/to/your/swift/repo --output /path/to/output.scip
+```
+
 Options:
 
 | Flag | Meaning |
