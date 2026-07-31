@@ -22,6 +22,17 @@ struct XcodebuildBuildRunner: BuildRunner {
       "-configuration", xcodeConfiguration,
       "-derivedDataPath", derivedDataPath,
       "COMPILER_INDEX_STORE_ENABLE=YES",
+      // An index build never runs, installs, or ships the product — it exists only to write
+      // Index.noindex/DataStore. Signing is pure overhead here, and because no -destination
+      // is passed, xcodebuild targets "My Mac", whose device ID iOS provisioning profiles
+      // don't include — so signed app-extension targets fail during
+      // GatherProvisioningInputs, before anything compiles. Do not restore signing, and do
+      // not "fix" this with -destination: repos with a checked-in .xcodeproj may be macOS
+      // apps, which a forced iOS destination would break instead.
+      "CODE_SIGNING_ALLOWED=NO",
+      "CODE_SIGNING_REQUIRED=NO",
+      "CODE_SIGN_IDENTITY=",
+      "CODE_SIGN_ENTITLEMENTS=",
       "build",
     ]
   }

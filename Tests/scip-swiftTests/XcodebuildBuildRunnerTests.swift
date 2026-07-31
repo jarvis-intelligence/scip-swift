@@ -51,4 +51,25 @@ struct XcodebuildBuildRunnerTests {
   func buildActionIsLast() {
     #expect(makeRunner().arguments.last == "build")
   }
+
+  @Test("code signing is fully disabled — an index build never ships a product")
+  func disablesCodeSigning() {
+    let args = makeRunner().arguments
+    #expect(args.contains("CODE_SIGNING_ALLOWED=NO"))
+    #expect(args.contains("CODE_SIGNING_REQUIRED=NO"))
+    #expect(args.contains("CODE_SIGN_IDENTITY="))
+    #expect(args.contains("CODE_SIGN_ENTITLEMENTS="))
+  }
+
+  @Test("signing settings precede the build action")
+  func signingSettingsPrecedeBuildAction() {
+    let args = makeRunner().arguments
+    let lastSetting = args.lastIndex(where: { $0.hasPrefix("CODE_SIGN") })
+    let buildAction = args.firstIndex(of: "build")
+    #expect(lastSetting != nil)
+    #expect(buildAction != nil)
+    if let lastSetting, let buildAction {
+      #expect(lastSetting < buildAction)
+    }
+  }
 }
