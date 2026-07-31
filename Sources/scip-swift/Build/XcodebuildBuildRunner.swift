@@ -13,19 +13,25 @@ struct XcodebuildBuildRunner: BuildRunner {
   let derivedDataPath: String
   let projectArguments: [String]
 
+  /// The full `xcodebuild` argument list. Kept pure and separate from
+  /// `produceIndexStore()` so it can be asserted on without spawning Xcode.
+  var arguments: [String] {
+    let xcodeConfiguration = configuration == .debug ? "Debug" : "Release"
+    return projectArguments + [
+      "-scheme", scheme,
+      "-configuration", xcodeConfiguration,
+      "-derivedDataPath", derivedDataPath,
+      "COMPILER_INDEX_STORE_ENABLE=YES",
+      "build",
+    ]
+  }
+
   func produceIndexStore() throws -> IndexStoreBuildResult {
     let xcodebuild = try SubprocessRunner.resolveExecutable(named: "xcodebuild")
-    let xcodeConfiguration = configuration == .debug ? "Debug" : "Release"
 
     let result = try SubprocessRunner.run(
       executable: xcodebuild,
-      arguments: projectArguments + [
-        "-scheme", scheme,
-        "-configuration", xcodeConfiguration,
-        "-derivedDataPath", derivedDataPath,
-        "COMPILER_INDEX_STORE_ENABLE=YES",
-        "build",
-      ],
+      arguments: arguments,
       currentDirectory: repoPath
     )
     guard result.exitCode == 0 else {
