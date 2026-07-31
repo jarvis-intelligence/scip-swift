@@ -2,5 +2,5 @@
 ///
 /// Bump this on tagged releases (Decision 4: distributed as a compiled binary release).
 enum ScipSwiftVersion {
-  static let version = "0.1.1"
+  static let version = "0.1.2"
 }
