@@ -9,10 +9,12 @@ jobs:
   build-and-test:
     # Requirement: macOS host — building/indexing Apple-platform code needs Xcode + the iOS SDK,
     # which Apple does not ship for Linux (design.md Risks).
-    runs-on: macos-15
+    # macos-26 ships Xcode 26, providing the Swift 6.2 toolchain required by
+    # Package.swift (swift-tools-version 6.2) and the .swift-version pin (6.2.4).
+    runs-on: macos-26
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Show toolchain versions
         run: |
