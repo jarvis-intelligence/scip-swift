@@ -1,0 +1,110 @@
+# Requirements: scip-swift v0.2.0
+
+**Defined:** 2026-08-11
+**Core Value:** Produce valid, `scip lint`-passing `.scip` indexes from any Swift repository so Swift developers get the same code intelligence that exists for other languages.
+
+## v0.2.0 Requirements
+
+### Symbol Metadata Enrichment
+
+- [ ] **META-01**: Map IndexStoreDB relationships (inheritance, conformance, override) into SCIP `Relationship` fields — `.baseOf`/`.extendedBy` → `is_implementation`, `.overrideOf` → `is_reference`
+- [ ] **META-02**: Populate `enclosing_symbol` for locals using `.childOf` relation data
+- [ ] **META-03**: Expand `SymbolRoleMapping` to set `ForwardDefinition` (`.declaration`), `Generated`, and `Test` (`SymbolProperty.unitTest`) bits
+- [ ] **META-04**: Use `SymbolLocation.isSystem` to correctly classify `external_symbols` instead of the referenced-but-undefined heuristic
+- [ ] **META-05**: Populate `signature_documentation` with basic signatures reconstructed from kind/subKind/displayName
+- [ ] **META-06**: Empirically validate IndexStoreDB relation population depth for Swift (spike/proof-of-concept with inheritance fixture before full mapping)
+
+### Distribution
+
+- [ ] **DIST-01**: Create Homebrew formula in a `homebrew-scip-swift` tap repository for `brew install` installation
+- [ ] **DIST-02**: Build universal (arm64 + x86_64) binary in release CI
+- [ ] **DIST-03**: Add `release.yml` GitHub Actions workflow triggered on `v*` tags — build, lipo, publish to GitHub Releases, update formula
+- [ ] **DIST-04**: Add runtime `libIndexStore.dylib` resolution check with clear error message when Xcode is not installed
+
+### Incremental Indexing
+
+- [ ] **INCR-01**: Persist IndexStoreDB database across runs via a stable `databasePath` (not ephemeral temp dir)
+- [ ] **INCR-02**: Add `--cache-dir <path>` CLI option for persistent cache location (default: `<repo>/.scip-cache/`)
+- [ ] **INCR-03**: Cache per-file `Scip_Document` protobufs keyed by content hash + toolchain version + scip-swift version
+- [ ] **INCR-04**: Detect stale documents via `IndexStoreDB.dateOfLatestUnitFor(filePath:)` and content hash comparison
+- [ ] **INCR-05**: Add `--index-only` mode that skips the build step and reads an existing IndexStore directly
+- [ ] **INCR-06**: Invalidate cache on toolchain version, indexstore-db version, or scip-swift version change
+
+### Cross-Repo Indexing
+
+- [ ] **CROSS-01**: Add `index-many` subcommand accepting multiple repo paths
+- [ ] **CROSS-02**: Index each repo independently producing separate `.scip` files
+- [ ] **CROSS-03**: Populate the `version` field in SCIP symbol strings to disambiguate same-named modules across repos
+- [ ] **CROSS-04**: Optionally merge multiple `.scip` indexes into a single output via a `--merge` flag
+- [ ] **CROSS-05**: Resolve cross-repo references using SCIP `external_symbols` mechanism
+
+### Testing
+
+- [ ] **TEST-01**: Add Xcode end-to-end integration test fixture (closes the documented test-coverage gap)
+- [ ] **TEST-02**: Add unit tests for `RelationshipMapping` (new mapper)
+- [ ] **TEST-03**: Add unit tests for expanded `SymbolRoleMapping` cases
+- [ ] **TEST-04**: Add integration test for incremental indexing (second run reuses cache)
+- [ ] **TEST-05**: Add integration test for multi-repo merge
+
+## v2 Requirements (Post-v0.2.0)
+
+### Symbol Readability
+
+- **READ-01**: Demangled symbol names (e.g. `Hello.Greeter.sayHello()` instead of raw USR) — needs compiler mangling library or custom demangler
+- **READ-02**: Exact occurrence ranges via AST-level source location data or source re-lexing
+
+### Performance
+
+- **PERF-01**: Streaming protobuf serialization for very large indexes
+- **PERF-02**: Parallel symbol processing (per-file or per-symbol-kind)
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Linux support | `libIndexStore.dylib` and Apple SDKs are macOS-only; architectural constraint |
+| Source code parsing | Compiler IndexStore is the authoritative data source; no custom parser |
+| Custom code navigation format | SCIP protobuf spec used as-is |
+| Demangled symbol names in v0.2.0 | Deferred to v1.0+; needs compiler mangling library (20+ hours, H2 2027) |
+| Xcode IDE plugin | Depends on Apple adding SCIP support to Xcode; not actionable |
+| Call hierarchy role | `scip.proto` has no `Call` bit; spec limitation, unfixable |
+
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| META-01 | Phase 1 | Pending |
+| META-02 | Phase 1 | Pending |
+| META-03 | Phase 1 | Pending |
+| META-04 | Phase 1 | Pending |
+| META-05 | Phase 1 | Pending |
+| META-06 | Phase 1 | Pending |
+| TEST-02 | Phase 1 | Pending |
+| TEST-03 | Phase 1 | Pending |
+| DIST-01 | Phase 2 | Pending |
+| DIST-02 | Phase 2 | Pending |
+| DIST-03 | Phase 2 | Pending |
+| DIST-04 | Phase 2 | Pending |
+| INCR-01 | Phase 3 | Pending |
+| INCR-02 | Phase 3 | Pending |
+| INCR-03 | Phase 3 | Pending |
+| INCR-04 | Phase 3 | Pending |
+| INCR-05 | Phase 3 | Pending |
+| INCR-06 | Phase 3 | Pending |
+| TEST-04 | Phase 3 | Pending |
+| CROSS-01 | Phase 4 | Pending |
+| CROSS-02 | Phase 4 | Pending |
+| CROSS-03 | Phase 4 | Pending |
+| CROSS-04 | Phase 4 | Pending |
+| CROSS-05 | Phase 4 | Pending |
+| TEST-05 | Phase 4 | Pending |
+| TEST-01 | Phase 5 | Pending |
+
+**Coverage:**
+- v0.2.0 requirements: 26 total
+- Mapped to phases: 26
+- Unmapped: 0 ✓
+
+---
+*Requirements defined: 2026-08-11*
+*Last updated: 2026-08-11 after initial definition*
