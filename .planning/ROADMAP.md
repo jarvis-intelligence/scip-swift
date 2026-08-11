@@ -30,7 +30,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Swift Testing / XCTest symbols carry the `Test` role bit, and `override func` symbols carry `ForwardDefinition`
   4. `external_symbols` contains only system/stdlib symbols (verified via `SymbolLocation.isSystem`), not project-internal cross-module symbols
   5. `signature_documentation` is populated on function/variable/type symbols with reconstructed signatures (e.g., `func greet(name:)`), improving hover tooltips from bare to useful
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 01-01-PLAN.md — Tracer: spike fixture validating relation population (META-06), RelationshipMapping mapper + SCIPIndexBuilder wiring (META-01, TEST-02)
+- [ ] 01-02-PLAN.md — Expand SymbolRoleMapping with ForwardDefinition/Test bits (META-03, TEST-03), populate enclosing_symbol from .childOf (META-02)
+- [ ] 01-03-PLAN.md — Replace external_symbols heuristic with isSystem (META-04), create SignatureMapping mapper (META-05)
 
 ### Phase 2: Homebrew Distribution & Release Pipeline
 **Goal**: Users can install scip-swift via `brew install` from a custom tap, with an automated release pipeline producing universal binaries and a formula updated on every tagged release — fully independent of the mapping work
@@ -86,7 +90,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Symbol Metadata Enrichment | 0/TBD | Not started | - |
+| 1. Symbol Metadata Enrichment | 0/3 | Planned | - |
 | 2. Homebrew Distribution & Release Pipeline | 0/TBD | Not started | - |
 | 3. Incremental Indexing | 0/TBD | Not started | - |
 | 4. Cross-Repo Indexing | 0/TBD | Not started | - |
