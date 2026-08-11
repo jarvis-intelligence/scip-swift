@@ -715,22 +715,22 @@ Relationships may target symbols defined in other files. The `scip lint` `missin
 | A6 | `.declaration` and `.definition` roles are mutually exclusive on a single occurrence | Pitfall 4 | ForwardDefinition + Definition collision; add defensive guard |
 | A7 | Relationship targets in other files will resolve via the global symbol table | Pitfall 2 | Cross-file relationships may fail lint; need post-processing pass |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **`.baseOf` direction (META-06 spike resolves this)**
    - What we know: The role exists in IndexStoreDB source [VERIFIED: `SymbolRole.swift:33`]
    - What's unclear: Whether it appears on the derived class's occurrence (pointing to base) or the base class's occurrence (pointing to derived)
-   - Recommendation: Run spike; if wrong direction, reverse-map during accumulation
+   - RESOLVED: Spike in Plan 01-01 Task 1 determines direction empirically; RelationshipMapping mapping table adjusts per spike result
 
 2. **Cross-document relationship target resolution**
    - What we know: `scip lint` requires all `Relationship.symbol` targets to exist in the index
    - What's unclear: Whether same-document-only filtering loses significant relationship data
-   - Recommendation: Start with same-document-only; measure data loss; upgrade if needed
+   - RESOLVED: Approach A (same-document-only) adopted in Plan 01-01 Task 3; cross-document upgrade deferred unless data loss is significant
 
 3. **Protocol method requirement vs. implementation distinction**
    - What we know: `SymbolProperty.protocolInterface` exists [VERIFIED: `SymbolProperty.swift:31`]
    - What's unclear: Whether protocol requirements should get `ForwardDefinition` and implementations get `is_implementation` relationships pointing to requirements
-   - Recommendation: Defer protocol requirement/implementation distinction to v0.2.x; for v0.2.0, treat all protocol conformances uniformly as `is_implementation`
+   - RESOLVED: Deferred to v0.2.x per plan scope; for v0.2.0, treat all protocol conformances uniformly as `is_implementation`
 
 ## Environment Availability
 
