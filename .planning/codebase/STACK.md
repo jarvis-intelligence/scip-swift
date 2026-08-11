@@ -1,85 +1,92 @@
----
-title: STACK
-focus: tech
-last_mapped_commit: 34a8c1e
----
-
-# STACK
+# Technology Stack
 
 **Analysis Date:** 2026-08-11
 
-Technologies, runtime, frameworks, dependencies, and build configuration for `scip-swift`.
+## Languages
 
-## Summary
+**Primary:**
+- Swift 6.2 (`swift-tools-version: 6.2` in `Package.swift:1`) — the entire tool is Swift. All sources under `Sources/scip-swift/`.
 
-`scip-swift` is a **macOS-only Swift command-line tool** that converts a Swift repo's compiler
-index (IndexStore) into a real `scip.proto` SCIP index. It is a single SwiftPM executable target
-built against the Swift 6.2 toolchain.
+**Secondary:**
+- Protobuf (`.proto`) — `Protos/scip.proto` is the vendored SCIP schema; compiled to Swift via `protoc-gen-swift` into `Sources/scip-swift/Generated/Scip.pb.swift`.
+- Bash — `Protos/generate.sh` regenerates the protobuf bindings.
 
-- **Language:** Swift 6.2 (`Package.swift` declares `swift-tools-version: 6.2`)
-- **Pinned toolchain:** `6.2.4` (`.swift-version`)
-- **Platforms:** macOS 13+ (`platforms: [.macOS(.v14)]` in `Package.swift`); host runtime is macOS-only
-- **Output artifact:** compiled `scip-swift` executable; output payload is a `.scip` protobuf file
-- **Version:** `0.1.2` (`Sources/scip-swift/Version.swift`)
+**Pinned toolchain:**
+- Swift 6.2.4 — `.swift-version:1` and mirrored as `ToolchainInfo.pinnedSwiftVersion` in `Sources/scip-swift/Platform/ToolchainInfo.swift:8`. Apple does not guarantee USR (symbol-identity) stability across toolchain versions, so this pin is load-bearing.
 
-## Languages & Runtime
+## Runtime
 
-- **Swift** is the only source language. Swift 6.2 concurrency is enabled via the tools-version.
-- `Sources/scip-swift/Generated/Scip.pb.swift` is a large (~3190 lines) **generated** file from the
-  vendored `Protos/scip.proto` — never hand-edited; regenerate via `Protos/generate.sh`.
-- A single executable target, `scip-swift`, plus a test target `scip-swiftTests` (`Package.swift`).
+**Environment:**
+- macOS 14+ — `Package.swift:6` declares `.macOS(.v14)`. macOS-only by necessity: IndexStore access requires `libIndexStore.dylib` (ships only in the Xcode toolchain), and indexing repos that import `UIKit`/`WatchKit`/`WidgetKit` needs the Apple SDKs, which are macOS-only.
+- The built executable (`scip-swift`) itself runs on macOS. It is not a library; it is an executable product (`Package.swift:8`).
 
-## Dependencies
+**Package Manager:**
+- Swift Package Manager (SwiftPM) — declared in `Package.swift`.
+- Lockfile: `Package.resolved` (present, version 3 format).
 
-Declared in `Package.swift`, pinned in `Package.resolved`:
+## Frameworks
 
-- **indexstore-db** (`https://github.com/swiftlang/indexstore-db.git`, branch `main`, rev `c993f4fb`)
-  — the core dependency. Provides `IndexStoreDB`, `Symbol`, `SymbolOccurrence`, `SymbolRole`,
-  `SymbolLocation` types used to read the compiler's index. Transitive: pulls in **swift-lmdb**.
-- **swift-protobuf** (`https://github.com/apple/swift-protobuf.git`, `1.28.0` → resolved `1.38.1`)
-  — protobuf runtime + the generator that produces `Generated/Scip.pb.swift`.
-- **swift-argument-parser** (`https://github.com/apple/swift-argument-parser.git`, `1.5.1` →
-  resolved `1.8.2`) — CLI parsing (`ParsableCommand`, `@Argument`, `@Option`).
+**Core:**
+- SwiftPM toolchain (`swift-tools-version: 6.2`) — build/package management.
+- `swift-argument-parser` 1.8.2 (pinned) / `from: "1.5.1"` (`Package.swift:11`) — CLI argument parsing. `ScipSwiftCommand` (`Sources/scip-swift/ScipSwiftCommand.swift`) is the `@main` root; `IndexCommand` (`Sources/scip-swift/Commands/IndexCommand.swift`) is the sole/default subcommand.
+
+**Indexing library (the central dependency):**
+- `IndexStoreDB` — the Swift API over Apple's IndexStore format (`Package.swift:8-9`, `Package.swift:18`). Pinned to `branch: "main"` of `swiftlang/indexstore-db` (revision `c993f4fb...` per `Package.resolved`). This is the same index that powers Xcode's "jump to definition" and SourceKit-LSP. Loaded at runtime in `Sources/scip-swift/IndexStore/IndexStoreLoader.swift`.
+
+**Serialization:**
+- `swift-protobuf` 1.38.1 (pinned) / `from: "1.28.0"` (`Package.swift:10`) — runtime for the generated `Scip.pb.swift`. Used via `index.serializedData()` in `Sources/scip-swift/Commands/IndexCommand.swift:43`.
+
+**Testing:**
+- Swift Testing (`@Suite` / `@Test` / `#expect` / `#require`) — not XCTest. Test sources in `Tests/scip-swiftTests/`. Integration tests shell out to real `swift build` against `Fixtures/MiniSwiftPackage` (no mocks).
+
+**Build/Dev:**
+- `swift build` / `swift test` — the standard SwiftPM CLI.
+- `protoc` + `protoc-gen-swift` — only needed when regenerating bindings (`Protos/generate.sh`); installed via `brew install protobuf swift-protobuf`.
+
+## Key Dependencies
+
+**Critical:**
+- `indexstore-db` (SwiftPM package `indexstore-db`, product `IndexStoreDB`) — the entire pipeline reads symbol occurrences from here. `IndexStoreLoader.open(storePath:databasePath:)` (`Sources/scip-swift/IndexStore/IndexStoreLoader.swift:7`) loads it against a `libIndexStore.dylib` path resolved via `xcrun --find swift` (`Sources/scip-swift/Platform/ToolchainInfo.swift:16`).
+- `swift-protobuf` (product `SwiftProtobuf`) — emits the `.scip` file via generated message types (`Scip_Index`, `Scip_Document`, `Scip_Occurrence`, `Scip_SymbolInformation`, `Scip_Metadata`, `Scip_ToolInfo`).
+- `swift-argument-parser` (product `ArgumentParser`) — defines the CLI surface (`--output`, `--build-tool`, `--configuration`, `--scheme`, `--version`).
+
+**Transitive (resolved, not declared directly):**
+- `swift-lmdb` (from `swiftlang/swift-lmdb`, branch `main`, revision `a4bc8780...`) — brought in by `indexstore-db` for its LMDB-backed index database. Appears in `Package.resolved` only.
+
+**Vendored (not a SwiftPM dependency):**
+- `Protos/scip.proto` and `Sources/scip-swift/Generated/Scip.pb.swift` — the SCIP schema and generated Swift bindings, vendored from upstream `sourcegraph/scip`. **Never hand-edit `Generated/Scip.pb.swift`**; regenerate via `Protos/generate.sh`.
 
 ## Configuration
 
-- `Package.swift` — SwiftPM manifest; one `.executable` product, one executable target, one test target.
-- `.swift-version` — pins the toolchain to `6.2.4` (USR stability is toolchain-sensitive; see
-  `ToolchainInfo.pinnedSwiftVersion`).
-- `Package.resolved` — locked dependency revisions.
-- `.gitignore` — ignores `.build/`, `.swiftpm/`, `*.scip`, and explicitly re-includes
-  `Sources/scip-swift/Build/` (the user's global gitignore bare-`build` pattern would otherwise
-  match it case-insensitively).
-- No `.env`, no runtime config files — all configuration is via CLI flags at invocation.
+**Environment:**
+- No `.env` files, no runtime configuration files. The tool is configured entirely through CLI flags (`Sources/scip-swift/Commands/IndexCommand.swift:7-22`):
+  - `repoPath` (positional, defaults to CWD)
+  - `--output <path>` (default: `<repo>/index.scip`)
+  - `--build-tool swiftpm|xcodebuild` (auto-detected if omitted)
+  - `--configuration debug|release` (default: `debug`)
+  - `--scheme <name>` (xcodebuild only; auto-detected if exactly one scheme exists)
+  - `--version`
 
-## Build Commands
+**Toolchain resolution (runtime):**
+- `xcrun --find swift` locates the active toolchain, then `libIndexStore.dylib` is resolved relative to it at `<toolchain>/usr/lib/libIndexStore.dylib` (`Sources/scip-swift/Platform/ToolchainInfo.swift:16-33`). `SubprocessRunner.resolveExecutable(named:)` (`Sources/scip-swift/Build/SubprocessRunner.swift:69`) uses `/usr/bin/env which` for PATH lookup of `swift`/`xcodebuild`/`xcrun`.
 
-```sh
-swift build                       # debug build
-swift build -c release            # release build -> .build/release/scip-swift
-swift test                        # all tests (unit + integration)
-swift test --filter <SuiteName>   # one Swift Testing suite
-Protos/generate.sh                # regenerate protobuf bindings (requires protoc + protoc-gen-swift)
-```
+**Build config:**
+- `Package.swift` — single executable target `scip-swift` + test target `scip-swiftTests`.
+- `.swift-version` — pins the toolchain for contributors and CI.
+- `.gitignore` — present (build artifacts, `.build`, `DerivedData`, etc.).
+- No lint/format config files (`.swiftformat`, `.swiftlint.yml`, `.editorconfig`) — not present.
 
-Prerequisite: a Swift 6.2 toolchain + Xcode (for the iOS/macOS SDKs and `libIndexStore.dylib`).
-`brew install protobuf swift-protobuf` is required only when regenerating the proto bindings.
+## Platform Requirements
 
-## Generated vs Authored Code
+**Development:**
+- macOS 14+ with Xcode and the Swift 6.2.4 toolchain.
+- `protoc` / `protoc-gen-swift` only if regenerating protobuf bindings.
+- CI runs on `macos-26` (`.github/workflows/ci.yml:13`) to get Xcode 26 (provides the Swift 6.2 toolchain).
 
-| Kind | Location | Regen? |
-|---|---|---|
-| Authored Swift | `Sources/scip-swift/**` (excl. `Generated/`) | n/a |
-| Generated protobuf bindings | `Sources/scip-swift/Generated/Scip.pb.swift` | `Protos/generate.sh` |
-| Vendored proto schema | `Protos/scip.proto` (from `sourcegraph/scip`) | upstream sync |
-| Tests | `Tests/scip-swiftTests/*.swift` | n/a |
-| Fixture repo | `Fixtures/MiniSwiftPackage/` | n/a |
-
-## Distribution
-
-Compiled binary release (GitHub Releases, macOS arm64). Homebrew formula is an open roadmap item
-(`docs/project-roadmap.md`). Not a library package — no `.library` product is exported.
+**Production:**
+- The tool ships as a compiled macOS executable (`README.md` documents `swift build -c release` then `cp .build/release/scip-swift /usr/local/bin/`). Distributed as a binary release per the PDR (Version 0.1.2 — `Sources/scip-swift/Version.swift:4`).
+- **Deliberately not Linux-compatible**: `libIndexStore.dylib` is macOS-only and Apple-platform SDKs are required for real-world iOS/watchOS repos. Do not attempt to make the build/test pipeline pass on Linux (`.github/workflows/ci.yml` is macOS-only by design).
 
 ---
-*tech focus analysis: 2026-08-11*
-<!-- refreshed: 2026-08-11 -->
+
+*Stack analysis: 2026-08-11*

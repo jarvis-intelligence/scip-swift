@@ -1,115 +1,118 @@
----
-title: CONCERNS
-focus: concerns
-last_mapped_commit: 34a8c1e
----
-
-# CONCERNS
+# Codebase Concerns
 
 **Analysis Date:** 2026-08-11
 
-Technical debt, known issues, fragile areas, and limitations for `scip-swift`.
+> **Primary reference:** `docs/research-scip-swift-limitations.md` is the authoritative deep-dive. This document summarizes and prioritizes its findings for quick reference during planning.
 
-Source of truth for the limitations below: the implementation itself plus
-`docs/research-scip-swift-limitations.md` (a code-grounded deep dive that cross-references the
-exact `indexstore-db` checkout), `README.md` "Known limitations", and `docs/project-roadmap.md`.
+## Tech Debt
 
-## Severity legend
-🔴 High · 🟠 Medium · 🟡 Low
+**Relationships (inheritance/conformance/override) silently discarded — HIGH:**
+- Issue: `SCIPIndexBuilder.makeDocument()` (`SCIPIndexBuilder.swift:61-112`) never reads `occurrence.relations`. IndexStoreDB fetches them from the compiler but they're thrown away.
+- Why: The initial implementation focused on occurrences/symbols; relationships weren't in the original scope.
+- Impact: The emitted index **cannot power** "Find implementations", inheritance hierarchy navigation, protocol conformance links, or method override resolution — core code-intelligence features. Peer indexers (scip-typescript) populate these.
+- Fix approach: Map IndexStoreDB `.baseOf`/`.extendedBy` → `is_implementation`, `.overrideOf` → `is_reference`, `.childOf` → `enclosing_symbol`. The `scip.proto` `Relationship` message exists for exactly this. Severity: HIGH, Fixability: MEDIUM (API exists, mapping is approximate).
 
-## Indexing fidelity gaps (data dropped that IndexStoreDB provides)
+**`documentation` and `signature_documentation` never populated — MEDIUM:**
+- Issue: `SCIPIndexBuilder.swift:98-101` sets only `symbol`, `displayName`, `kind` on `Scip_SymbolInformation`. SCIP's `documentation` and `signature_documentation` fields are always empty.
+- Why: IndexStoreDB doesn't hand back docstrings directly; full implementation would need source-comment parsing.
+- Impact: Hover tooltips in SCIP consumers are bare — no API docs, no signature info.
+- Fix approach: Basic signatures (e.g. `func greet(name: String) -> String`) are reconstructible from kind/subKind/name. Full docstrings need source-comment parsing. Fixability: MEDIUM.
 
-- 🔴 **Relationships (inheritance / conformance / override) are silently discarded.** IndexStoreDB
-  exposes `relations` (`.baseOf`, `.overrideOf`, `.extendedBy`, `.childOf`), but `SCIPIndexBuilder`
-  never queries them, so `Scip_Relationship` / `Scip_SymbolInformation.relationships` is never
-  populated. Peer indexers (scip-typescript, scip-rust) emit these. Fixable with the existing
-  dependency (`SCIPIndexBuilder.swift`).
-- 🟠 **`documentation` and `signature_documentation` are never set.** `SymbolInformation` gets only
-  `symbol`, `displayName`, `kind` (`SCIPIndexBuilder.makeDocument`). SCIP marks these fields
-  "strongly recommended"; hover/signature tooltips in consumers are bare. A basic signature is
-  reconstructible from kind/subKind/name; full docstrings need source-comment parsing.
-- 🟠 **`SymbolRoleMapping` is lossier than necessary.** Only `.definition`/`.write`/`.reference`/
-  `.read` are mapped. It drops `.declaration` (SCIP has `ForwardDefinition = 0x40` for it), `.implicit`,
-  and never sets SCIP's `Generated = 0x10` / `Test = 0x20` bits — even though
-  `SymbolProperty.unitTest` directly identifies test symbols. Easy pure-function fix
-  (`SymbolRoleMapping.swift`).
-- 🟡 **`enclosing_symbol` is never set for locals.** IndexStoreDB `.childOf` carries this; trivial
-  once relations are read.
-- 🟡 **`isSystem` location flag is ignored.** `SymbolLocation.isSystem` marks stdlib/framework
-  occurrences — the precise signal for true external symbols. The project instead infers
-  `external_symbols` by a referenced-but-not-defined heuristic
-  (`SCIPIndexBuilder.build`).
+**SymbolRole mapping is lossier than necessary — MEDIUM, EASY FIX:**
+- Issue: `SymbolRoleMapping.scipRoles()` (`SymbolRoleMapping.swift:9-20`) maps only 4 of ~20 IndexStoreDB roles. Drops `.declaration` (could map to `ForwardDefinition = 0x40`), `.implicit`, and never sets SCIP's own `Generated = 0x10` or `Test = 0x20` bits.
+- Why: Initial mapping covered the minimum needed for `scip lint` to pass.
+- Impact: Test symbols aren't tagged as tests; generated code isn't tagged as generated; forward declarations aren't distinguished from definitions.
+- Fix approach: Pure-function additions to `SymbolRoleMapping`. `SymbolProperty.unitTest` identifies test symbols. Fixability: EASY — no architectural change needed.
 
-## Fundamental / spec-driven limitations (documented, accurate)
+**`enclosing_symbol` never set for locals — LOW, EASY:**
+- Issue: SCIP's `enclosing_symbol` field is never populated. IndexStoreDB's `.childOf` relation carries exactly this.
+- Why: Same as relationships — relations aren't read.
+- Fix approach: Set once relationships are read (`.childOf` → `enclosing_symbol`). Fixability: EASY, but blocked by the relationships fix.
 
-- 🔴 **Opaque USR symbol names (no demangling).** `SCIPSymbolFormatter` embeds the raw compiler USR
-  verbatim as an escaped descriptor term (`scip-swift <pm> <module> . <usr>.`). Correct and stable,
-  but not human-readable like peer indexers' descriptor chains. **Hard to fix** — needs Swift's
-  mangling library (not packaged standalone) or a custom demangler. Roadmap defers to v1.0+
-  (`SCIPSymbolFormatter.swift`, `docs/project-roadmap.md`).
-- 🟡 **Approximate occurrence ranges.** IndexStoreDB records only a single 1-based anchor point per
-  occurrence (no end column). `PositionMapping` approximates the end from display-name length,
-  stopping at the first `(`. Correct ~95% for simple identifiers; drifts for compound names
-  (`greet(name:)`). Fix requires source re-lexing — genuinely hard
-  (`PositionMapping.swift`).
-- 🟡 **No call-hierarchy role.** Real `scip.proto` `SymbolRole` has no `Call` bit, so call sites
-  ride along on `.reference`/`.read`. **Unfixable** (spec) — `SymbolRoleMapping` + tests encode this
-  intentionally.
-- 🟠 **USR stability across Swift toolchain versions is not guaranteed by Apple.** Mitigated by
-  pinning the toolchain (`.swift-version` = 6.2.4, `ToolchainInfo.pinnedSwiftVersion`) — a process
-  control, not a technical fix.
+**`isSystem` location flag ignored — LOW, EASY:**
+- Issue: `SymbolLocation.isSystem` marks Swift-stdlib/system-framework occurrences. The project infers `external_symbols` by heuristic (referenced-but-not-defined) instead.
+- Why: The heuristic was simpler and passes `scip lint`.
+- Impact: External-symbol classification is heuristic-based, not authoritative.
+- Fix approach: Use `isSystem` directly for more correct `external_symbols` classification. Fixability: EASY.
 
-## Build-pipeline fragility
+## Known Bugs
 
-- 🟠 **xcodebuild path has no integration test.** Only SwiftPM has a fixture
-  (`Fixtures/MiniSwiftPackage`). `XcodebuildBuildRunner` is validated by arg-list assertions only
-  (`XcodebuildBuildRunnerTests`), never a real `xcodebuild` end-to-end in CI. iOS-specific target
-  behavior is unverified.
-- 🟠 **xcodebuild passes no `-destination`** (targets generic "My Mac"). The code comment justifies
-  this (a forced iOS destination breaks macOS-app projects; disabling signing avoids provisioning
-  failure), but it leans on the scheme's default SDK. iOS-specific target configs may not all index
-  as intended (`XcodebuildBuildRunner.arguments`).
-- 🟡 **SwiftPM IndexStore path discovery is heuristic.** `SwiftPMBuildRunner.findIndexStore` scans
-  `<scratch>/<triple>/<config>/index/store` by listing directories; a change in SwiftPM's scratch
-  layout could silently break it (no pinned SwiftPM version — branch-based `indexstore-db`).
-- 🟡 **macOS-only host; full rebuild each run.** Every invocation rebuilds the target repo from
-  scratch; there is no incremental/cached index. Architectural, documented.
-- 🟡 **`SubprocessRunner` uses an `@unchecked Sendable` escape hatch.** `DataBox` is documented as
-  safe via a happens-before relationship with `DispatchGroup.wait()`, but it's the one place the
-  Swift 6 data-race checker is deliberately bypassed (`SubprocessRunner.swift`). Review carefully on
-  any refactor.
+No known bugs in the current implementation. The emitted index passes `scip lint` and is functionally correct for the features it supports (symbol resolution, go-to-definition, find-references).
 
-## Testing gaps
+## Security Considerations
 
-- 🟡 No direct unit tests for `BuildBackendDetector`, `XcodeProjectLocator.resolveScheme`,
-  `ToolchainInfo.libIndexStoreDylibPath`, or `SwiftFileDiscovery` (the last is covered only
-  indirectly via the integration test).
-- 🟡 No coverage measurement configured (no `.codecov.yml`, no `--enable-code-coverage` in CI).
+**Subprocess execution (build orchestration):**
+- Risk: `SubprocessRunner.run()` executes `swift build` and `xcodebuild` with user-provided repo paths and arguments. A malicious repo path could theoretically include shell injection.
+- Current mitigation: `SubprocessRunner` uses `Process` with explicit argument arrays (not shell interpolation), so command injection is not possible. Paths are resolved via `URL.standardizedFileURL`.
+- Recommendations: Current implementation is adequate for a CLI tool run by developers. No changes needed.
 
-## Process / distribution
+**No secrets handling:**
+- Risk: None — the tool doesn't read, store, or transmit secrets. It reads source code and compiler index data only.
+- Current mitigation: N/A
 
-- 🟡 **No Homebrew formula.** Distribution is manual binary upload to GitHub Releases (arm64 only).
-  x86_64 support is an open consideration (`docs/project-roadmap.md`).
-- 🟡 **No formatter/linter config in-repo.** 2-space style is convention-enforced; no SwiftFormat/
-  SwiftLint/.swiftformat file. Drift risk as contributors grow.
-- 🟡 **`indexstore-db` is pinned to `branch: "main"`** (not a tag) in `Package.swift`. Reproducible
-  via `Package.resolved`, but upstream `main` moves under the lock — re-resolving could pull a
-  breaking revision. `swift-lmdb` is similarly branch-pinned (transitive).
+## Performance Bottlenecks
 
-## Security
+**Full rebuild every invocation:**
+- Problem: Every `scip-swift` run triggers a full `swift build` or `xcodebuild build` of the target repo from scratch.
+- Measurement: Build time dominates — for a small fixture, the integration test takes ~10-30s (mostly `swift build`). For large repos, build time is the bottleneck.
+- Cause: The tool doesn't cache or reuse build output; it creates a fresh scratch/derived-data path per run.
+- Improvement path: Incremental builds via a persistent scratch path; or an "index-only" mode that skips the build and reads an existing IndexStore. This is an architectural decision (documented in roadmap as future work).
 
-- ✅ **No secrets, tokens, or credentials** anywhere in the codebase or generated docs.
-- ✅ **No network egress.** All integration is local subprocess + local dylib + local filesystem.
-- 🟡 The tool executes arbitrary build commands (`swift build` / `xcodebuild`) against
-  user-supplied repo paths — by design, but it means indexing an untrusted repo runs that repo's
-  build scripts. Document as a trust boundary if ever exposed as a service.
+**In-memory processing:**
+- Problem: All occurrences are loaded into memory before serialization. For very large codebases, this could be memory-intensive.
+- Measurement: Not measured — the fixture is tiny.
+- Cause: `SCIPIndexBuilder.build()` iterates all files, accumulates all `Scip_Document`s and `referencedSymbols` in memory, then serializes.
+- Improvement path: Streaming serialization if memory becomes an issue (not currently a problem for typical repos).
 
-## TODO / Open items (from roadmap)
+## Fragile Areas
 
-- Exact occurrence range recovery (deferred; hard).
-- Demangled symbol names (deferred to v1.0+; hard).
-- Homebrew distribution formula (low effort, not yet done).
+**Toolchain / `libIndexStore.dylib` resolution:**
+- Why fragile: The tool shells out to `xcrun --find swift` and resolves `libIndexStore.dylib` relative to the result. If the user has a non-standard toolchain, or `xcrun` returns an unexpected path, the dylib won't be found.
+- Common failures: "dylib not found" on systems with multiple Xcode versions, or after an Xcode update that moves the toolchain.
+- Safe modification: `ToolchainInfo.libIndexStorePath` is the single point of resolution — changes here affect all IndexStoreDB opening. Test thoroughly.
+- Test coverage: No unit test for dylib resolution (would require mocking the toolchain). Integration test implicitly covers it (if the dylib isn't found, the integration test fails).
+
+**IndexStore path discovery (SwiftPMBuildRunner):**
+- Why fragile: `SwiftPMBuildRunner.findIndexStore()` scans `<scratch>/<triple>/<config>/index/store` by enumerating directories. The triple directory name depends on the host platform and is not predictable.
+- Common failures: If SwiftPM changes its scratch-path layout (has happened across major versions), the index store won't be found, producing `BuildError.indexStoreNotProduced`.
+- Safe modification: The directory-walking logic in `findIndexStore()` is the adaptation point for layout changes.
+- Test coverage: Integration test covers it against the current SwiftPM version, but not future versions.
+
+**Xcode build path (no `-destination`):**
+- Why fragile: `XcodebuildBuildRunner` passes no `-destination` flag, targeting generic "My Mac". The code comment explains: a forced iOS destination breaks macOS-app projects, while no destination means iOS-specific targets may not fully index.
+- Common failures: iOS-only projects may not index completely; the trade-off is documented in the code.
+- Safe modification: Do NOT add `-destination` without understanding the full trade-off (documented in `XcodebuildBuildRunner.swift:24-31`).
+- Test coverage: `XcodebuildBuildRunnerTests` tests argument construction only — no end-to-end Xcode build fixture exists (documented limitation L9).
+
+**Generated protobuf bindings (vendored):**
+- Why fragile: `Generated/Scip.pb.swift` is 3190 lines of auto-generated code. Hand-editing it would be silently overwritten on regeneration.
+- Common failures: N/A — the file is correct as generated.
+- Safe modification: NEVER edit `Generated/Scip.pb.swift`. Edit `Protos/scip.proto` and run `Protos/generate.sh` instead.
+- Test coverage: Implicit — the integration test serializes/deserializes protobuf messages, exercising the bindings.
+
+**USR instability across Swift versions:**
+- Why fragile: Swift USRs (symbol identifiers) are not guaranteed stable across toolchain versions. The toolchain is pinned to 6.2.4 via `.swift-version`, but CI and local development must use this exact version.
+- Common failures: Building/testing with a different toolchain produces different USRs, making symbol comparisons across runs unreliable.
+- Safe modification: Do not change `.swift-version` without understanding USR migration implications.
+- Test coverage: USR-dependent assertions in `SCIPSymbolFormatterTests` use specific USR strings — these would break if the toolchain changes.
+
+## Comparison with Peer Indexers
+
+| Capability | scip-typescript | scip-rust | **scip-swift** |
+|---|---|---|---|
+| Human-readable symbol names | ✅ descriptor chains | ✅ descriptor chains | ❌ raw USR (opaque) |
+| Inheritance/conformance relationships | ✅ `Relationship` | ✅ `Relationship` | ❌ dropped |
+| Documentation/signatures | partial | partial | ❌ none |
+| Exact occurrence ranges | ✅ | ✅ | ❌ approximated |
+| Cross-platform host | ✅ | ✅ | ❌ macOS-only |
+
+**Biggest gaps (by impact):**
+1. **Relationships dropped** (HIGH) — fixable with existing API, no fundamental blocker
+2. **Opaque USR symbol names** (HIGH) — hardest gap; needs a demangling library or custom demangler; roadmap defers to v1.0+ (H2 2027)
+3. **No documentation/signatures** (MEDIUM) — basic signatures reconstructible from existing data
 
 ---
-*concerns focus analysis: 2026-08-11*
-<!-- refreshed: 2026-08-11 -->
+
+*Concerns analysis: 2026-08-11*
+*Primary reference: `docs/research-scip-swift-limitations.md`*
+*Update when limitations change or are addressed*

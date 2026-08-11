@@ -1,126 +1,151 @@
----
-title: STRUCTURE
-focus: arch
-last_mapped_commit: 34a8c1e
----
-
-# STRUCTURE
+# Codebase Structure
 
 **Analysis Date:** 2026-08-11
 
-Directory layout, key locations, and naming conventions for `scip-swift`.
-
-## Top-Level Layout
+## Directory Layout
 
 ```
 scip-swift/
-├── Package.swift                  # SwiftPM manifest (swift-tools-version 6.2, macOS(.v14))
-├── Package.resolved               # Pinned dependency revisions
-├── .swift-version                 # Toolchain pin: 6.2.4
-├── .gitignore                     # Ignores .build/, .swiftpm/, *.scip; re-includes Build/
-├── CLAUDE.md                      # Agent guidance (architecture + commands)
-├── README.md                      # User-facing docs
-├── LICENSE                        # Apache-2.0
-│
-├── .github/workflows/ci.yml       # CI: build + test on macos-26
-├── Protos/
-│   ├── scip.proto                 # Vendored upstream SCIP schema (sourcegraph/scip)
-│   └── generate.sh                # Regenerate Swift bindings (protoc + protoc-gen-swift)
-├── Sources/scip-swift/            # Sole executable target (see below)
-├── Tests/scip-swiftTests/         # Swift Testing test target
-├── Fixtures/MiniSwiftPackage/     # Fixture repo for integration tests
-└── docs/                          # Design docs, roadmap, research, diagrams
+├── Sources/scip-swift/          # All executable source code
+│   ├── Build/                   # Build orchestration (SwiftPM + Xcode runners)
+│   ├── Commands/                # ArgumentParser subcommands
+│   ├── Generated/               # Vendored protobuf bindings (never hand-edit)
+│   ├── IndexStore/              # IndexStoreDB access + file discovery
+│   ├── Platform/                # Toolchain/libIndexStore resolution
+│   ├── SCIPMapping/             # Core IndexStore→SCIP mapping logic
+│   ├── ScipSwiftCommand.swift   # @main entry point
+│   └── Version.swift            # Version constant
+├── Tests/scip-swiftTests/       # Swift Testing test suites
+├── Fixtures/MiniSwiftPackage/   # Real Swift package for integration tests
+├── Protos/                      # Vendored scip.proto + generation script
+├── docs/                        # Project documentation (PDR, architecture, standards)
+├── .github/workflows/           # CI (macOS-only)
+├── Package.swift                # SwiftPM manifest
+├── .swift-version               # Pinned toolchain (6.2.4)
+└── CLAUDE.md / README.md        # Project instructions
 ```
 
-## Source Target — `Sources/scip-swift/`
+## Directory Purposes
 
-The single executable target. Organized by pipeline stage (mirrors the architecture layers).
+**`Sources/scip-swift/Build/`:**
+- Purpose: Build the target repo with indexing enabled and locate the IndexStore output
+- Contains: 9 Swift files (~425 lines total) — build tool detection, two `BuildRunner` implementations, subprocess management, error types
+- Key files: `BuildBackendDetector.swift` (auto-detect SwiftPM vs Xcode), `SwiftPMBuildRunner.swift`, `XcodebuildBuildRunner.swift`, `SubprocessRunner.swift`, `BuildError.swift`
+- Subdirectories: None (flat)
 
-```
-Sources/scip-swift/
-├── ScipSwiftCommand.swift            # @main entry (ArgumentParser root)
-├── Commands/
-│   └── IndexCommand.swift            # defaultSubcommand; orchestrates the whole pipeline
-├── Build/                            # Stage 2: build orchestration
-│   ├── BuildTool.swift               # enum BuildTool { swiftpm, xcodebuild } (ExpressibleByArgument)
-│   ├── BuildConfiguration.swift      # enum BuildConfiguration { debug, release }
-│   ├── BuildBackendDetector.swift    # auto-detect swiftpm vs xcodebuild from repo contents
-│   ├── BuildRunner                   # (protocol in IndexStoreBuildResult.swift)
-│   ├── SwiftPMBuildRunner.swift      # swift build --enable-index-store runner
-│   ├── XcodebuildBuildRunner.swift   # xcodebuild runner (signing disabled, .arguments is testable)
-│   ├── XcodeProjectLocator.swift     # find .xcworkspace/.xcodeproj + resolve scheme
-│   ├── SubprocessRunner.swift        # Process wrapper + resolveExecutable(named:)
-│   ├── BuildError.swift              # exhaustive typed error enum
-│   └── IndexStoreBuildResult.swift   # BuildRunner protocol + result struct
-├── IndexStore/                       # Stage 3: open + query the IndexStore
-│   ├── IndexStoreLoader.swift        # open IndexStoreDB via libIndexStore.dylib
-│   └── SwiftFileDiscovery.swift      # walk repo for .swift files (skip build/dep dirs)
-├── SCIPMapping/                      # Stage 4: IndexStoreDB → SCIP protobuf
-│   ├── SCIPIndexBuilder.swift        # main loop: occurrences → Documents/Symbols/external_symbols
-│   ├── SCIPSymbolFormatter.swift     # USR → SCIP symbol string; LocalSymbolNumberer struct
-│   ├── SymbolKindMapping.swift       # Symbol.Kind/subKind → Scip_SymbolInformation.Kind
-│   ├── SymbolRoleMapping.swift       # SymbolRole bits → Scip_SymbolRole bits
-│   └── PositionMapping.swift         # 1-based anchor → 0-based half-open range
-├── Platform/
-│   └── ToolchainInfo.swift           # pinnedSwiftVersion + libIndexStoreDylibPath()
-├── Version.swift                     # ScipSwiftVersion.version = "0.1.2"
-└── Generated/
-    └── Scip.pb.swift                 # ~3190-line generated protobuf bindings — NEVER hand-edit
-```
+**`Sources/scip-swift/Commands/`:**
+- Purpose: ArgumentParser subcommand definitions
+- Contains: 1 file — `IndexCommand.swift` (81 lines)
+- Key files: `IndexCommand.swift` — the sole subcommand and pipeline coordinator
+- Subdirectories: None
 
-## Test Target — `Tests/scip-swiftTests/`
+**`Sources/scip-swift/Generated/`:**
+- Purpose: Swift protobuf bindings for the SCIP schema — vendored, never hand-edited
+- Contains: `Scip.pb.swift` (3190 lines, auto-generated from `Protos/scip.proto`)
+- Special: Regenerate via `Protos/generate.sh` (requires `brew install protobuf swift-protobuf`); do NOT edit
 
-One test file per unit, plus one end-to-end integration suite. Uses **Swift Testing**
-(`@Suite`/`@Test`), not XCTest.
+**`Sources/scip-swift/IndexStore/`:**
+- Purpose: Open IndexStoreDB and discover `.swift` files in the target repo
+- Contains: `IndexStoreLoader.swift` (17 lines), `SwiftFileDiscovery.swift` (26 lines)
+- Key files: `IndexStoreLoader.open(storePath:databasePath:)` loads IndexStoreDB against `libIndexStore.dylib`
+- Subdirectories: None
 
-```
-Tests/scip-swiftTests/
-├── SCIPSymbolFormatterTests.swift     # symbol-string formatting + LocalSymbolNumberer
-├── SymbolKindMappingTests.swift       # kind/subKind → SCIP kind
-├── SymbolRoleMappingTests.swift       # role bit mapping (incl. .call ride-along)
-├── XcodebuildBuildRunnerTests.swift   # XcodebuildBuildRunner.arguments assertions (no real xcodebuild)
-└── IntegrationTests.swift             # full pipeline vs Fixtures/MiniSwiftPackage (shells out)
-```
+**`Sources/scip-swift/Platform/`:**
+- Purpose: Resolve the active Swift toolchain
+- Contains: `ToolchainInfo.swift` (32 lines)
+- Key files: `ToolchainInfo.libIndexStorePath` — shells out to `xcrun --find swift`, then resolves `<toolchain>/usr/lib/libIndexStore.dylib`
 
-## Fixtures
+**`Sources/scip-swift/SCIPMapping/`:**
+- Purpose: The core mapping layer — IndexStoreDB occurrences → SCIP protobuf messages
+- Contains: 5 files (~316 lines total) — 1 builder + 4 pure-function mappers
+- Key files: `SCIPIndexBuilder.swift` (119 lines, main loop), `SCIPSymbolFormatter.swift` (77 lines, symbol string formatting + `LocalSymbolNumberer`), `SymbolKindMapping.swift` (70 lines), `PositionMapping.swift` (29 lines), `SymbolRoleMapping.swift` (21 lines)
+- Subdirectories: None
 
-```
-Fixtures/MiniSwiftPackage/
-├── Package.swift                      # minimal SwiftPM package
-└── Sources/MiniSwiftPackage/Greeter.swift   # Greeter struct with greet()/name property
-```
-Used only by `IntegrationTests.swift`. There is **no Xcode fixture** — the xcodebuild path is
-validated by argument-list assertions only.
+## Key File Locations
 
-## Key Locations (quick reference)
+**Entry Points:**
+- `Sources/scip-swift/ScipSwiftCommand.swift` — `@main`, registers `IndexCommand` as default subcommand
+- `Sources/scip-swift/Commands/IndexCommand.swift` — pipeline coordinator (detect → build → map → serialize → write)
 
-| Need | Look at |
-|---|---|
-| Add a CLI flag | `Sources/scip-swift/Commands/IndexCommand.swift` |
-| Change build invocation | `Sources/scip-swift/Build/*BuildRunner.swift` |
-| Change symbol/role/kind mapping | `Sources/scip-swift/SCIPMapping/*Mapping.swift` |
-| Change the main indexing loop | `Sources/scip-swift/SCIPMapping/SCIPIndexBuilder.swift` |
-| Regenerate proto bindings | `Protos/generate.sh` (after editing `Protos/scip.proto`) |
-| Bump version | `Sources/scip-swift/Version.swift` |
-| CI config | `.github/workflows/ci.yml` |
+**Configuration:**
+- `Package.swift` — SwiftPM manifest (single executable + test target, 3 dependencies)
+- `.swift-version` — pins toolchain to 6.2.4
+- `.github/workflows/ci.yml` — CI config (macOS 26 runner, `swift build` + `swift test`)
+
+**Core Logic:**
+- `Sources/scip-swift/SCIPMapping/SCIPIndexBuilder.swift` — the main mapping loop
+- `Sources/scip-swift/SCIPMapping/SCIPSymbolFormatter.swift` — USR → SCIP symbol string
+- `Sources/scip-swift/SCIPMapping/SymbolKindMapping.swift` — IndexStoreDB `Symbol.Kind` → SCIP kind
+- `Sources/scip-swift/SCIPMapping/SymbolRoleMapping.swift` — `SymbolRole` bits → SCIP role bits
+- `Sources/scip-swift/SCIPMapping/PositionMapping.swift` — 1-based anchor → 0-based half-open range
+
+**Testing:**
+- `Tests/scip-swiftTests/` — 5 test files (Swift Testing `@Suite`/`@Test`, not XCTest)
+- `Fixtures/MiniSwiftPackage/` — minimal real Swift package used by integration tests
+
+**Documentation:**
+- `docs/system-architecture.md` — full architecture breakdown + end-to-end example
+- `docs/code-standards.md` — patterns catalog (enum namespaces, protocol abstraction, error types)
+- `docs/project-overview-pdr.md` — product requirements document
+- `docs/project-roadmap.md` — roadmap and milestones
+- `docs/research-scip-swift-limitations.md` — deep-dive on known and undocumented limitations
+- `CLAUDE.md` — project instructions for AI assistants
+- `README.md` — user-facing documentation
 
 ## Naming Conventions
 
-- **Files** are named after their primary type (`BuildError.swift` → `enum BuildError`,
-  `SCIPIndexBuilder.swift` → `struct SCIPIndexBuilder`). One primary type per file.
-- **Directories** group by pipeline stage / responsibility (`Build/`, `IndexStore/`,
-  `SCIPMapping/`, `Platform/`, `Commands/`, `Generated/`).
-- **Types**: `PascalCase`. Mapping namespaces and stateless utilities are `enum`; data carriers and
-  the orchestrator are `struct`; `BuildRunner` is a `protocol`.
-- **Generated code** lives under `Generated/` with a capitalized proto-derived name
-  (`Scip.pb.swift`, types prefixed `Scip_`).
+**Files:**
+- PascalCase matching the primary type: `BuildError.swift` contains `enum BuildError`, `SCIPIndexBuilder.swift` contains `struct SCIPIndexBuilder`
+- Acronyms fully capitalized: `SCIPSymbolFormatter`, `ScipSwiftCommand` (SCIP in type names)
+- Test files mirror the module name + `Tests`: `SymbolKindMappingTests.swift` tests `SymbolKindMapping`
 
-## Documentation
+**Directories:**
+- PascalCase: `Build/`, `IndexStore/`, `SCIPMapping/`, `Generated/`
+- Singular for functional areas (not pluralized collections)
 
-`docs/` contains: `codebase-summary.md`, `system-architecture.md`, `code-standards.md`,
-`project-overview-pdr.md`, `project-roadmap.md`, `research-scip-swift-limitations.md`, and
-`diagrams/` (`system-architecture.png`, `.excalidraw`, `architecture-diagram.html`).
+**Types:**
+- `enum` for stateless mappers: `SymbolKindMapping`, `SymbolRoleMapping`, `PositionMapping`, `SCIPSymbolFormatter`, `BuildBackendDetector`
+- `struct` for data carriers and the one stateful mapper: `IndexStoreBuildResult`, `LocalSymbolNumberer`, `SCIPIndexBuilder`
+- `protocol` for abstractions: `BuildRunner`
+
+## Where to Add New Code
+
+**New mapper (e.g., RelationshipMapping):**
+- Implementation: `Sources/scip-swift/SCIPMapping/RelationshipMapping.swift` as `enum RelationshipMapping { static func ... }`
+- Wire it in: `SCIPIndexBuilder.makeDocument()` — call the mapper inside the occurrence loop
+- Tests: `Tests/scip-swiftTests/RelationshipMappingTests.swift` as `@Suite("RelationshipMapping") struct RelationshipMappingTests`
+
+**New build backend (e.g., BazelBuildRunner):**
+- Implementation: `Sources/scip-swift/Build/BazelBuildRunner.swift` conforming to `BuildRunner`
+- Wire it in: Add a case to `BuildTool` enum, extend `BuildBackendDetector.detect()`, add a branch in `IndexCommand.produceIndexStore()`
+- Tests: `Tests/scip-swiftTests/BazelBuildRunnerTests.swift`
+
+**New CLI option:**
+- Definition: `Sources/scip-swift/Commands/IndexCommand.swift` — add `@Option` or `@Flag` property
+- Usage: In `IndexCommand.run()` or `produceIndexStore()`
+
+**New test:**
+- Unit test: `Tests/scip-swiftTests/<ModuleName>Tests.swift` using `@Suite`/`@Test`/`#expect`
+- Integration test: Extend `IntegrationTests.swift` or add a new fixture under `Fixtures/`
+
+## Special Directories
+
+**`Sources/scip-swift/Generated/`:**
+- Purpose: Auto-generated protobuf bindings
+- Source: `Protos/generate.sh` runs `protoc` + `protoc-gen-swift` against `Protos/scip.proto`
+- Committed: Yes (so consumers don't need protobuf toolchain to build)
+
+**`Fixtures/MiniSwiftPackage/`:**
+- Purpose: Real SwiftPM package for end-to-end integration testing (not mocked)
+- Contains: `Package.swift`, `Sources/MiniSwiftPackage/Greeter.swift` (a simple `struct Greeter` with `greet()` and `name`)
+- Committed: Yes — integration tests shell out to real `swift build` against this
+
+**`Protos/`:**
+- Purpose: Vendored SCIP schema and generation script
+- Contains: `scip.proto` (35KB, upstream from `sourcegraph/scip`), `generate.sh`
+- Committed: Yes
 
 ---
-*arch focus analysis: 2026-08-11*
-<!-- refreshed: 2026-08-11 -->
+
+*Structure analysis: 2026-08-11*
+*Update when directory structure changes*

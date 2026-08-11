@@ -1,143 +1,145 @@
----
-title: ARCHITECTURE
-focus: arch
-last_mapped_commit: 34a8c1e
----
-
-# ARCHITECTURE
+# Architecture
 
 **Analysis Date:** 2026-08-11
 
-System design and data flow for `scip-swift`.
+## Pattern Overview
 
-## Architectural Pattern
+**Overall:** Five-stage single-executable CLI pipeline (build → index access → map → serialize → output)
 
-A **linear five-stage pipeline** in a single executable target. There is no long-running process,
-no plugin system, and no request/response model: the CLI ingests a repo path and emits a single
-`.scip` file. Each stage hands a plain-data value to the next.
+**Key Characteristics:**
+- Single executable target, no library product
+- Linear pipeline — each stage's output feeds the next, no branching or async
+- Stateless pure-function mappers (side-effect-free enum namespaces)
+- In-memory processing — no persistent state between runs; every invocation rebuilds from scratch
+- Compiler-as-index-source — reads the Swift compiler's own IndexStore (same data Xcode/SourceKit-LSP use)
 
-```
-CLI (ArgumentParser)
-   │  repo path + options
-   ▼
-Build orchestration ──► IndexStoreBuildResult { indexStorePath }
-   │  (shells out to swift build / xcodebuild)
-   ▼
-IndexStore access ──► IndexStoreDB handle + [swift file paths]
-   │  (opens libIndexStore.dylib via IndexStoreDB)
-   ▼
-SCIP mapping ──► Scip_Index (protobuf message)
-   │  (stateless pure-function mappers)
-   ▼
-Output ──► serializedData() written to .scip file
-```
+## Layers
 
-The entry point is `Sources/scip-swift/ScipSwiftCommand.swift` (`@main`), which delegates to the
-`IndexCommand` subcommand (`Sources/scip-swift/Commands/IndexCommand.swift`) — also the
-`defaultSubcommand`, so the bare `scip-swift <repo>` form works. `IndexCommand.run()` owns the
-whole pipeline and the per-run temp work directory.
+**CLI Layer:**
+- Purpose: Parse arguments, dispatch to subcommand, own temp-directory lifecycle
+- Contains: `ScipSwiftCommand` (`@main` root), `IndexCommand` (sole/default subcommand)
+- Location: `Sources/scip-swift/ScipSwiftCommand.swift`, `Sources/scip-swift/Commands/IndexCommand.swift`
+- Depends on: Build orchestration + SCIP mapping layers
+- Used by: User invocation (`scip-swift <repo>`)
 
-## Layers (by directory)
+**Build Orchestration Layer:**
+- Purpose: Build the target repo with indexing enabled; locate the resulting IndexStore
+- Contains: `BuildBackendDetector`, `SwiftPMBuildRunner`, `XcodebuildBuildRunner`, `XcodeProjectLocator`, `SubprocessRunner`, `BuildError`, `BuildTool`, `BuildConfiguration`, `IndexStoreBuildResult`
+- Location: `Sources/scip-swift/Build/`
+- Depends on: `SubprocessRunner` (Foundation `Process`), `ToolchainInfo` (Platform layer)
+- Used by: `IndexCommand.produceIndexStore()`
 
-### 1. CLI — `ScipSwiftCommand.swift`, `Commands/IndexCommand.swift`
-ArgumentParser root + subcommand. `IndexCommand` parses `repoPath`, `--output`, `--build-tool`,
-`--configuration`, `--scheme`; resolves the build tool (explicit or auto-detected); creates a
-temp work dir; and coordinates the four remaining stages. All work-directory paths are composed
-from `NSTemporaryDirectory()/scip-swift-<uuid>/`.
+**Index Access Layer:**
+- Purpose: Open the IndexStoreDB at the build output path; discover `.swift` files in the repo
+- Contains: `IndexStoreLoader.open(storePath:databasePath:)`, `SwiftFileDiscovery.swiftFiles(underRepoPath:)`
+- Location: `Sources/scip-swift/IndexStore/`
+- Depends on: `IndexStoreDB` package, `ToolchainInfo` (locates `libIndexStore.dylib`)
+- Used by: `SCIPIndexBuilder.build()`
 
-### 2. Build orchestration — `Sources/scip-swift/Build/`
-Responsibility: build the target repo with indexing-while-building enabled and return the path to
-the resulting IndexStore as an `IndexStoreBuildResult`.
+**SCIP Mapping Layer:**
+- Purpose: Convert IndexStoreDB occurrences/symbols into SCIP protobuf messages
+- Contains: `SCIPIndexBuilder` (main loop + state), four pure mappers (`SCIPSymbolFormatter`, `SymbolKindMapping`, `SymbolRoleMapping`, `PositionMapping`)
+- Location: `Sources/scip-swift/SCIPMapping/`
+- Depends on: `IndexStoreDB`, `Generated/Scip.pb.swift`
+- Used by: `IndexCommand.run()` (calls `builder.build()`)
 
-- `BuildBackendDetector.detect(repoPath:)` picks `.swiftpm` vs `.xcodebuild` — prefers `Package.swift`,
-  else any `.xcworkspace`/`.xcodeproj` entry, else throws `BuildError.cannotDetectBuildSystem`.
-- `BuildRunner` protocol (`IndexStoreBuildResult.swift`) with two implementations:
-  - `SwiftPMBuildRunner` — `swift build --enable-index-store --scratch-path <p>`, then locates
-    `<scratch>/<triple>/<config>/index/store`.
-  - `XcodebuildBuildRunner` — `xcodebuild … COMPILER_INDEX_STORE_ENABLE=YES CODE_SIGNING_*=NO`,
-    IndexStore at `<derivedData>/Index.noindex/DataStore`.
-- `XcodeProjectLocator` resolves `-workspace`/`-project` args and the scheme (explicit, or the
-  single shared scheme from `xcodebuild -list -json`).
-- `SubprocessRunner` — `Process` wrapper with concurrent stdout/stderr reads (avoids pipe-buffer
-  deadlock) and `resolveExecutable(named:)` via `/usr/bin/env which`.
-- `BuildError` — exhaustive error enum, `CustomStringConvertible`; carries last subprocess output.
+**Platform Layer:**
+- Purpose: Resolve the active toolchain and locate `libIndexStore.dylib`
+- Contains: `ToolchainInfo` (`pinnedSwiftVersion`, `libIndexStorePath` via `xcrun --find swift`)
+- Location: `Sources/scip-swift/Platform/ToolchainInfo.swift`
+- Depends on: `Foundation.Process` (shells out to `xcrun`)
+- Used by: `IndexStoreLoader`, `IndexCommand` (version string)
 
-### 3. IndexStore access — `Sources/scip-swift/IndexStore/`
-- `IndexStoreLoader.open(storePath:databasePath:)` — instantiates `IndexStoreDB` with the dylib
-  resolved by `ToolchainInfo.libIndexStoreDylibPath()`.
-- `SwiftFileDiscovery.swiftFiles(underRepoPath:)` — walks the repo for `.swift` files, skipping
-  `.build`, `.git`, `.swiftpm`, `DerivedData`, `Pods`, `.index-build`. Returns sorted paths.
+**Generated Layer (vendored):**
+- Purpose: Swift protobuf bindings for the SCIP schema
+- Contains: `Scip_Index`, `Scip_Document`, `Scip_Occurrence`, `Scip_SymbolInformation`, `Scip_SingleLineRange`, `Scip_Metadata`, `Scip_ToolInfo`, `Scip_SymbolRole`
+- Location: `Sources/scip-swift/Generated/Scip.pb.swift` (3190 lines — never hand-edit; regenerate via `Protos/generate.sh`)
+- Depends on: `SwiftProtobuf`
+- Used by: SCIP mapping layer
 
-### 4. SCIP mapping — `Sources/scip-swift/SCIPMapping/`
-The core conversion. `SCIPIndexBuilder` is a `struct` (stateful, runs once) that drives the loop;
-it delegates to four **stateless** pure-function mappers.
+## Data Flow
 
-- `SCIPIndexBuilder.build()` (`SCIPIndexBuilder.swift`):
-  1. Opens the IndexStoreDB.
-  2. Builds `Scip_Metadata` (`toolInfo.name = "scip-swift"`, version, CLI args, `project_root`, utf8).
-  3. For each discovered `.swift` file → `makeDocument(...)`:
-     - Queries `indexStoreDB.symbolOccurrences(inFilePath:)`.
-     - For each occurrence (sorted): builds the SCIP symbol string (local vs global), an
-       `Scip_Occurrence` (symbol, roles via `SymbolRoleMapping`, range via `PositionMapping`),
-       and a `Scip_SymbolInformation` (symbol, displayName, kind via `SymbolKindMapping`).
-     - Definition occurrences populate `document.symbols`; non-local referenced occurrences are
-       tracked for `external_symbols`.
-  4. `external_symbols` = referenced-but-never-defined symbol infos (e.g. stdlib types), sorted.
-- The four pure mappers:
-  - `SCIPSymbolFormatter` — renders the canonical SCIP symbol string. Global symbols wrap the raw
-    compiler USR as an opaque escaped descriptor term (`scip-swift <pm> <module> . <usr>.`);
-    local symbols use `local <n>`. `LocalSymbolNumberer` assigns stable per-document IDs.
-  - `SymbolKindMapping` — IndexStoreDB `Symbol.Kind`/`subKind` → `Scip_SymbolInformation.Kind`
-    (exhaustive switch; subKind overrides for subscript/getter/setter).
-  - `SymbolRoleMapping` — IndexStoreDB `SymbolRole` bits → SCIP `SymbolRole` bits (definition,
-    write→writeAccess, read/reference→readAccess).
-  - `PositionMapping` — 1-based anchor point → 0-based half-open `Scip_SingleLineRange`; end column
-    approximated from display-name length (stops at first `(`).
+**Indexing a repository (the only flow):**
 
-### 5. Output
-`index.serializedData().write(to:)` to `--output` or `<repo>/index.scip`
-(`IndexCommand.run()`). Prints `Wrote N document(s) to <path>`.
+1. User runs `scip-swift <repoPath> [--output ...] [--build-tool ...] [--configuration ...] [--scheme ...]`
+2. `ScipSwiftCommand` (the `@main`) dispatches to `IndexCommand` (the default subcommand)
+3. `IndexCommand.run()` resolves `repoPath` to an absolute path
+4. `BuildBackendDetector.detect(repoPath:)` picks `.swiftpm` (if `Package.swift` exists) or `.xcodebuild` (if `.xcworkspace`/`.xcodeproj` found); `--build-tool` overrides
+5. A temp work directory is created under `$TMPDIR/scip-swift-<uuid>/`
+6. `produceIndexStore(tool:repoPath:workDirectory:)` switches on the build tool:
+   - `.swiftpm` → `SwiftPMBuildRunner` runs `swift build --scratch-path <tmp>/scratch --enable-index-store`, then finds `<scratch>/<triple>/<config>/index/store`
+   - `.xcodebuild` → `XcodeProjectLocator` resolves workspace/project + scheme, `XcodebuildBuildRunner` runs `xcodebuild build -derivedDataPath <tmp>/derived-data COMPILER_INDEX_STORE_ENABLE=YES CODE_SIGNING_ALLOWED=NO ...`, IndexStore is at `<derived>/Index.noindex/DataStore`
+7. `SCIPIndexBuilder` is initialized with the IndexStore path + a database path (`<workDir>/index-db`)
+8. `builder.build()` opens IndexStoreDB, walks every `.swift` file (via `SwiftFileDiscovery`), queries occurrences per file:
+   - Each occurrence → `SCIPSymbolFormatter` (symbol string) + `SymbolRoleMapping` (role bits) + `PositionMapping` (range) → `Scip_Occurrence`
+   - Defined symbols collected into `document.symbols`; referenced-but-undefined symbols tracked for `external_symbols`
+   - Locals (`.local` property) get `local <n>` IDs via `LocalSymbolNumberer`
+9. `index.externalSymbols` = referenced symbols not in any document's defined set (needed for `scip lint`)
+10. `index.serializedData()` written to `--output` or `<repo>/index.scip`
+11. Temp directory is left in place (not explicitly cleaned up beyond OS temp eviction)
+
+**State Management:**
+- No persistent state — every run is independent and starts from a clean build
+- Temp directory is created fresh per invocation via `UUID()`
+- IndexStoreDB database path is under the temp directory (ephemeral)
 
 ## Key Abstractions
 
-- **`BuildRunner` protocol** — decouples the pipeline from the concrete build tool; the mapping
-  layer is agnostic to which runner produced the IndexStore.
-- **Stateless `enum` namespaces** for pure mapping logic (`SymbolKindMapping`,
-  `SymbolRoleMapping`, `PositionMapping`, `SCIPSymbolFormatter`, `BuildBackendDetector`,
-  `SwiftFileDiscovery`, `IndexStoreLoader`, `SubprocessRunner`, `ToolchainInfo`,
-  `XcodeProjectLocator`). Signals "no constructor needed."
-- **`IndexStoreBuildResult`** — the plain-data handoff between build orchestration and mapping.
-- **`BuildError`** — typed, exhaustive errors; no generic string errors.
+**Enum-as-stateless-namespace (pure mapper):**
+- Purpose: Pure-function transformations from IndexStoreDB types to SCIP types — no instance state
+- Examples: `SCIPSymbolFormatter`, `SymbolKindMapping`, `SymbolRoleMapping`, `PositionMapping`, `BuildBackendDetector`
+- Pattern: `enum FooMapper { static func mapX(...) -> ScipY }` — using `enum` (not `struct`) signals "no instances, no constructor"
 
-## Data Flow (end-to-end example)
+**BuildRunner protocol:**
+- Purpose: Decouple the pipeline from a specific build tool
+- Examples: `SwiftPMBuildRunner`, `XcodebuildBuildRunner`
+- Pattern: Protocol with a single `produceIndexStore() throws -> IndexStoreBuildResult` method; `IndexCommand` switches on the `BuildTool` enum to pick the runner
 
-```
-repo/Package.swift
-  → BuildBackendDetector.detect → .swiftpm
-  → SwiftPMBuildRunner.produceIndexStore → swift build --enable-index-store --scratch-path <tmp>/scratch
-  → IndexStoreBuildResult(indexStorePath: "<tmp>/scratch/<triple>/debug/index/store")
-  → SCIPIndexBuilder(repoPath, indexStorePath, databasePath: "<tmp>/index-db", buildToolName: "swiftpm", converterVersion)
-  → IndexStoreLoader.open (loads libIndexStore.dylib)
-  → SwiftFileDiscovery.swiftFiles → [repo/Sources/Foo.swift, …]
-  → per file: IndexStoreDB.symbolOccurrences → Scip_Occurrence + Scip_SymbolInformation
-  → Scip_Index { metadata, documents, externalSymbols }
-  → serializedData() → repo/index.scip
-```
+**LocalSymbolNumberer (the one stateful mapper):**
+- Purpose: Assign stable per-document `local <n>` IDs to locally-scoped symbols
+- Location: `Sources/scip-swift/SCIPMapping/SCIPSymbolFormatter.swift` (bottom of file)
+- Pattern: `struct` with `private var idsByUSR: [String: Int]`; a fresh instance is created per document
+
+**BuildError (exhaustive error enum):**
+- Purpose: Every build-pipeline failure mode has a named case with an actionable `CustomStringConvertible` message
+- Location: `Sources/scip-swift/Build/BuildError.swift`
+- Pattern: `enum BuildError: Error, CustomStringConvertible` with 5 cases — no generic error strings
 
 ## Entry Points
 
-- `@main ScipSwiftCommand` (`Sources/scip-swift/ScipSwiftCommand.swift`) — the only entry point.
-- `IndexCommand.run()` is the pipeline orchestrator.
+**CLI entry (`@main`):**
+- Location: `Sources/scip-swift/ScipSwiftCommand.swift`
+- Triggers: Running the `scip-swift` executable
+- Responsibilities: Declare root command config, register `IndexCommand` as the sole subcommand
+
+**Subcommand dispatch:**
+- Location: `Sources/scip-swift/Commands/IndexCommand.swift`
+- Triggers: Any `scip-swift [index] <args>` invocation (`index` is optional — it's the `defaultSubcommand`)
+- Responsibilities: Parse args → detect build backend → create temp dir → run build → build SCIP index → write output
+
+## Error Handling
+
+**Strategy:** Swift typed errors (`Error` protocol) thrown and caught at `IndexCommand.run()` (ArgumentParser renders them to the user)
+
+**Patterns:**
+- `BuildError` — exhaustive 5-case enum; each case carries structured context (repoPath, tool name, exit code, output) and renders an actionable message via `CustomStringConvertible`
+- `IndexStoreLoader` throws whatever `IndexStoreDB` throws (opaque to the caller — no wrapping)
+- `SubprocessRunner.run()` throws `BuildError.toolNotLaunchable` if the executable can't be resolved
+- No `try?` or `Result` types — errors propagate via `throws` up to the CLI boundary
 
 ## Cross-Cutting Concerns
 
-- **Toolchain pinning** — `ToolchainInfo.pinnedSwiftVersion` (`6.2.4`) and `.swift-version`; USR
-  stability across toolchain versions is not guaranteed.
-- **macOS-only** — `libIndexStore.dylib` and Apple SDKs are macOS-only; enforced by host
-  requirements, not runtime checks.
-- **Temp-dir isolation** — each run gets its own `NSTemporaryDirectory()` work dir; cleaned up by
-  OS, not explicitly by the tool (tests use `defer { removeItem }`).
+**Logging:**
+- Minimal: `print("Wrote \(n) document(s) to \(path)")` on success — no logging framework, no debug output
+- Build failures surface the last 50 lines of subprocess output via `BuildError.buildFailed`
+
+**Toolchain resolution:**
+- `ToolchainInfo.libIndexStorePath` shells out to `xcrun --find swift`, then resolves `<toolchain>/usr/lib/libIndexStore.dylib` — happens at IndexStoreDB open time, not at startup
+
+**File discovery filtering:**
+- `SwiftFileDiscovery.skippedDirectoryNames` = `.build`, `.git`, `.swiftpm`, `DerivedData`, `Pods`, `.index-build` — prevents indexing dependency checkouts and build artifacts
 
 ---
-*arch focus analysis: 2026-08-11*
-<!-- refreshed: 2026-08-11 -->
+
+*Architecture analysis: 2026-08-11*
+*Update when major patterns change*
