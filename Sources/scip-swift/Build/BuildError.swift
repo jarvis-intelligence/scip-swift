@@ -20,6 +20,10 @@ enum BuildError: Error, CustomStringConvertible {
   /// The build reported success, but no IndexStore was found where one was expected.
   case indexStoreNotProduced(expectedPath: String)
 
+  /// `libIndexStore.dylib` was not found at the resolved toolchain path. The user needs
+  /// Xcode or Command Line Tools installed (DIST-04).
+  case xcodeRequired(dylibPath: String)
+
   var description: String {
     switch self {
     case .cannotDetectBuildSystem(let repoPath):
@@ -42,6 +46,17 @@ enum BuildError: Error, CustomStringConvertible {
         Build succeeded but no IndexStore was produced at \(expectedPath). This commonly happens \
         when the code being indexed cannot compile on this host (for example, Apple-platform-only \
         imports such as UIKit/WatchKit/WidgetKit on a non-macOS host, or a missing SDK).
+        """
+    case .xcodeRequired(let dylibPath):
+      return """
+        libIndexStore.dylib was not found at \(dylibPath). scip-swift requires Xcode or \
+        Command Line Tools to be installed.
+
+        To fix this:
+          1. Install Xcode from the Mac App Store, or run: xcode-select --install
+          2. If Xcode is installed but not selected, run: \
+        sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          3. Verify with: xcrun --find swift
         """
     }
   }
