@@ -60,7 +60,10 @@ Plans:
   3. Changing the Swift toolchain version, indexstore-db version, or scip-swift version invalidates the entire cache (no stale data served)
   4. `--index-only` mode skips the build step entirely and reads an existing IndexStore directly, enabling CI to reuse a prior build
   5. Integration test confirms cache correctness: index → modify source → re-index → changed symbols updated, unchanged symbols preserved, `scip lint` still passes
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 03-01-PLAN.md — Cache layer primitives: ContentHasher (SHA256), IndexManifest (version invalidation), CacheStore (protobuf document I/O) — TDD
+- [ ] 03-02-PLAN.md — Tracer: wire cache into SCIPIndexBuilder.build() + CLI flags --cache-dir/--index-only + integration test (TEST-04)
 
 ### Phase 4: Cross-Repo Indexing
 **Goal**: scip-swift can index multiple repositories and optionally merge them into a single `.scip` output, with symbol version disambiguation preventing collisions across same-named modules
@@ -95,7 +98,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Symbol Metadata Enrichment | 0/3 | Planned | - |
 | 2. Homebrew Distribution & Release Pipeline | 0/2 | Planned | - |
-| 3. Incremental Indexing | 0/TBD | Not started | - |
+| 3. Incremental Indexing | 0/2 | Planned | - |
 | 4. Cross-Repo Indexing | 0/TBD | Not started | - |
 | 5. Xcode End-to-End Test Fixture | 0/TBD | Not started | - |
 
