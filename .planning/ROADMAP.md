@@ -45,7 +45,10 @@ Plans:
   2. Push of a `v*` tag triggers a GitHub Actions workflow that builds a universal (arm64 + x86_64) binary, uploads it to GitHub Releases, and updates the Homebrew formula SHA256
   3. Running the binary on a machine with only CommandLineTools (no Xcode) produces a clear, actionable error message directing the user to install Xcode — not a cryptic dylib crash
   4. The universal binary runs natively on both Apple Silicon and Intel Macs
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 02-01-PLAN.md — Runtime dylib existence guard with actionable error (DIST-04)
+- [ ] 02-02-PLAN.md — Homebrew formula template + release CI pipeline with universal binary build (DIST-01, DIST-02, DIST-03)
 
 ### Phase 3: Incremental Indexing
 **Goal**: Re-indexing a repo reuses cached per-file `Scip_Document` protobufs for unchanged files, significantly reducing rebuild time for repos >100 files — with a correctness guarantee that stale cache is never served
@@ -91,7 +94,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Symbol Metadata Enrichment | 0/3 | Planned | - |
-| 2. Homebrew Distribution & Release Pipeline | 0/TBD | Not started | - |
+| 2. Homebrew Distribution & Release Pipeline | 0/2 | Planned | - |
 | 3. Incremental Indexing | 0/TBD | Not started | - |
 | 4. Cross-Repo Indexing | 0/TBD | Not started | - |
 | 5. Xcode End-to-End Test Fixture | 0/TBD | Not started | - |
