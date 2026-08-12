@@ -9,6 +9,7 @@ struct SCIPIndexBuilder {
   let databasePath: String
   let buildToolName: String
   let converterVersion: String
+  let symbolVersion: String
   let cacheStore: CacheStore?
 
   init(
@@ -17,6 +18,7 @@ struct SCIPIndexBuilder {
     databasePath: String,
     buildToolName: String,
     converterVersion: String,
+    symbolVersion: String = "",
     cacheStore: CacheStore? = nil
   ) {
     self.repoPath = repoPath
@@ -24,6 +26,7 @@ struct SCIPIndexBuilder {
     self.databasePath = databasePath
     self.buildToolName = buildToolName
     self.converterVersion = converterVersion
+    self.symbolVersion = symbolVersion
     self.cacheStore = cacheStore
   }
 
@@ -133,6 +136,7 @@ struct SCIPIndexBuilder {
         : SCIPSymbolFormatter.globalSymbolString(
           packageManager: buildToolName,
           moduleName: occurrence.location.moduleName,
+          version: symbolVersion,
           usr: symbol.usr
         )
 
@@ -160,6 +164,7 @@ struct SCIPIndexBuilder {
         symbolInformation.enclosingSymbol = SCIPSymbolFormatter.globalSymbolString(
           packageManager: buildToolName,
           moduleName: occurrence.location.moduleName,
+          version: symbolVersion,
           usr: childOfRelation.symbol.usr
         )
       }
@@ -172,6 +177,7 @@ struct SCIPIndexBuilder {
               SCIPSymbolFormatter.globalSymbolString(
                 packageManager: buildToolName,
                 moduleName: occurrence.location.moduleName,
+                version: symbolVersion,
                 usr: relSymbol.usr
               )
             }

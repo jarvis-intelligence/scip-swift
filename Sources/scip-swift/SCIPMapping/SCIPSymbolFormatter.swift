@@ -21,12 +21,12 @@ import IndexStoreDB
 enum SCIPSymbolFormatter {
   static let scheme = "scip-swift"
 
-  static func globalSymbolString(packageManager: String, moduleName: String, usr: String) -> String {
+  static func globalSymbolString(packageManager: String, moduleName: String, version: String = "", usr: String) -> String {
     let manager = escapeSpaceField(packageManager)
     let packageName = escapeSpaceField(moduleName)
-    let version = escapeSpaceField("")
+    let versionField = escapeSpaceField(version)
     let descriptor = "\(escapeIdentifierName(usr))."
-    return "\(escapeSpaceField(scheme)) \(manager) \(packageName) \(version) \(descriptor)"
+    return "\(escapeSpaceField(scheme)) \(manager) \(packageName) \(versionField) \(descriptor)"
   }
 
   static func localSymbolString(localID: Int) -> String {

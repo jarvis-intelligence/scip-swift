@@ -29,14 +29,40 @@ struct IndexCommand: ParsableCommand {
   @Flag(name: .long, help: "Skip the build step and read an existing IndexStore directly.")
   var indexOnly: Bool = false
 
-  private static let indexstoreDbRevision = "c993f4fb"
+  static let indexstoreDbRevision = "c993f4fb"
 
   func run() throws {
     let resolvedRepoPath = URL(fileURLWithPath: repoPath).standardizedFileURL.path
-    let tool = try buildTool ?? BuildBackendDetector.detect(repoPath: resolvedRepoPath)
+    let index = try Self.indexOneRepo(
+      repoPath: resolvedRepoPath,
+      output: output,
+      buildTool: buildTool,
+      configuration: configuration,
+      scheme: scheme,
+      cacheDir: cacheDir,
+      indexOnly: indexOnly,
+      symbolVersion: ""
+    )
+
+    let outputPath = output ?? (resolvedRepoPath as NSString).appendingPathComponent("index.scip")
+    try index.serializedData().write(to: URL(fileURLWithPath: outputPath))
+    print("Wrote \(index.documents.count) document(s) to \(outputPath)")
+  }
+
+  static func indexOneRepo(
+    repoPath: String,
+    output: String?,
+    buildTool: BuildTool?,
+    configuration: BuildConfiguration,
+    scheme: String?,
+    cacheDir: String?,
+    indexOnly: Bool,
+    symbolVersion: String
+  ) throws -> Scip_Index {
+    let tool = try buildTool ?? BuildBackendDetector.detect(repoPath: repoPath)
 
     let persistentCache = cacheDir != nil || indexOnly
-    let resolvedCacheDir = cacheDir ?? (resolvedRepoPath as NSString).appendingPathComponent(".scip-cache")
+    let resolvedCacheDir = cacheDir ?? (repoPath as NSString).appendingPathComponent(".scip-cache")
 
     let scratchPath: String
     let databasePath: String
@@ -59,19 +85,19 @@ struct IndexCommand: ParsableCommand {
         indexStorePath = foundPath
       } else {
         let runner = SwiftPMBuildRunner(
-          repoPath: resolvedRepoPath,
+          repoPath: repoPath,
           configuration: configuration,
           scratchPath: scratchPath
         )
         indexStorePath = try runner.produceIndexStore().indexStorePath
       }
     } else {
-      let workDirectory = try Self.makeTemporaryDirectory()
+      let workDirectory = makeTemporaryDirectory()
       scratchPath = (workDirectory as NSString).appendingPathComponent("scratch")
       databasePath = (workDirectory as NSString).appendingPathComponent("index-db")
 
       let runner = SwiftPMBuildRunner(
-        repoPath: resolvedRepoPath,
+        repoPath: repoPath,
         configuration: configuration,
         scratchPath: scratchPath
       )
@@ -85,14 +111,14 @@ struct IndexCommand: ParsableCommand {
         if !manifest.isCompatibleWith(
           toolchainVersion: ToolchainInfo.pinnedSwiftVersion,
           converterVersion: ScipSwiftVersion.version,
-          indexstoreDbRevision: Self.indexstoreDbRevision,
+          indexstoreDbRevision: indexstoreDbRevision,
           buildToolName: tool.rawValue
         ) {
           try store.invalidateAll()
           try store.saveManifest(IndexManifest(
             toolchainVersion: ToolchainInfo.pinnedSwiftVersion,
             converterVersion: ScipSwiftVersion.version,
-            indexstoreDbRevision: Self.indexstoreDbRevision,
+            indexstoreDbRevision: indexstoreDbRevision,
             buildToolName: tool.rawValue
           ))
         }
@@ -100,7 +126,7 @@ struct IndexCommand: ParsableCommand {
         try store.saveManifest(IndexManifest(
           toolchainVersion: ToolchainInfo.pinnedSwiftVersion,
           converterVersion: ScipSwiftVersion.version,
-          indexstoreDbRevision: Self.indexstoreDbRevision,
+          indexstoreDbRevision: indexstoreDbRevision,
           buildToolName: tool.rawValue
         ))
       }
@@ -108,24 +134,20 @@ struct IndexCommand: ParsableCommand {
     }
 
     let builder = SCIPIndexBuilder(
-      repoPath: resolvedRepoPath,
+      repoPath: repoPath,
       indexStorePath: indexStorePath,
       databasePath: databasePath,
       buildToolName: tool.rawValue,
       converterVersion: ScipSwiftVersion.version,
+      symbolVersion: symbolVersion,
       cacheStore: cacheStore
     )
-    let index = try builder.build()
-
-    let outputPath = output ?? (resolvedRepoPath as NSString).appendingPathComponent("index.scip")
-    try index.serializedData().write(to: URL(fileURLWithPath: outputPath))
-
-    print("Wrote \(index.documents.count) document(s) to \(outputPath)")
+    return try builder.build()
   }
 
-  private static func makeTemporaryDirectory() throws -> String {
+  private static func makeTemporaryDirectory() -> String {
     let path = (NSTemporaryDirectory() as NSString).appendingPathComponent("scip-swift-\(UUID().uuidString)")
-    try FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: true)
+    try? FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: true)
     return path
   }
 }

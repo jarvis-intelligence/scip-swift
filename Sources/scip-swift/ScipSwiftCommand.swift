@@ -6,7 +6,7 @@ struct ScipSwiftCommand: ParsableCommand {
     commandName: "scip-swift",
     abstract: "Converts a Swift repo's IndexStoreDB build index into a real scip.proto SCIP index.",
     version: "\(ScipSwiftVersion.version) (swift \(ToolchainInfo.pinnedSwiftVersion))",
-    subcommands: [IndexCommand.self],
+    subcommands: [IndexCommand.self, IndexManyCommand.self],
     defaultSubcommand: IndexCommand.self
   )
 }
