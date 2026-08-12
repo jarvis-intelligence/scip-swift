@@ -555,22 +555,22 @@ indexStoreDB.pollForUnitChangesAndWait()
 | A4 | The `Package.resolved` indexstore-db revision string can be read at runtime for the cache key | Pattern 2 | Low — it can be read from the file, or the `IndexStoreLibrary.version` runtime API can be used instead (verified at IndexStoreDB.swift:548-556) |
 | A5 | `.scip-cache/` is the right default cache directory name | CLI Flag | Low — easily changed; follows the convention of dot-prefixed tool directories (`.build`, `.swiftpm`, `.git`) |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **external_symbols computation with cached documents**
    - What we know: `makeDocument()` populates `referencedSymbols` and `systemReferencedSymbols` as side-effects during the occurrence loop. These are used for `external_symbols`. When a document is loaded from cache, these dictionaries are not populated.
    - What's unclear: Whether scanning the cached document's `occurrences` and `symbols` arrays post-assembly provides enough information to reconstruct the `external_symbols` set correctly.
-   - Recommendation: After assembling all documents (cached + fresh), iterate all documents' occurrences. An occurrence's `symbol` that doesn't appear in any document's `symbols[].symbol` is external. Check `isSystem` — but `isSystem` is an IndexStoreDB `SymbolLocation` property, not preserved in the SCIP `Scip_Occurrence` protobuf. **The planner must decide whether to store `isSystem` info in the cached document, or accept that `external_symbols` for cached documents uses the referenced-but-undefined heuristic.** Given that Phase 1 (META-04) moved to `isSystem`-based classification, the cache should preserve this info — potentially by storing the external symbol classification in the document itself or in a sidecar.
+   - RESOLVED: Plan 03-02 Task 1 implements post-assembly occurrence scanning. The isSystem distinction is not preserved through cache (Scip_Occurrence protobuf has no isSystem field); referenced-but-undefined heuristic is used for cached documents with documented rationale. (cached + fresh), iterate all documents' occurrences. An occurrence's `symbol` that doesn't appear in any document's `symbols[].symbol` is external. Check `isSystem` — but `isSystem` is an IndexStoreDB `SymbolLocation` property, not preserved in the SCIP `Scip_Occurrence` protobuf. **The planner must decide whether to store `isSystem` info in the cached document, or accept that `external_symbols` for cached documents uses the referenced-but-undefined heuristic.** Given that Phase 1 (META-04) moved to `isSystem`-based classification, the cache should preserve this info — potentially by storing the external symbol classification in the document itself or in a sidecar.
 
 2. **Xcode `--index-only` path resolution**
    - What we know: SwiftPM stores the index store under `<scratch>/<triple>/<config>/index/store`. Xcode stores it under `<derivedData>/Index.noindex/DataStore`.
    - What's unclear: Whether the `--index-only` mode should support both build backends or just SwiftPM initially. The `findIndexStore` logic is SwiftPM-specific.
-   - Recommendation: Support both in the initial implementation. XcodeBuildRunner already knows the index store path (`<derivedDataPath>/Index.noindex/DataStore`), so validation is straightforward.
+   - RESOLVED: SwiftPM-only for initial implementation (Plan 03-02 Task 2). Xcode --index-only deferred — documented as a known limitation. SwiftPM is the primary use case; Xcode path uses a different index store location convention that requires separate resolution logic. XcodeBuildRunner already knows the index store path (`<derivedDataPath>/Index.noindex/DataStore`), so validation is straightforward.
 
 3. **Cache directory in multi-module repos**
    - What we know: The default cache dir is `<repo>/.scip-cache/`. For a repo with multiple Swift packages (monorepo), all modules share one cache.
    - What's unclear: Whether file path collisions across modules could cause cache issues. Since the cache is keyed by content hash (not file path), this shouldn't be a problem — different files produce different hashes.
-   - Recommendation: Use content hash as the primary key; file path is only for manifest tracking. No action needed.
+   - RESOLVED: No action needed. Content hash is the primary key; file path collisions across modules are not possible because different files produce different hashes.; file path is only for manifest tracking. No action needed.
 
 ## Environment Availability
 
