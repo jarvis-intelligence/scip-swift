@@ -539,22 +539,22 @@ case .xcodeRequired(let dylibPath):
 | A5 | The tap repository URL is `github.com/phuongddx/homebrew-scip-swift` | Multiple sections | The git remote shows `github.com:jarvis-intelligence/scip-swift.git`; the GitHub username/org for the tap may differ from the main repo. User must confirm the exact tap repo owner. |
 | A6 | `--triple ...-macosx14` produces a binary that runs on macOS 14 | Code Examples (build) | Empirically tested with `macosx` (no version) which worked on macOS 26; `macosx14` version suffix should target macOS 14 but was not explicitly tested for deployment target behavior |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Tap repository owner and name**
    - What we know: The main repo is at `github.com/jarvis-intelligence/scip-swift` (from `git remote -v`). The README references `github.com/phuongddx/scip-swift`.
    - What's unclear: Which GitHub user/org owns the `homebrew-scip-swift` tap? Is it `phuongddx/homebrew-scip-swift` or `jarvis-intelligence/homebrew-scip-swift`?
-   - Recommendation: Use `phuongddx/homebrew-scip-swift` to match the README install instructions. The user should create this repo before the first release.
+   - RESOLVED: Plan 02-02 Task 1 uses a checkpoint:decision to resolve this. User confirms owner during execution./homebrew-scip-swift` to match the README install instructions. The user should create this repo before the first release.
 
 2. **Whether `libIndexStore.dylib` availability with CommandLineTools is macOS-version-dependent**
    - What we know: It exists at `/Library/Developer/CommandLineTools/usr/lib/libIndexStore.dylib` on this machine (macOS 26, Xcode 26.3). The earlier STACK.md research claimed it was Xcode-only.
    - What's unclear: Was this always the case, or is it a recent addition? Does it work on macOS 14/15 with older CommandLineTools?
-   - Recommendation: The runtime check handles both cases gracefully — if the dylib is missing (regardless of cause), the error message tells the user to install Xcode or CommandLineTools. No need to resolve this definitively for the check to be correct.
+   - RESOLVED: The runtime check (Plan 02-01) handles both cases gracefully — if the dylib is missing (regardless of cause), the error message tells the user to install Xcode or CommandLineTools. No need to resolve this definitively for the check to be correct.
 
 3. **Static vs dynamic Swift runtime linking**
    - What we know: The binary dynamically links `/usr/lib/swift/libswift*.dylib` (verified via `otool -L`). These ship with macOS 12+.
    - What's unclear: Should we add `--static-swift-stdlib` for extra safety on older macOS?
-   - Recommendation: Do NOT add static linking. The formula requires `macos: :sonoma` (14+), where the Swift ABI runtime is always present. Static linking would bloat the binary by ~30MB for no benefit.
+   - RESOLVED: Do NOT add static linking. The formula requires `macos: :sonoma` (14+), where the Swift ABI runtime is always present. Static linking would bloat the binary by ~30MB for no benefit.
 
 ## Environment Availability
 
