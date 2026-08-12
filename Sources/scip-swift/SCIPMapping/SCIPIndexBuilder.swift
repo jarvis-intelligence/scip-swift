@@ -88,7 +88,10 @@ struct SCIPIndexBuilder {
 
       var scipOccurrence = Scip_Occurrence()
       scipOccurrence.symbol = symbolString
-      scipOccurrence.symbolRoles = SymbolRoleMapping.scipRoles(for: occurrence.roles)
+      scipOccurrence.symbolRoles = SymbolRoleMapping.scipRoles(for: occurrence.roles, symbol: symbol)
+      if Self.isGeneratedPath(filePath) {
+        scipOccurrence.symbolRoles |= Int32(Scip_SymbolRole.generated.rawValue)
+      }
       scipOccurrence.singleLineRange = PositionMapping.singleLineRange(
         location: occurrence.location,
         displayName: symbol.name
@@ -99,6 +102,14 @@ struct SCIPIndexBuilder {
       symbolInformation.symbol = symbolString
       symbolInformation.displayName = symbol.name
       symbolInformation.kind = SymbolKindMapping.scipKind(for: symbol)
+
+      if isLocal, let childOfRelation = occurrence.relations.first(where: { $0.roles.contains(.childOf) }) {
+        symbolInformation.enclosingSymbol = SCIPSymbolFormatter.globalSymbolString(
+          packageManager: buildToolName,
+          moduleName: occurrence.location.moduleName,
+          usr: childOfRelation.symbol.usr
+        )
+      }
 
       if occurrence.roles.contains(.definition) {
         if !isLocal {
@@ -127,5 +138,11 @@ struct SCIPIndexBuilder {
     let normalizedRepoPath = repoPath.hasSuffix("/") ? repoPath : repoPath + "/"
     guard filePath.hasPrefix(normalizedRepoPath) else { return filePath }
     return String(filePath.dropFirst(normalizedRepoPath.count))
+  }
+
+  private static func isGeneratedPath(_ filePath: String) -> Bool {
+    let generatedComponents: Set<String> = [".build", "DerivedData", ".index-build"]
+    let components = filePath.split(separator: "/")
+    return components.contains { generatedComponents.contains(String($0)) }
   }
 }
