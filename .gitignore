@@ -8,3 +8,4 @@ Fixtures/MiniSwiftPackage/.build/
 # also matches our Sources/scip-swift/Build/ directory. Un-ignore it explicitly.
 !/Sources/scip-swift/Build/
 !/Sources/scip-swift/Build/**
+.scip-cache/

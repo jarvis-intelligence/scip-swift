@@ -24,6 +24,9 @@ enum BuildError: Error, CustomStringConvertible {
   /// Xcode or Command Line Tools installed (DIST-04).
   case xcodeRequired(dylibPath: String)
 
+  /// `--index-only` was used but no IndexStore was found at the expected persistent path.
+  case indexStoreNotFoundForIndexOnly(expectedPath: String)
+
   var description: String {
     switch self {
     case .cannotDetectBuildSystem(let repoPath):
@@ -57,6 +60,11 @@ enum BuildError: Error, CustomStringConvertible {
           2. If Xcode is installed but not selected, run: \
         sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           3. Verify with: xcrun --find swift
+        """
+    case .indexStoreNotFoundForIndexOnly(let expectedPath):
+      return """
+        --index-only was used but no IndexStore was found at \(expectedPath). \
+        Run scip-swift without --index-only first to build and cache the index store.
         """
     }
   }

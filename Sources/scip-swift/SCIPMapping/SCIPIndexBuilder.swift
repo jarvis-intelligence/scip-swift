@@ -4,45 +4,92 @@ import IndexStoreDB
 /// Requirement: IndexStoreDB to SCIP protobuf conversion (task 3.6) — drives the whole mapping,
 /// producing a complete `Scip_Index` from an opened IndexStoreDB.
 struct SCIPIndexBuilder {
-  /// Absolute path to the repo root (becomes `Metadata.project_root` and the base that
-  /// `Document.relative_path` is computed against).
   let repoPath: String
   let indexStorePath: String
   let databasePath: String
-  /// The build backend used ("swiftpm" or "xcodebuild"), embedded in every symbol's package
-  /// manager field.
   let buildToolName: String
   let converterVersion: String
+  let cacheStore: CacheStore?
+
+  init(
+    repoPath: String,
+    indexStorePath: String,
+    databasePath: String,
+    buildToolName: String,
+    converterVersion: String,
+    cacheStore: CacheStore? = nil
+  ) {
+    self.repoPath = repoPath
+    self.indexStorePath = indexStorePath
+    self.databasePath = databasePath
+    self.buildToolName = buildToolName
+    self.converterVersion = converterVersion
+    self.cacheStore = cacheStore
+  }
 
   func build() throws -> Scip_Index {
     let indexStoreDB = try IndexStoreLoader.open(storePath: indexStorePath, databasePath: databasePath)
+    indexStoreDB.pollForUnitChangesAndWait()
 
     var index = Scip_Index()
     index.metadata = makeMetadata()
 
-    // Every non-local symbol referenced anywhere, keyed by its SCIP symbol string. Used to
-    // populate `external_symbols` for symbols referenced but never defined in this index (e.g.
-    // Swift standard library types) — required for the emitted index to pass `scip lint`, since
-    // real `scip.proto` has no concept of "reference to an unaccounted-for symbol".
     var referencedSymbols: [String: Scip_SymbolInformation] = [:]
     var systemReferencedSymbols: [String: Scip_SymbolInformation] = [:]
     var definedSymbolStrings: Set<String> = []
 
     for filePath in SwiftFileDiscovery.swiftFiles(underRepoPath: repoPath) {
-      if let document = makeDocument(
-        filePath: filePath,
-        indexStoreDB: indexStoreDB,
-        referencedSymbols: &referencedSymbols,
-        systemReferencedSymbols: &systemReferencedSymbols
-      ) {
+      var document: Scip_Document?
+
+      if let cacheStore {
+        let contentHash = try? ContentHasher.sha256Hex(of: filePath)
+        if let hash = contentHash {
+          if let cached = cacheStore.loadDocument(hash: hash),
+             indexStoreDB.dateOfLatestUnitFor(filePath: filePath) != nil {
+            document = cached
+          }
+        }
+
+        if document == nil {
+          if let fresh = makeDocument(
+            filePath: filePath,
+            indexStoreDB: indexStoreDB,
+            referencedSymbols: &referencedSymbols,
+            systemReferencedSymbols: &systemReferencedSymbols
+          ) {
+            if let hash = contentHash {
+              try? cacheStore.saveDocument(fresh, hash: hash)
+            }
+            document = fresh
+          }
+        }
+      } else {
+        document = makeDocument(
+          filePath: filePath,
+          indexStoreDB: indexStoreDB,
+          referencedSymbols: &referencedSymbols,
+          systemReferencedSymbols: &systemReferencedSymbols
+        )
+      }
+
+      if let document {
         definedSymbolStrings.formUnion(document.symbols.map(\.symbol))
         index.documents.append(document)
       }
     }
 
-    index.externalSymbols = Array(systemReferencedSymbols.values) + Array(referencedSymbols.values)
-      .filter { !definedSymbolStrings.contains($0.symbol) }
-      .sorted { $0.symbol < $1.symbol }
+    var externalSymbols: [String: Scip_SymbolInformation] = [:]
+    for doc in index.documents {
+      for occurrence in doc.occurrences {
+        let sym = occurrence.symbol
+        if !sym.hasPrefix("local ") && !definedSymbolStrings.contains(sym) && externalSymbols[sym] == nil {
+          var info = Scip_SymbolInformation()
+          info.symbol = sym
+          externalSymbols[sym] = info
+        }
+      }
+    }
+    index.externalSymbols = externalSymbols.values.sorted { $0.symbol < $1.symbol }
 
     return index
   }

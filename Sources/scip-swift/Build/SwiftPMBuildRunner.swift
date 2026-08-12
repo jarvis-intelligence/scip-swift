@@ -36,7 +36,7 @@ struct SwiftPMBuildRunner: BuildRunner {
     return IndexStoreBuildResult(indexStorePath: indexStorePath)
   }
 
-  private static func findIndexStore(underScratchPath scratchPath: String, configuration: BuildConfiguration) -> String? {
+  static func findIndexStore(underScratchPath scratchPath: String, configuration: BuildConfiguration) -> String? {
     let fileManager = FileManager.default
     let tripleDirectories = (try? fileManager.contentsOfDirectory(atPath: scratchPath)) ?? []
     for triple in tripleDirectories {
