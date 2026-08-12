@@ -1,0 +1,67 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Build arm64
+        run: swift build -c release --triple arm64-apple-macosx14 --scratch-path .build/arm64
+
+      - name: Build x86_64
+        run: swift build -c release --triple x86_64-apple-macosx14 --scratch-path .build/x86
+
+      - name: Create universal binary
+        run: |
+          lipo -create \
+            .build/arm64/release/scip-swift \
+            .build/x86/release/scip-swift \
+            -output scip-swift
+          lipo -info scip-swift
+          ./scip-swift --version
+
+      - name: Create tarball and compute SHA256
+        id: tarball
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          tar czf scip-swift-${VERSION}.tar.gz scip-swift
+          SHA256=$(shasum -a 256 scip-swift-${VERSION}.tar.gz | awk '{print $1}')
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "sha256=${SHA256}" >> $GITHUB_OUTPUT
+          echo "tarball=scip-swift-${VERSION}.tar.gz" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            "${{ steps.tarball.outputs.tarball }}" \
+            --title "${GITHUB_REF_NAME}" \
+            --generate-notes
+
+      - name: Update tap formula
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/phuongddx/homebrew-scip-swift.git" /tmp/tap
+          cd /tmp/tap
+          VERSION=${{ steps.tarball.outputs.version }}
+          SHA256=${{ steps.tarball.outputs.sha256 }}
+          sed -i '' "s|url .*|url \"https://github.com/phuongddx/scip-swift/releases/download/v${VERSION}/scip-swift-${VERSION}.tar.gz\"|" Formula/scip-swift.rb
+          sed -i '' "s|sha256 .*|sha256 \"${SHA256}\"|" Formula/scip-swift.rb
+          sed -i '' "s|version .*|version \"${VERSION}\"|" Formula/scip-swift.rb
+          git add Formula/scip-swift.rb
+          git commit -m "scip-swift ${VERSION}"
+          git push origin main
