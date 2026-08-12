@@ -25,20 +25,22 @@ struct SCIPIndexBuilder {
     // Swift standard library types) — required for the emitted index to pass `scip lint`, since
     // real `scip.proto` has no concept of "reference to an unaccounted-for symbol".
     var referencedSymbols: [String: Scip_SymbolInformation] = [:]
+    var systemReferencedSymbols: [String: Scip_SymbolInformation] = [:]
     var definedSymbolStrings: Set<String> = []
 
     for filePath in SwiftFileDiscovery.swiftFiles(underRepoPath: repoPath) {
       if let document = makeDocument(
         filePath: filePath,
         indexStoreDB: indexStoreDB,
-        referencedSymbols: &referencedSymbols
+        referencedSymbols: &referencedSymbols,
+        systemReferencedSymbols: &systemReferencedSymbols
       ) {
         definedSymbolStrings.formUnion(document.symbols.map(\.symbol))
         index.documents.append(document)
       }
     }
 
-    index.externalSymbols = referencedSymbols.values
+    index.externalSymbols = Array(systemReferencedSymbols.values) + Array(referencedSymbols.values)
       .filter { !definedSymbolStrings.contains($0.symbol) }
       .sorted { $0.symbol < $1.symbol }
 
@@ -61,7 +63,8 @@ struct SCIPIndexBuilder {
   private func makeDocument(
     filePath: String,
     indexStoreDB: IndexStoreDB,
-    referencedSymbols: inout [String: Scip_SymbolInformation]
+    referencedSymbols: inout [String: Scip_SymbolInformation],
+    systemReferencedSymbols: inout [String: Scip_SymbolInformation]
   ) -> Scip_Document? {
     let occurrences = indexStoreDB.symbolOccurrences(inFilePath: filePath)
     guard !occurrences.isEmpty else { return nil }
@@ -102,6 +105,9 @@ struct SCIPIndexBuilder {
       symbolInformation.symbol = symbolString
       symbolInformation.displayName = symbol.name
       symbolInformation.kind = SymbolKindMapping.scipKind(for: symbol)
+      if let signature = SignatureMapping.signature(for: symbol) {
+        symbolInformation.signatureDocumentation = signature
+      }
 
       if isLocal, let childOfRelation = occurrence.relations.first(where: { $0.roles.contains(.childOf) }) {
         symbolInformation.enclosingSymbol = SCIPSymbolFormatter.globalSymbolString(
@@ -125,8 +131,12 @@ struct SCIPIndexBuilder {
           )
         }
         definedSymbols[symbolString] = symbolInformation
-      } else if !isLocal, referencedSymbols[symbolString] == nil {
-        referencedSymbols[symbolString] = symbolInformation
+      } else if !isLocal, referencedSymbols[symbolString] == nil, systemReferencedSymbols[symbolString] == nil {
+        if occurrence.location.isSystem {
+          systemReferencedSymbols[symbolString] = symbolInformation
+        } else {
+          referencedSymbols[symbolString] = symbolInformation
+        }
       }
     }
 
