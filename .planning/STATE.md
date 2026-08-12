@@ -3,10 +3,10 @@ gsd_state_version: '1.0'
 status: executing
 progress:
   total_phases: 5
-  completed_phases: 0
-  total_plans: 3
-  completed_plans: 3
-  percent: 20
+  completed_phases: 2
+  total_plans: 5
+  completed_plans: 5
+  percent: 40
 ---
 
 # Project State
@@ -16,78 +16,47 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-11)
 
 **Core value:** Produce valid, `scip lint`-passing `.scip` indexes from any Swift repository so Swift developers get the same code intelligence that exists for other languages.
-**Current focus:** Phase 1 — Symbol Metadata Enrichment (execution complete, pending verification)
+**Current focus:** Phase 2 complete — ready for Phase 3 (Incremental Indexing)
 
 ## Current Position
 
-Phase: 1 of 5 (Symbol Metadata Enrichment)
-Plan: 3 of 3 in current phase
-Status: Execution complete — 54 tests pass, ready for verification
-Last activity: 2026-08-12 — All 3 plans executed inline (subagents hit 503 capacity errors)
+Phase: 2 of 5 (Homebrew Distribution & Release Pipeline) ✅
+Plan: 2 of 2 in Phase 2
+Status: Execution complete — 57 tests pass
+Last activity: 2026-08-12 — Both plans executed inline
 
-Progress: [████░░░░░░] 20%
+Progress: [████░░░░░░] 40%
 
-## Phase 1 Results
+## Completed Phases
 
-### Plans Executed
+### Phase 1: Symbol Metadata Enrichment ✅
+- 3 plans, 54 tests (30→54)
+- RelationshipMapping, SignatureMapping, expanded SymbolRoleMapping, isSystem, enclosing_symbol
 
-| Plan | Status | Requirements | Tests |
-|------|--------|-------------|-------|
-| 01-01 (tracer) | ✅ DONE | META-06, META-01, TEST-02 | 8 (3 spike + 5 mapping) |
-| 01-02 (roles) | ✅ DONE | META-03, META-02, TEST-03 | 12 (4 new role + 8 existing) |
-| 01-03 (isSystem+sigs) | ✅ DONE | META-04, META-05 | 12 new signature tests |
+### Phase 2: Homebrew Distribution & Release Pipeline ✅
+- 2 plans, 57 tests (54→57)
+- Runtime dylib guard, Homebrew formula, release CI pipeline
 
-### Key Spike Finding (META-06)
+## Next Phase
 
-Swift IndexStoreDB populates `.overrideOf` and `.childOf` on **member** occurrences (methods, initializers) but NOT on type-level definitions. Type-level inheritance/conformance is not expressed via `occurrence.relations`. Relationship mapping covers method overrides; type-level inheritance is a known limitation.
-
-### New Files
-
-- `Sources/scip-swift/SCIPMapping/RelationshipMapping.swift` — relations → SCIP Relationship
-- `Sources/scip-swift/SCIPMapping/SignatureMapping.swift` — Symbol → Scip_Signature
-- `Fixtures/RelationSpikeFixture/` — spike validation package
-- `Tests/scip-swiftTests/RelationshipMappingTests.swift` — 5 unit tests
-- `Tests/scip-swiftTests/SignatureMappingTests.swift` — 12 unit tests
-- `Tests/scip-swiftTests/RelationSpikeTests.swift` — 3 spike diagnostic tests
-
-### Modified Files
-
-- `Sources/scip-swift/SCIPMapping/SymbolRoleMapping.swift` — new signature + 3 role bits
-- `Sources/scip-swift/SCIPMapping/SCIPIndexBuilder.swift` — relationships, enclosing, Generated, isSystem, signatures
-- `Tests/scip-swiftTests/SymbolRoleMappingTests.swift` — 4 new test cases
-
-## Performance Metrics
-
-**Velocity:**
-- Total plans completed: 3
-- Average duration: ~15 min (inline execution)
-- Total execution time: ~45 min
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 1 | 3 | 45min | 15min |
+### Phase 3: Incremental Indexing
+- Depends on Phase 1 (cache schema must be stable — enrichment landed ✅)
+- Requirements: INCR-01 through INCR-06, TEST-04
+- Cache per-file Scip_Document protobufs, content-hash invalidation, --index-only mode
 
 ## Accumulated Context
 
 ### Decisions
 
-- **Phase 1 execution:** Subagents hit persistent 503 API capacity errors; switched to inline execution per the workflow's fallback path
-- **Spike finding:** Type-level relations not populated for Swift — relationship mapping scope correctly narrowed to member-level overrides
-- **SymbolRoleMapping:** Added backwards-compatible overload `scipRoles(for:)` to avoid breaking existing callers without symbol access
-
-### Pending Todos
-
-- Run `$gsd-verify-work 1` to verify phase completion
-- Phase 2 (Homebrew Distribution) can start after Phase 1 verification
+- **Phase 2 tap owner:** `phuongddx` chosen (matches README install instructions)
+- **Phase 2 execution:** Subagent executors hit persistent 503 errors; both plans executed inline
 
 ### Blockers/Concerns
 
-None — all 54 tests pass, all 8 requirements covered.
+None — all 57 tests pass.
 
 ## Session Continuity
 
 Last session: 2026-08-12
-Stopped at: Phase 1 execution complete — 3/3 plans done, 54 tests pass, pending verification
+Stopped at: Phase 2 complete — 5/5 plans executed across Phases 1+2, ready for Phase 3 planning
 Resume file: None
