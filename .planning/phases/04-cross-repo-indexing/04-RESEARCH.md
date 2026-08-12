@@ -369,22 +369,22 @@ static func resolveExternalSymbols(
 | A3 | The `index-many` subcommand should produce individual `.scip` files even without `--merge` | CROSS-01/02 | If the user expects `index-many` to always merge, the UX is wrong. LOW risk — `--merge` is an explicit flag, and separate files are more flexible. |
 | A4 | `scip lint` is available as a binary on the CI machine for TEST-05 | Validation Architecture | If not available, the integration test needs a Go build step to compile it. MEDIUM risk — documented as an environment dependency. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **What value should populate the version field by default?**
    - What we know: The field is currently empty (`.`). It must be repo-specific to prevent collisions. Options: (a) SwiftPM package name + version from `Package.swift`, (b) git commit hash, (c) user-supplied `--symbol-version` flag, (d) hash of repo URL.
    - What's unclear: Which is most natural for the scip-swift use case. scip-python uses `--project-name`/`--project-namespace` [CITED: .planning/research/STACK.md L296]. scip-typescript doesn't use the version field (relies on npm package scoping).
-   - Recommendation: Default to empty for single-repo `index` (backward compat); require `--symbol-version` or auto-derive from git hash for `index-many`. Let the planner decide the exact default.
+   - RESOLVED: Default to empty for single-repo index (backward compat); repo directory basename for index-many. Planner decision — no git hash dependency or user flag required. for single-repo `index` (backward compat); require `--symbol-version` or auto-derive from git hash for `index-many`. Let the planner decide the exact default.
 
 2. **Should the merged index set `projectRoot` to a virtual path?**
    - What we know: `scip lint` doesn't validate that `projectRoot` exists on disk — it only uses it for metadata [VERIFIED: scip lint source — projectRoot is not checked in lint logic].
    - What's unclear: Whether Sourcegraph handles a virtual/empty projectRoot gracefully in a merged index.
-   - Recommendation: Set `projectRoot` to the output directory path (where the merged `.scip` is written). This is a pragmatic default the planner can adjust.
+   - RESOLVED: Set projectRoot to output directory path. Pragmatic default, planner can adjust. to the output directory path (where the merged `.scip` is written). This is a pragmatic default the planner can adjust.
 
 3. **Should `index-many` support `--cache-dir` and `--index-only` per repo?**
    - What we know: Phase 3 added these flags to `IndexCommand`. The extracted `indexOneRepo()` function accepts them.
    - What's unclear: Whether per-repo cache directories are needed, or a shared cache root with repo subdirectories.
-   - Recommendation: Support `--cache-dir` as a parent directory, with `<cache-dir>/<repo-name>/` per repo. Planner decides.
+   - RESOLVED: Support --cache-dir as parent with per-repo subdirectories. Planner decision. as a parent directory, with `<cache-dir>/<repo-name>/` per repo. Planner decides.
 
 ## Environment Availability
 
