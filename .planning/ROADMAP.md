@@ -75,7 +75,10 @@ Plans:
   3. `--merge` flag combines multiple `.scip` indexes into a single output that passes `scip lint` with no duplicate-symbol warnings
   4. Cross-repo references resolve via the SCIP `external_symbols` mechanism — a symbol referenced in RepoA but defined in RepoB resolves correctly in the merged index
   5. Integration test confirms: index two repos with same-named modules → merge → `scip lint` passes → cross-repo "go to definition" works
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 04-01-PLAN.md — Tracer: version field population (CROSS-03), indexOneRepo extraction, IndexManyCommand subcommand (CROSS-01/02), basic ScipIndexMerger wired end-to-end
+- [ ] 04-02-PLAN.md — ScipIndexMerger correctness rules: external symbol stripping + path prefixing (CROSS-04/05), cross-repo fixtures + multi-repo merge integration test (TEST-05)
 
 ### Phase 5: Xcode End-to-End Test Fixture
 **Goal**: The Xcode build path is validated by a real end-to-end integration test (not argument assertions only), preventing silent regressions for Xcode-only projects
@@ -99,7 +102,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 1. Symbol Metadata Enrichment | 0/3 | Planned | - |
 | 2. Homebrew Distribution & Release Pipeline | 0/2 | Planned | - |
 | 3. Incremental Indexing | 0/2 | Planned | - |
-| 4. Cross-Repo Indexing | 0/TBD | Not started | - |
+| 4. Cross-Repo Indexing | 0/2 | Planned | - |
 | 5. Xcode End-to-End Test Fixture | 0/TBD | Not started | - |
 
 ---
