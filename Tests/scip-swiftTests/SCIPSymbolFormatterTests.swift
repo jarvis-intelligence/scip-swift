@@ -65,4 +65,36 @@ struct SCIPSymbolFormatterTests {
     #expect(second == 1)
     #expect(firstAgain == first)
   }
+
+  @Test("non-empty version populates the fourth field instead of the dot placeholder")
+  func versionFieldPopulated() {
+    let symbol = SCIPSymbolFormatter.globalSymbolString(
+      packageManager: "swiftpm",
+      moduleName: "MiniSwiftPackage",
+      version: "abc123",
+      usr: "s:16MiniSwiftPackage7GreeterV"
+    )
+    #expect(symbol == "scip-swift swiftpm MiniSwiftPackage abc123 `s:16MiniSwiftPackage7GreeterV`.")
+  }
+
+  @Test("default empty version preserves the dot placeholder (backward compatibility)")
+  func versionFieldDefaultEmpty() {
+    let symbol = SCIPSymbolFormatter.globalSymbolString(
+      packageManager: "swiftpm",
+      moduleName: "MiniSwiftPackage",
+      usr: "s:16MiniSwiftPackage7GreeterV"
+    )
+    #expect(symbol == "scip-swift swiftpm MiniSwiftPackage . `s:16MiniSwiftPackage7GreeterV`.")
+  }
+
+  @Test("spaces in the version field are doubled per escape rules")
+  func versionFieldSpaceDoubling() {
+    let symbol = SCIPSymbolFormatter.globalSymbolString(
+      packageManager: "swiftpm",
+      moduleName: "MiniSwiftPackage",
+      version: "a b",
+      usr: "abc123"
+    )
+    #expect(symbol == "scip-swift swiftpm MiniSwiftPackage a  b abc123.")
+  }
 }
