@@ -101,6 +101,18 @@ struct SCIPIndexBuilder {
       symbolInformation.kind = SymbolKindMapping.scipKind(for: symbol)
 
       if occurrence.roles.contains(.definition) {
+        if !isLocal {
+          symbolInformation.relationships = RelationshipMapping.scipRelationships(
+            for: occurrence.relations,
+            symbolFormatter: { relSymbol in
+              SCIPSymbolFormatter.globalSymbolString(
+                packageManager: buildToolName,
+                moduleName: occurrence.location.moduleName,
+                usr: relSymbol.usr
+              )
+            }
+          )
+        }
         definedSymbols[symbolString] = symbolInformation
       } else if !isLocal, referencedSymbols[symbolString] == nil {
         referencedSymbols[symbolString] = symbolInformation
