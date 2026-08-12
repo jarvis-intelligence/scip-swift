@@ -1,12 +1,12 @@
 ---
 gsd_state_version: '1.0'
-status: planning
+status: executing
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 3
+  completed_plans: 3
+  percent: 20
 ---
 
 # Project State
@@ -16,70 +16,78 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-11)
 
 **Core value:** Produce valid, `scip lint`-passing `.scip` indexes from any Swift repository so Swift developers get the same code intelligence that exists for other languages.
-**Current focus:** Phase 1 — Symbol Metadata Enrichment (not yet planned)
+**Current focus:** Phase 1 — Symbol Metadata Enrichment (execution complete, pending verification)
 
 ## Current Position
 
 Phase: 1 of 5 (Symbol Metadata Enrichment)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-08-11 — Roadmap created with 5 phases, 26 requirements mapped
+Plan: 3 of 3 in current phase
+Status: Execution complete — 54 tests pass, ready for verification
+Last activity: 2026-08-12 — All 3 plans executed inline (subagents hit 503 capacity errors)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [████░░░░░░] 20%
+
+## Phase 1 Results
+
+### Plans Executed
+
+| Plan | Status | Requirements | Tests |
+|------|--------|-------------|-------|
+| 01-01 (tracer) | ✅ DONE | META-06, META-01, TEST-02 | 8 (3 spike + 5 mapping) |
+| 01-02 (roles) | ✅ DONE | META-03, META-02, TEST-03 | 12 (4 new role + 8 existing) |
+| 01-03 (isSystem+sigs) | ✅ DONE | META-04, META-05 | 12 new signature tests |
+
+### Key Spike Finding (META-06)
+
+Swift IndexStoreDB populates `.overrideOf` and `.childOf` on **member** occurrences (methods, initializers) but NOT on type-level definitions. Type-level inheritance/conformance is not expressed via `occurrence.relations`. Relationship mapping covers method overrides; type-level inheritance is a known limitation.
+
+### New Files
+
+- `Sources/scip-swift/SCIPMapping/RelationshipMapping.swift` — relations → SCIP Relationship
+- `Sources/scip-swift/SCIPMapping/SignatureMapping.swift` — Symbol → Scip_Signature
+- `Fixtures/RelationSpikeFixture/` — spike validation package
+- `Tests/scip-swiftTests/RelationshipMappingTests.swift` — 5 unit tests
+- `Tests/scip-swiftTests/SignatureMappingTests.swift` — 12 unit tests
+- `Tests/scip-swiftTests/RelationSpikeTests.swift` — 3 spike diagnostic tests
+
+### Modified Files
+
+- `Sources/scip-swift/SCIPMapping/SymbolRoleMapping.swift` — new signature + 3 role bits
+- `Sources/scip-swift/SCIPMapping/SCIPIndexBuilder.swift` — relationships, enclosing, Generated, isSystem, signatures
+- `Tests/scip-swiftTests/SymbolRoleMappingTests.swift` — 4 new test cases
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: —
+- Total plans completed: 3
+- Average duration: ~15 min (inline execution)
+- Total execution time: ~45 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
-
-**Recent Trend:**
-- Last 5 plans: —
-- Trend: —
-
-*Updated after each plan completion*
+| 1 | 3 | 45min | 15min |
 
 ## Accumulated Context
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
-
-- **Roadmap**: Enrichment-first ordering — Phase 1 must be stable before Phase 3 caching, otherwise cached documents lack relationships/signatures and every enrichment improvement invalidates all cache entries
-- **Roadmap**: META-06 (validate Swift relation population depth) is a spike that must happen FIRST within Phase 1 before committing to the full relationship mapping design — single biggest unknown in the roadmap
-- **Roadmap**: Phases 1 and 2 are independent and can run in parallel if capacity allows
-- **Roadmap**: CROSS-03 (version field in symbol strings) must be populated before multi-repo merge (CROSS-04) can work without collisions
+- **Phase 1 execution:** Subagents hit persistent 503 API capacity errors; switched to inline execution per the workflow's fallback path
+- **Spike finding:** Type-level relations not populated for Swift — relationship mapping scope correctly narrowed to member-level overrides
+- **SymbolRoleMapping:** Added backwards-compatible overload `scipRoles(for:)` to avoid breaking existing callers without symbol access
 
 ### Pending Todos
 
-None yet.
+- Run `$gsd-verify-work 1` to verify phase completion
+- Phase 2 (Homebrew Distribution) can start after Phase 1 verification
 
 ### Blockers/Concerns
 
-- **Phase 1 spike (META-06):** Swift compiler relation population depth for IndexStoreDB is empirically unverified. The API exists (confirmed from source), but whether Swift populates `.baseOf`/`.overrideOf`/`.extendedBy` as richly as Clang is the biggest open question. If depth is shallow, relationship mapping scope must be reduced.
-- **Phase 3 cache invalidation:** IndexStoreDB lifecycle semantics (`pollForUnitChangesAndWait`, `dateOfLatestUnitFor`) are documented but the end-to-end cache correctness flow needs integration testing during planning.
-
-## Deferred Items
-
-Items acknowledged and carried forward from previous milestone close:
-
-| Category | Item | Status | Deferred At |
-|----------|------|--------|-------------|
-| v1.0+ | READ-01 (demangled symbol names) | Deferred | v0.2.0 init — needs compiler mangling library |
-| v1.0+ | READ-02 (exact occurrence ranges) | Deferred | v0.2.0 init — needs AST-level source data |
-| v1.0+ | PERF-01 (streaming protobuf) | Deferred | v0.2.0 init — premature optimization |
-| v1.0+ | PERF-02 (parallel symbol processing) | Deferred | v0.2.0 init |
+None — all 54 tests pass, all 8 requirements covered.
 
 ## Session Continuity
 
-Last session: 2026-08-11
-Stopped at: Roadmap created — 5 phases, 26/26 requirements mapped, ready for Phase 1 planning
+Last session: 2026-08-12
+Stopped at: Phase 1 execution complete — 3/3 plans done, 54 tests pass, pending verification
 Resume file: None
