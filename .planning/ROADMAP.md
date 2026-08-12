@@ -7,6 +7,7 @@ scip-swift v0.2.0 closes the parity gaps between scip-swift and peer indexers (s
 ## Phases
 
 **Phase Numbering:**
+
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
@@ -21,73 +22,92 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Phase Details
 
 ### Phase 1: Symbol Metadata Enrichment
+
 **Goal**: The emitted `.scip` index contains relationships (inheritance, conformance, override), enclosing symbols for locals, expanded role bits (Test, Generated, ForwardDefinition), basic signatures, and authoritative external-symbol classification — enabling "Find implementations" and protocol/override navigation that peer indexers already provide
 **Depends on**: Nothing (first enrichment phase; must be stable before Phase 3 caching)
 **Requirements**: META-01, META-02, META-03, META-04, META-05, META-06, TEST-02, TEST-03
 **Success Criteria** (what must be TRUE):
+
   1. Indexing a file with `class B: A {}` produces a `Relationship` on `B` pointing to `A` with `is_implementation = true`, and "Find implementations" on `A` returns `B` in a SCIP consumer
   2. Local symbols (function-local variables/parameters) have `enclosing_symbol` populated, so they appear nested under their containing scope in symbol outlines
   3. Swift Testing / XCTest symbols carry the `Test` role bit, and `override func` symbols carry `ForwardDefinition`
   4. `external_symbols` contains only system/stdlib symbols (verified via `SymbolLocation.isSystem`), not project-internal cross-module symbols
   5. `signature_documentation` is populated on function/variable/type symbols with reconstructed signatures (e.g., `func greet(name:)`), improving hover tooltips from bare to useful
+
 **Plans**: 3 plans
 Plans:
+
 - [ ] 01-01-PLAN.md — Tracer: spike fixture validating relation population (META-06), RelationshipMapping mapper + SCIPIndexBuilder wiring (META-01, TEST-02)
 - [ ] 01-02-PLAN.md — Expand SymbolRoleMapping with ForwardDefinition/Test bits (META-03, TEST-03), populate enclosing_symbol from .childOf (META-02)
 - [ ] 01-03-PLAN.md — Replace external_symbols heuristic with isSystem (META-04), create SignatureMapping mapper (META-05)
 
 ### Phase 2: Homebrew Distribution & Release Pipeline
+
 **Goal**: Users can install scip-swift via `brew install` from a custom tap, with an automated release pipeline producing universal binaries and a formula updated on every tagged release — fully independent of the mapping work
 **Depends on**: Nothing (pure infrastructure; can run in parallel with Phase 1)
 **Requirements**: DIST-01, DIST-02, DIST-03, DIST-04
 **Success Criteria** (what must be TRUE):
+
   1. A user can run `brew install phuongddx/scip-swift/scip-swift` and get a working binary without building from source
   2. Push of a `v*` tag triggers a GitHub Actions workflow that builds a universal (arm64 + x86_64) binary, uploads it to GitHub Releases, and updates the Homebrew formula SHA256
   3. Running the binary on a machine with only CommandLineTools (no Xcode) produces a clear, actionable error message directing the user to install Xcode — not a cryptic dylib crash
   4. The universal binary runs natively on both Apple Silicon and Intel Macs
+
 **Plans**: 2 plans
 Plans:
+
 - [ ] 02-01-PLAN.md — Runtime dylib existence guard with actionable error (DIST-04)
 - [ ] 02-02-PLAN.md — Homebrew formula template + release CI pipeline with universal binary build (DIST-01, DIST-02, DIST-03)
 
 ### Phase 3: Incremental Indexing
+
 **Goal**: Re-indexing a repo reuses cached per-file `Scip_Document` protobufs for unchanged files, significantly reducing rebuild time for repos >100 files — with a correctness guarantee that stale cache is never served
 **Depends on**: Phase 1 (enrichment must be stable so cached documents already contain relationships/signatures — otherwise the first post-cache enrichment invalidates every entry)
 **Requirements**: INCR-01, INCR-02, INCR-03, INCR-04, INCR-05, INCR-06, TEST-04
 **Success Criteria** (what must be TRUE):
+
   1. A second `scip-swift` run on an unchanged repo produces an identical `.scip` output while skipping the build step for unchanged files (measurable speedup)
   2. Modifying one source file causes only that file's `Scip_Document` to be regenerated; all other cached documents are reused
   3. Changing the Swift toolchain version, indexstore-db version, or scip-swift version invalidates the entire cache (no stale data served)
   4. `--index-only` mode skips the build step entirely and reads an existing IndexStore directly, enabling CI to reuse a prior build
   5. Integration test confirms cache correctness: index → modify source → re-index → changed symbols updated, unchanged symbols preserved, `scip lint` still passes
+
 **Plans**: 2 plans
 Plans:
+
 - [ ] 03-01-PLAN.md — Cache layer primitives: ContentHasher (SHA256), IndexManifest (version invalidation), CacheStore (protobuf document I/O) — TDD
 - [ ] 03-02-PLAN.md — Tracer: wire cache into SCIPIndexBuilder.build() + CLI flags --cache-dir/--index-only + integration test (TEST-04)
 
 ### Phase 4: Cross-Repo Indexing
+
 **Goal**: scip-swift can index multiple repositories and optionally merge them into a single `.scip` output, with symbol version disambiguation preventing collisions across same-named modules
 **Depends on**: Phase 1 (relationships provide cross-repo linking value) + Phase 3 (incremental benefits multi-repo builds)
 **Requirements**: CROSS-01, CROSS-02, CROSS-03, CROSS-04, CROSS-05, TEST-05
 **Success Criteria** (what must be TRUE):
+
   1. `scip-swift index-many <repoA> <repoB>` indexes each repo independently, producing separate `.scip` files
   2. The `version` field in SCIP symbol strings is populated, disambiguating same-named modules across different repos
   3. `--merge` flag combines multiple `.scip` indexes into a single output that passes `scip lint` with no duplicate-symbol warnings
   4. Cross-repo references resolve via the SCIP `external_symbols` mechanism — a symbol referenced in RepoA but defined in RepoB resolves correctly in the merged index
   5. Integration test confirms: index two repos with same-named modules → merge → `scip lint` passes → cross-repo "go to definition" works
-**Plans**: 2 plans
+
+**Plans**: 2/2 plans executed
 Plans:
-- [ ] 04-01-PLAN.md — Tracer: version field population (CROSS-03), indexOneRepo extraction, IndexManyCommand subcommand (CROSS-01/02), basic ScipIndexMerger wired end-to-end
-- [ ] 04-02-PLAN.md — ScipIndexMerger correctness rules: external symbol stripping + path prefixing (CROSS-04/05), cross-repo fixtures + multi-repo merge integration test (TEST-05)
+
+- [x] 04-01-PLAN.md — Tracer: version field population (CROSS-03), indexOneRepo extraction, IndexManyCommand subcommand (CROSS-01/02), basic ScipIndexMerger wired end-to-end
+- [x] 04-02-PLAN.md — ScipIndexMerger correctness rules: external symbol stripping + path prefixing (CROSS-04/05), cross-repo fixtures + multi-repo merge integration test (TEST-05)
 
 ### Phase 5: Xcode End-to-End Test Fixture
+
 **Goal**: The Xcode build path is validated by a real end-to-end integration test (not argument assertions only), preventing silent regressions for Xcode-only projects
 **Depends on**: Nothing (test infrastructure; can be developed any time)
 **Requirements**: TEST-01
 **Success Criteria** (what must be TRUE):
+
   1. A minimal `.xcodeproj` fixture exists under `Fixtures/` and is committed to the repo
   2. CI runs an integration test that builds the Xcode fixture with indexing enabled and indexes it end-to-end via `scip-swift`
   3. The test fails if `XcodebuildBuildRunner` regresses (e.g., broken IndexStore discovery, scheme resolution failure) — catching Xcode-only breakage before it ships
+
 **Plans**: TBD
 
 ## Progress
@@ -102,7 +122,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 1. Symbol Metadata Enrichment | 0/3 | Planned | - |
 | 2. Homebrew Distribution & Release Pipeline | 0/2 | Planned | - |
 | 3. Incremental Indexing | 0/2 | Planned | - |
-| 4. Cross-Repo Indexing | 0/2 | Planned | - |
+| 4. Cross-Repo Indexing | 2/2 | In Progress|  |
 | 5. Xcode End-to-End Test Fixture | 0/TBD | Not started | - |
 
 ---
