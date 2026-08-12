@@ -1,0 +1,106 @@
+import Foundation
+import Testing
+
+@testable import scip_swift
+
+@Suite("CacheStore")
+struct CacheStoreTests {
+  @Test("saveDocument then loadDocument returns identical protobuf")
+  func saveLoadRoundTrip() throws {
+    let cache = CacheStore(cacheDir: makeTempDir())
+
+    var doc = Scip_Document()
+    doc.language = "Swift"
+    doc.relativePath = "test.swift"
+    var occ = Scip_Occurrence()
+    occ.symbol = "scip-swift test . foo."
+    doc.occurrences.append(occ)
+
+    try cache.saveDocument(doc, hash: "abcdef123456")
+    let loaded = cache.loadDocument(hash: "abcdef123456")
+
+    #expect(loaded != nil)
+    #expect(loaded?.language == "Swift")
+    #expect(loaded?.relativePath == "test.swift")
+    #expect(loaded?.occurrences.count == 1)
+  }
+
+  @Test("loadDocument returns nil for non-existent hash")
+  func loadNonExistentReturnsNil() {
+    let cache = CacheStore(cacheDir: makeTempDir())
+    #expect(cache.loadDocument(hash: "nonexistent") == nil)
+  }
+
+  @Test("saveManifest then loadManifest round-trips")
+  func manifestRoundTrip() throws {
+    let cache = CacheStore(cacheDir: makeTempDir())
+    let manifest = IndexManifest(
+      toolchainVersion: "6.2.4",
+      converterVersion: "0.1.2",
+      indexstoreDbRevision: "c993f4fb",
+      buildToolName: "swiftpm"
+    )
+    try cache.saveManifest(manifest)
+    let loaded = try cache.loadManifest()
+    #expect(loaded != nil)
+    #expect(loaded?.toolchainVersion == "6.2.4")
+    #expect(loaded?.buildToolName == "swiftpm")
+  }
+
+  @Test("loadManifest returns nil when no manifest exists")
+  func loadManifestEmpty() throws {
+    let cache = CacheStore(cacheDir: makeTempDir())
+    let loaded = try cache.loadManifest()
+    #expect(loaded == nil)
+  }
+
+  @Test("invalidateAll removes the cache directory")
+  func invalidateAllRemovesDir() throws {
+    let dir = makeTempDir()
+    let cache = CacheStore(cacheDir: dir)
+
+    var doc = Scip_Document()
+    doc.language = "Swift"
+    try cache.saveDocument(doc, hash: "testhash")
+
+    try cache.invalidateAll()
+    #expect(!FileManager.default.fileExists(atPath: dir))
+  }
+
+  @Test("saveDocument creates nested docs directory")
+  func saveCreatesDocsDir() throws {
+    let dir = makeTempDir()
+    let cache = CacheStore(cacheDir: dir)
+
+    var doc = Scip_Document()
+    doc.language = "Swift"
+    try cache.saveDocument(doc, hash: "testhash")
+
+    let docsDir = (dir as NSString).appendingPathComponent("docs")
+    #expect(FileManager.default.fileExists(atPath: docsDir))
+  }
+
+  @Test("loadDocument after cache recreated works")
+  func cacheRecreatedWorks() throws {
+    let dir = makeTempDir()
+    let cache = CacheStore(cacheDir: dir)
+
+    var doc = Scip_Document()
+    doc.language = "Swift"
+    doc.relativePath = "test.swift"
+
+    try cache.saveDocument(doc, hash: "recreate")
+    try cache.invalidateAll()
+    try cache.saveDocument(doc, hash: "recreate")
+    let loaded = cache.loadDocument(hash: "recreate")
+
+    #expect(loaded != nil)
+    #expect(loaded?.language == "Swift")
+  }
+
+  private func makeTempDir() -> String {
+    let dir = NSTemporaryDirectory() + "cache-test-\(UUID().uuidString)"
+    try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+    return dir
+  }
+}
