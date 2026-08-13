@@ -1,0 +1,63 @@
+import Foundation
+import Testing
+
+@testable import scip_swift
+
+/// Requirement: TEST-01 — end-to-end integration test for the Xcode build path
+/// (XcodebuildBuildRunner -> IndexStore -> SCIPIndexBuilder). Shells out to a real `xcodebuild`
+/// against `Fixtures/XcodeTestProject`, so it's slower than the unit tests but exercises real
+/// behavior end-to-end, per project convention (no mocks).
+@Suite("Xcode Integration")
+struct XcodeIntegrationTests {
+  @Test("full Xcode pipeline produces a valid SCIP index for the fixture project")
+  func fullPipeline() throws {
+    let fixtureRepoPath = Self.fixtureRepoPath()
+    let workDirectory = try Self.makeTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(atPath: workDirectory) }
+
+    let projectArguments = try XcodeProjectLocator.workspaceOrProjectArguments(repoPath: fixtureRepoPath)
+    let scheme = try XcodeProjectLocator.resolveScheme(
+      explicitScheme: nil,
+      projectArguments: projectArguments,
+      repoPath: fixtureRepoPath
+    )
+
+    let derivedDataPath = (workDirectory as NSString).appendingPathComponent("DerivedData")
+    let runner = XcodebuildBuildRunner(
+      repoPath: fixtureRepoPath,
+      configuration: .debug,
+      scheme: scheme,
+      derivedDataPath: derivedDataPath,
+      projectArguments: projectArguments
+    )
+    let buildResult = try runner.produceIndexStore()
+
+    let builder = SCIPIndexBuilder(
+      repoPath: fixtureRepoPath,
+      indexStorePath: buildResult.indexStorePath,
+      databasePath: (workDirectory as NSString).appendingPathComponent("index-db"),
+      buildToolName: BuildTool.xcodebuild.rawValue,
+      converterVersion: "test"
+    )
+    let index = try builder.build()
+
+    #expect(index.documents.count > 0)
+    let document = try #require(index.documents.first)
+    #expect(document.language == "Swift")
+    #expect(!document.symbols.isEmpty)
+  }
+
+  private static func fixtureRepoPath() -> String {
+    let repoRoot = URL(fileURLWithPath: #filePath)
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+    return repoRoot.appendingPathComponent("Fixtures/XcodeTestProject").path
+  }
+
+  private static func makeTemporaryDirectory() throws -> String {
+    let path = (NSTemporaryDirectory() as NSString).appendingPathComponent("scip-swift-xcode-tests-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: true)
+    return path
+  }
+}
