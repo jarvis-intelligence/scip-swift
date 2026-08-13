@@ -23,35 +23,41 @@ Produce valid, `scip lint`-passing `.scip` indexes from any Swift repository (Sw
 - ✓ macOS arm64 binary via GitHub Releases — v0.1.0
 - ✓ `index` subcommand as default (`scip-swift <repo>` works bare) — v0.1.1
 - ✓ Disabled code signing for index-only xcodebuild runs — v0.1.2
+- ✓ Symbol relationships (inheritance, conformance, override) mapped to SCIP — v0.2.0
+- ✓ Enclosing symbols for locals via `.childOf` relation — v0.2.0
+- ✓ Expanded role bits (Test, Generated, ForwardDefinition) — v0.2.0
+- ✓ Basic signatures reconstructed from kind/subKind/displayName — v0.2.0
+- ✓ Authoritative external-symbol classification via `SymbolLocation.isSystem` — v0.2.0
+- ✓ Homebrew formula + release CI with universal binary — v0.2.0
+- ✓ Incremental indexing with content-hash cache + version invalidation — v0.2.0
+- ✓ `--cache-dir` and `--index-only` CLI flags — v0.2.0
+- ✓ Cross-repo `index-many` subcommand with `--merge` — v0.2.0
+- ✓ SCIP version field disambiguation for same-named modules — v0.2.0
+- ✓ Xcode end-to-end integration test fixture — v0.2.0
 
 ### Active
 
-- [ ] Homebrew formula for easy installation (`brew install`)
-- [ ] Incremental indexing — cache IndexStore results, only reprocess changed files
-- [ ] Symbol metadata enrichment — relationships, role bits, enclosing symbols, signatures
-- [ ] Cross-repo symbol linking — multi-repo indexing mode resolving cross-references
+(Dependencies, demangled symbols, and Linux support are candidates for v1.0+ — not yet scoped.)
 
 ### Out of Scope
 
 - Linux support — `libIndexStore.dylib` and Apple SDKs are macOS-only; architectural, not a feature gap
 - Source code parsing — the compiler's own IndexStore is the data source; no custom Swift parser
 - Custom code navigation format — SCIP protobuf spec is used as-is
-- Demangled symbol names in v0.2.0 — deferred to v1.0+; needs compiler mangling library or custom demangler (H2 2027)
+- Demangled symbol names — deferred to v1.0+; needs compiler mangling library or custom demangler (H2 2027)
 
 ## Context
 
-**Current state:** v0.1.2 shipped. The tool works end-to-end: it builds a target repo with indexing enabled, reads the resulting IndexStore via IndexStoreDB, maps occurrences/symbols to SCIP protobuf messages, and writes a `.scip` file. The emitted index passes `scip lint` and is consumed by Sourcegraph and other SCIP tools.
+**Current state:** v0.2.0 shipped. The tool works end-to-end for both SwiftPM and Xcode projects: it builds a target repo with indexing enabled, reads the resulting IndexStore via IndexStoreDB, maps occurrences/symbols (with relationships, role bits, enclosing symbols, and signatures) to SCIP protobuf messages, and writes a `.scip` file. The emitted index passes `scip lint`. Incremental caching speeds re-indexing. Cross-repo `index-many` with `--merge` handles multi-repo codebases. 95 tests across 16 suites.
 
-**Known gaps (from `docs/research-scip-swift-limitations.md`):**
-- Relationships (inheritance, conformance, override) are fetched from the compiler but silently discarded — the highest-impact missing feature
-- Symbol names use raw USRs (unreadable to humans, though correct)
-- SymbolRole mapping drops several IndexStoreDB roles that have SCIP equivalents
-- No documentation or signature data in symbol information
-- Xcode path has no end-to-end integration test fixture
+**Known gaps:**
+- Symbol names use raw USRs (unreadable to humans, though correct) — demangling deferred to v1.0+
+- Occurrence ranges approximate from display-name length — IndexStoreDB provides only an anchor point
+- `xcodebuild` without `-destination` may not fully index iOS-only targets
 
-**Peer comparison:** scip-typescript and scip-rust both emit human-readable symbol names, populate relationships, and provide documentation. scip-swift matches on data source (compiler index) but trails on these three areas.
+**Peer comparison:** scip-typescript and scip-rust both emit human-readable symbol names and provide documentation. scip-swift now matches on relationships and role bits but still trails on readable symbol names (demangling pending).
 
-**Codebase characteristics:** Single executable target (~1200 lines of hand-written Swift + 3190 lines generated protobuf). Five-stage pipeline architecture with stateless pure-function mappers. Swift Testing framework (not XCTest). 2-space indentation, enum-as-namespace pattern for mappers.
+**Codebase characteristics:** Single executable target (~6000 lines of hand-written Swift + 3190 lines generated protobuf). Five-stage pipeline architecture with stateless pure-function mappers. Swift Testing framework (not XCTest). 2-space indentation, enum-as-namespace pattern for mappers. 95 tests across 16 suites including real-build integration tests.
 
 ## Constraints
 
@@ -71,6 +77,9 @@ Produce valid, `scip lint`-passing `.scip` indexes from any Swift repository (Sw
 | Enum-as-namespace for stateless mappers | Signals "no instances"; compile-time safety on exhaustive switches | ✓ Good |
 | `xcodebuild` without `-destination` | Forced iOS destination breaks macOS-app projects; generic "My Mac" avoids provisioning failures | ⚠️ Revisit — iOS targets may not fully index |
 | Drop call-site role onto `.reference` | `scip.proto` has no `Call` bit; spec limitation | — Pending (unfixable in spec) |
+| Content-hash caching for incremental indexing | Avoids reprocessing unchanged files; version-keyed invalidation | ✓ Good — 95 tests, byte-identical second-run output |
+| Opaque USR-wrapped SCIP symbol strings (no demangling) | Compiler-guaranteed unique; avoids fragile demangling dependency | ✓ Good — correct and stable; readability deferred to v1.0+ |
+| `indexOneRepo` extraction for cross-repo reuse | Single responsibility; IndexManyCommand delegates per-repo then merges | ✓ Good |
 
 ## Evolution
 
@@ -90,4 +99,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-11 after initialization*
+*Last updated: 2026-08-13 after v0.2.0 milestone*

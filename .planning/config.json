@@ -49,7 +49,8 @@
     "security_block_on": "high",
     "tdd_mode": true,
     "ui_review": true,
-    "use_worktrees": true
+    "use_worktrees": true,
+    "_auto_chain_active": false
   },
   "ship": {
     "pr_body_sections": []
@@ -66,7 +67,6 @@
     "source_grounding_authority": "grep"
   },
   "resolve_model_ids": "omit",
-  "branching_strategy": "milestone",
   "quick_branch_template": null,
   "intel": {
     "enabled": true
