@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 milestone: v0.2.0
 milestone_name: milestone
-current_phase: 04
-current_phase_name: Cross-Repo Indexing
+current_phase: 05
+current_phase_name: Xcode End-to-End Test Fixture
 status: completed
-stopped_at: Phase 4 complete — 4/5 phases done, ready for Phase 5
-last_updated: "2026-08-13T00:15:00.000Z"
+stopped_at: All 5 phases complete — milestone v0.2.0 ready for completion
+last_updated: "2026-08-13T02:50:00.000Z"
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 10
-  completed_plans: 7
-  percent: 80
+  completed_plans: 8
+  percent: 100
 ---
 
 # Project State
@@ -22,14 +22,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-11)
 
 **Core value:** Produce valid, `scip lint`-passing `.scip` indexes from any Swift repository.
-**Current focus:** Phase 4 complete — ready for Phase 5 (Xcode End-to-End Test Fixture)
+**Current focus:** All 5 phases complete — milestone v0.2.0 ready for completion
 
 ## Current Position
 
-Phase: 04 (Cross-Repo Indexing) ✅
-Plan: 2 of 2
-Status: Execution complete — 94 tests pass
-Progress: [████████░░] 80%
+Phase: 05 (Xcode End-to-End Test Fixture) ✅
+Plan: 1 of 1
+Status: Execution complete — 95 tests pass
+Progress: [██████████] 100%
 
 ## Completed Phases
 
@@ -52,7 +52,14 @@ Progress: [████████░░] 80%
 - ScipIndexMerger: document path prefixing, external symbol stripping, dedup (CROSS-04/05)
 - CrossRepoPackageA/B fixtures + multi-repo merge integration test (TEST-05)
 
+### Phase 5: Xcode End-to-End Test Fixture ✅
+
+- 1 plan, 95 tests total
+- Minimal .xcodeproj fixture (scip-swift-test) with class inheritance symbols
+- XcodeIntegrationTests: real xcodebuild → IndexStore → SCIPIndexBuilder end-to-end (TEST-01)
+- Closes the documented test-coverage gap for the Xcode build path
+
 ## Session Continuity
 
 Last session: 2026-08-13
-Stopped at: Phase 4 complete — 4/5 phases done, ready for Phase 5
+Stopped at: All 5 phases complete — milestone v0.2.0 ready for completion

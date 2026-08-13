@@ -108,7 +108,9 @@ Plans:
   2. CI runs an integration test that builds the Xcode fixture with indexing enabled and indexes it end-to-end via `scip-swift`
   3. The test fails if `XcodebuildBuildRunner` regresses (e.g., broken IndexStore discovery, scheme resolution failure) — catching Xcode-only breakage before it ships
 
-**Plans**: TBD
+**Plans**: 1/1 plans executed
+
+- [x] 05-01-PLAN.md
 
 ## Progress
 
@@ -123,7 +125,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Homebrew Distribution & Release Pipeline | 0/2 | Planned | - |
 | 3. Incremental Indexing | 0/2 | Planned | - |
 | 4. Cross-Repo Indexing | 2/2 | In Progress|  |
-| 5. Xcode End-to-End Test Fixture | 0/TBD | Not started | - |
+| 5. Xcode End-to-End Test Fixture | 1/1 | In Progress|  |
 
 ---
 
