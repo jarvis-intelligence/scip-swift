@@ -43,16 +43,16 @@
 
 | REQ | Phase | Status |
 |-----|-------|--------|
-| REPAIR-01 | 6 | pending |
-| REPAIR-02 | 6 | pending |
-| REPAIR-03 | 6 | pending |
-| SYMBOL-01 | 7 | pending |
-| SYMBOL-02 | 7 | pending |
-| SYMBOL-03 | 7 | pending |
-| SYMBOL-04 | 7 | pending |
-| RANGE-01 | 8 | pending |
-| RANGE-02 | 8 | pending |
-| RANGE-03 | 8 | pending |
-| DOCS-01 | 9 | pending |
-| DOCS-02 | 9 | pending |
-| DOCS-03 | 9 | pending |
+| REPAIR-01 | Phase 6 | pending |
+| REPAIR-02 | Phase 6 | pending |
+| REPAIR-03 | Phase 6 | pending |
+| SYMBOL-01 | Phase 7 | pending |
+| SYMBOL-02 | Phase 7 | pending |
+| SYMBOL-03 | Phase 7 | pending |
+| SYMBOL-04 | Phase 7 | pending |
+| RANGE-01 | Phase 8 | pending |
+| RANGE-02 | Phase 8 | pending |
+| RANGE-03 | Phase 8 | pending |
+| DOCS-01 | Phase 9 | pending |
+| DOCS-02 | Phase 9 | pending |
+| DOCS-03 | Phase 9 | pending |

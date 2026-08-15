@@ -1,12 +1,14 @@
 ---
-gsd_state_version: 1.0
+gsd_state_version: '1.0'
 milestone: v0.3.0
 milestone_name: Readable Indexes
 status: planning
-last_updated: "2026-08-15T15:10:03.590Z"
+current_phase: 6
+current_phase_name: Xcode Backend Repair & Destination Selection
+last_updated: "2026-08-15T15:52:16.000Z"
 last_activity: 2026-08-15
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,51 +19,59 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-08-11)
+See: .planning/PROJECT.md (updated 2026-08-15)
 
 **Core value:** Produce valid, `scip lint`-passing `.scip` indexes from any Swift repository.
-**Current focus:** All 5 phases complete — milestone v0.2.0 ready for completion
+**Current focus:** v0.3.0 Readable Indexes — demangled names, exact ranges, destinations, docs
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-08-15 — Milestone v0.3.0 started
+Phase: 6 of 9 (Xcode Backend Repair & Destination Selection)
+Plan: 0 of TBD in current phase
+Status: Planning — roadmap drafted, awaiting approval
+Last activity: 2026-08-15 — v0.3.0 roadmap created (Phases 6–9, 13 REQs mapped)
 
-## Completed Phases
+Progress: [░░░░░░░░░░] 0%
 
-### Phase 1: Symbol Metadata Enrichment ✅
+## Performance Metrics
 
-### Phase 2: Homebrew Distribution & Release Pipeline ✅
+**Velocity:**
+- Total plans completed: 0 (v0.3.0; v0.2.0 closed with 10 plans / 5 phases)
+- Average duration: —
+- Total execution time: —
 
-### Phase 3: Incremental Indexing ✅
+*Updated after each plan completion*
 
-- 2 plans, 80 tests total
-- CacheStore + ContentHasher + IndexManifest
-- --cache-dir + --index-only CLI flags
-- Persistent paths, version-based invalidation
+## Accumulated Context
 
-### Phase 4: Cross-Repo Indexing ✅
+### Decisions
 
-- 2 plans, 94 tests total
-- SCIPSymbolFormatter version field (CROSS-03)
-- IndexManyCommand with variadic repo paths (CROSS-01/02)
-- ScipIndexMerger: document path prefixing, external symbol stripping, dedup (CROSS-04/05)
-- CrossRepoPackageA/B fixtures + multi-repo merge integration test (TEST-05)
+Decisions are logged in PROJECT.md Key Decisions table.
+Recent decisions affecting current work:
 
-### Phase 5: Xcode End-to-End Test Fixture ✅
+- Phase 6: `.xcodebuild` dispatch branch lost in c06c050 refactor — must be restored before any destination work (research finding)
+- Phase 7: demangling via `swift_demangle` through `@_silgen_name`, no new dependency; `s:`→`_$s` rewrite; wrapped USR stays canonical symbol identity
+- Phase 8: swift-syntax is the one new dependency; one shared per-file refiner pass feeds both ranges (8) and docs (9)
+- Cross-phase: bump IndexManifest cache version when serialized output changes; keep `scip lint` passing
 
-- 1 plan, 95 tests total
-- Minimal .xcodeproj fixture (scip-swift-test) with class inheritance symbols
-- XcodeIntegrationTests: real xcodebuild → IndexStore → SCIPIndexBuilder end-to-end (TEST-01)
-- Closes the documented test-coverage gap for the Xcode build path
+### Pending Todos
+
+None yet.
+
+### Blockers/Concerns
+
+None yet.
+
+## Deferred Items
+
+| Category | Item | Status | Deferred At |
+|----------|------|--------|-------------|
+| Future REQ | Fully-typed symbol names (demangled + signature) | v0.4+ candidate | v0.3.0 scoping |
+| Future REQ | ObjC header doc-comment extraction | v0.4+ candidate | v0.3.0 scoping |
+| Future REQ | Destination autodetection / multi-destination sweeps | v0.4+ candidate | v0.3.0 scoping |
 
 ## Session Continuity
 
-Last session: 2026-08-13
-Stopped at: All 5 phases complete — milestone v0.2.0 ready for completion
-
-## Operator Next Steps
-
-- Start the next milestone with /gsd-new-milestone
+Last session: 2026-08-15
+Stopped at: v0.3.0 roadmap drafted — 4 phases (6–9), 13/13 REQs mapped, awaiting approval
+Resume file: None
