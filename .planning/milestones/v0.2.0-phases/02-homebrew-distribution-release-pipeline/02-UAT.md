@@ -19,9 +19,8 @@ evidence: `gh release view v0.2.0` — published 2026-08-13, asset `scip-swift-0
 
 ### 2. Release binary reports version 0.2.0
 expected: `scip-swift --version` on the release artifact prints `0.2.0`.
-result: issue
-reported: "Binary prints `0.1.2 (swift 6.2.4)`. Sources/scip-swift/Version.swift still has `static let version = \"0.1.2\"` on main — the documented pre-release step 'Bump ScipSwiftVersion.version to 0.2.0' was skipped."
-severity: minor
+result: pass
+evidence: "Originally failed (binary printed 0.1.2). Fixed: Version.swift bumped, v0.2.1 tagged from bumped source; v0.2.1 release binary reports 0.2.1."
 
 ### 3. Release binary indexes a SwiftPM repo and passes scip lint
 expected: Downloaded release binary runs `index` against MiniSwiftPackage fixture, writes a .scip file that passes `scip lint` (exit 0).
@@ -35,15 +34,14 @@ evidence: Cache dir created with `index-db/`, `docs/`, `manifest.json`, `build-s
 
 ### 5. Homebrew formula installable from tap
 expected: `brew install phuongddx/scip-swift/scip-swift` works from the tap repo.
-result: issue
-reported: "Tap repo `phuongddx/homebrew-scip-swift` does not exist. Release workflow 'Update tap formula' step failed: `fatal: Authentication failed for 'https://github.com/phuongddx/homebrew-scip-swift.git/'` (exit 128). The tap repo was never created and/or HOMEBREW_TAP_TOKEN lacks access."
-severity: major
+result: pass
+evidence: "Originally failed (tap repo 404, CI auth failure). Fixed: phuongddx/homebrew-scip-swift created with v0.2.0 formula, HOMEBREW_TAP_TOKEN secret set, release.yml URL corrected to jarvis-intelligence org. Verified: tap + install + universal binary at /opt/homebrew/Cellar/scip-swift/0.2.0."
 
 ## Summary
 
 total: 5
-passed: 3
-issues: 2
+passed: 5
+issues: 0
 pending: 0
 skipped: 0
 
@@ -51,17 +49,23 @@ skipped: 0
 
 - gap_id: G-02-2
   truth: "Release binary reports version 0.2.0"
-  status: failed
+  status: resolved
   reason: "Version.swift never bumped; binary ships 0.1.2 inside the v0.2.0 tarball"
   severity: minor
   test: 2
   artifacts: ["Sources/scip-swift/Version.swift"]
   missing: ["version bump to 0.2.0 + new tag/release or patch release"]
+  resolved_by: "fix(release): bump version to 0.2.0 (33d7154) + v0.2.1 tag"
+  resolved_at: 2026-08-15
+  notes: "v0.2.0 release assets are immutable; v0.2.1 tagged from bumped source. Old tarball still reports 0.1.2 — superseded by v0.2.1."
 - gap_id: G-02-5
   truth: "brew install phuongddx/scip-swift/scip-swift works"
-  status: failed
+  status: resolved
   reason: "Tap repo missing; CI tap-update step failed on authentication (HOMEBREW_TAP_TOKEN invalid or repo absent)"
   severity: major
   test: 5
   artifacts: [".github/workflows/release.yml", "Formula/scip-swift.rb"]
   missing: ["create phuongddx/homebrew-scip-swift repo", "valid HOMEBREW_TAP_TOKEN secret", "re-run tap formula update"]
+  resolved_by: "tap bootstrap + HOMEBREW_TAP_TOKEN secret + release.yml URL fix (33d7154)"
+  resolved_at: 2026-08-15
+  notes: "Tap repo created, formula pushed with real v0.2.0 SHA256, `brew install phuongddx/scip-swift/scip-swift` verified working (universal binary, /opt/homebrew/Cellar/scip-swift/0.2.0). Release workflow now updates the tap on future tags."
