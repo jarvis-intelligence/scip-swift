@@ -59,7 +59,7 @@ jobs:
           cd /tmp/tap
           VERSION=${{ steps.tarball.outputs.version }}
           SHA256=${{ steps.tarball.outputs.sha256 }}
-          sed -i '' "s|url .*|url \"https://github.com/phuongddx/scip-swift/releases/download/v${VERSION}/scip-swift-${VERSION}.tar.gz\"|" Formula/scip-swift.rb
+          sed -i '' "s|url .*|url \"https://github.com/jarvis-intelligence/scip-swift/releases/download/v${VERSION}/scip-swift-${VERSION}.tar.gz\"|" Formula/scip-swift.rb
           sed -i '' "s|sha256 .*|sha256 \"${SHA256}\"|" Formula/scip-swift.rb
           sed -i '' "s|version .*|version \"${VERSION}\"|" Formula/scip-swift.rb
           git add Formula/scip-swift.rb
