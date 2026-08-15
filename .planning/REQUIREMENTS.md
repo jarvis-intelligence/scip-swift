@@ -6,7 +6,7 @@
 ## Requirements
 
 ### Repair & Targeting (REPAIR)
-- [ ] **REPAIR-01**: User can index an Xcode-project repo via `scip-swift index <repo>` and it builds through the xcodebuild backend again (restore the `.xcodebuild` dispatch branch lost in the c06c050 refactor), verified by an integration test against the existing Xcode fixture.
+- [ ] **REPAIR-01**: User can index an Xcode-project repo via `scip-swift index <repo>` and it builds through the xcodebuild backend again (restore the `.xcodebuild` dispatch branch lost in the 0cdefd7 cache rewrite (code recoverable from 1c5ba8f)), verified by an integration test against the existing Xcode fixture.
 - [ ] **REPAIR-02**: User can pass `--destination <spec>` (e.g. `platform=iOS Simulator,name=iPhone 16`) to select the xcodebuild destination; omitting the flag preserves today's generic-destination behavior.
 - [ ] **REPAIR-03**: When a `--destination` build fails, the error output includes a hint to run `xcodebuild -showdestinations` so the user can discover valid destination strings.
 
