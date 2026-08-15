@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Version**: 0.1.0 (released)
+**Version**: 0.2.1 (current — see `Sources/scip-swift/Version.swift`)
 
-**Status**: Shipped and available as a macOS arm64 binary via [GitHub Releases](https://github.com/phuongddx/scip-swift/releases).
+**Status**: Shipped and available as a macOS arm64 binary via [GitHub Releases](https://github.com/phuongddx/scip-swift/releases). The initial release was v0.1.0; v0.1.1 and v0.1.2 are patch releases (the `index` subcommand as the `defaultSubcommand`, and disabled code signing for index-only `xcodebuild` runs so app-extension targets don't fail provisioning).
 
 ### What's Shipped
 
@@ -20,7 +20,7 @@
 
 ### 1. Homebrew Distribution Formula
 
-**Status**: Not yet implemented
+**Status**: Shipped (v0.2.0; see `Formula/scip-swift.rb`)
 
 **Description**: Currently, users must build from source or download the arm64 binary directly. A Homebrew formula would simplify distribution and make `scip-swift` easier to install via `brew install phuongddx/tap/scip-swift` or similar.
 
@@ -81,7 +81,7 @@
 
 ### A. Cross-Repository Symbol Resolution
 
-**Feasibility**: Medium
+**Status**: Shipped (v0.2.0) — `index-many` subcommand with `--merge` (`Commands/IndexManyCommand.swift`) and `SCIPMapping/ScipIndexMerger.swift`.
 
 **Description**: Enable indexing multiple repositories and merging their SCIP outputs to resolve cross-repo symbol references (e.g., when RepoA references a type from RepoB).
 
@@ -94,7 +94,7 @@
 
 ### B. Incremental Indexing
 
-**Feasibility**: Medium
+**Status**: Shipped (v0.2.0) — `Sources/scip-swift/Caching/` (`CacheStore.swift`, `ContentHasher.swift`, `IndexManifest.swift`) and the `--cache-dir` option in `IndexCommand.swift`.
 
 **Description**: Avoid re-querying the entire IndexStore when only a few files changed. Cache IndexStore query results.
 
@@ -129,7 +129,7 @@
 
 ### E. Extended Symbol Metadata
 
-**Feasibility**: Medium
+**Status**: Partially shipped (v0.2.0) — minimal type signatures via `SCIPMapping/SignatureMapping.swift` and inheritance/`childOf` relationships via `SCIPMapping/RelationshipMapping.swift`; docstring extraction remains future work.
 
 **Description**: Enhance SCIP output with additional metadata:
 
@@ -155,7 +155,7 @@
 - Bug fixes
 - Improved error messages
 - Minor UX improvements
-- **Estimate**: Q3 2026 (if issues found)
+- **Status**: Released. Followed by v0.1.2 (`index` subcommand as `defaultSubcommand`; disabled code signing for index-only `xcodebuild` runs).
 
 ### v0.2.0 (Tentative)
 - Homebrew formula
@@ -173,7 +173,7 @@
 
 ## Success Metrics
 
-### Short-term (v0.1.0 — achieved)
+### Short-term (v0.1.x — achieved)
 - ✅ Valid SCIP protobuf output (`scip lint` passes)
 - ✅ End-to-end pipeline tested and documented
 - ✅ Handles real Swift projects (both SwiftPM and Xcode)
@@ -231,4 +231,4 @@ If you'd like to influence this roadmap or propose new features:
 
 ---
 
-*Last updated: July 2026 | v0.1.0*
+*Last updated: August 2026 | v0.2.1*

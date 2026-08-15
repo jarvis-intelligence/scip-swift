@@ -20,7 +20,7 @@ Mapping logic that has no state is organized as enums with static functions. Thi
 
 ```swift
 enum SymbolKindMapping {
-  static func mapKind(_ indexstoreKind: IndexStoreDB.Symbol.Kind) -> Scip_SymbolInformation.Kind {
+  static func scipKind(for symbol: Symbol) -> Scip_SymbolInformation.Kind {
     // implementation
   }
 }
@@ -48,16 +48,15 @@ Errors inherit from Swift's error protocol and implement `CustomStringConvertibl
 
 ```swift
 enum BuildError: Error, CustomStringConvertible {
-  case buildFailed(String)
-  case indexStoreNotProduced(String)
-  
-  var description: String {
-    switch self {
-    case .buildFailed(let log):
-      return "Build failed. Last 50 lines of output:\n\(log)"
-    case .indexStoreNotProduced:
-      return "Build completed but IndexStore was not produced. ..."
-    }
+  case cannotDetectBuildSystem(repoPath: String)
+  case xcodebuildSchemeRequired
+  case toolNotLaunchable(tool: String, underlying: String)
+  case buildFailed(tool: String, exitCode: Int32, output: String)
+  case indexStoreNotProduced(expectedPath: String)
+  case xcodeRequired(dylibPath: String)
+  case indexStoreNotFoundForIndexOnly(expectedPath: String)
+
+  var description: String { /* actionable, case-specific message */ }
   }
 }
 ```
@@ -70,23 +69,22 @@ Symbol kind and role mappings use exhaustive enum switches to ensure all SCIP va
 
 ```swift
 enum SymbolRoleMapping {
-  static func mapRoles(_ indexstoreRoles: [IndexStoreDB.SymbolRole]) -> [Scip_SymbolRole] {
-    var roles: Set<Scip_SymbolRole> = []
-    for role in indexstoreRoles {
-      switch role {
-      case .definition:
-        roles.insert(.definition)
-      case .reference:
-        roles.insert(.reference)
-      // ... additional cases
-      }
+  static func scipRoles(for indexStoreRoles: SymbolRole) -> Int32 {
+    var roles: Int32 = 0
+    if indexStoreRoles.contains(.definition) {
+      roles |= Int32(Scip_SymbolRole.definition.rawValue)
     }
-    return Array(roles)
+    if indexStoreRoles.contains(.write) {
+      roles |= Int32(Scip_SymbolRole.writeAccess.rawValue)
+    } else if indexStoreRoles.contains(.reference) || indexStoreRoles.contains(.read) {
+      roles |= Int32(Scip_SymbolRole.readAccess.rawValue)
+    }
+    return roles
   }
 }
 ```
 
-**Rationale**: Exhaustive switches catch additions to IndexStoreDB enums at compile time; no silent data loss.
+**Rationale**: SCIP roles are a packed `Int32` bitfield; `write` is mutually exclusive with `read` (a `write`-implying role suppresses the read bit). There is no call-specific bit in `scip.proto`, so `.call` contributes nothing.
 
 ### 5. Result Structs for Data Passing
 
@@ -109,7 +107,8 @@ Code that implements a specific design decision should include a comment referen
 ```swift
 // Per design.md: "Symbol identity via USR, not demangling"
 // We keep the raw compiler USR as-is for project-wide uniqueness.
-let symbolString = SCIPSymbolFormatter.formatSymbol(from: symbolUSR)
+let symbolString = SCIPSymbolFormatter.globalSymbolString(
+  packageManager: buildToolName, moduleName: moduleName, usr: symbolUSR)
 ```
 
 **Rationale**: Links implementation back to architectural decision; aids future maintenance.
@@ -119,10 +118,10 @@ let symbolString = SCIPSymbolFormatter.formatSymbol(from: symbolUSR)
 Public methods and types should have doc comments:
 
 ```swift
-/// Converts an IndexStoreDB symbol kind to the nearest SCIP equivalent.
-/// - Parameter kind: The IndexStoreDB symbol kind.
+/// Converts an IndexStoreDB symbol to the nearest SCIP equivalent kind.
+/// - Parameter symbol: The IndexStoreDB symbol (kind and subKind).
 /// - Returns: The mapped SCIP SymbolInformation.Kind.
-static func mapKind(_ kind: IndexStoreDB.Symbol.Kind) -> Scip_SymbolInformation.Kind
+static func scipKind(for symbol: Symbol) -> Scip_SymbolInformation.Kind
 ```
 
 **Rationale**: Makes the API self-documenting; helps IDE autocompletion and documentation generation.
@@ -131,13 +130,16 @@ static func mapKind(_ kind: IndexStoreDB.Symbol.Kind) -> Scip_SymbolInformation.
 
 ### Unit Tests
 
-- File names mirror the class/module being tested (e.g., `SymbolKindMappingTests.swift` for `SymbolKindMapping.swift`).
-- Tests use descriptive names following `test<Scenario><ExpectedBehavior>` convention.
+- File names mirror the module being tested (e.g., `SymbolKindMappingTests.swift` for `SymbolKindMapping.swift`).
+- Uses [Swift Testing](https://developer.apple.com/documentation/testing) — `@Suite` / `@Test` with string descriptions and `#expect`, **not** XCTest. Run one suite via `swift test --filter SymbolKindMapping`.
 
 ```swift
-func testSymbolKindMapping_FunctionMapsToDotMethod() {
-  let result = SymbolKindMapping.mapKind(.function)
-  XCTAssertEqual(result, .method)
+@Suite("SymbolKindMapping")
+struct SymbolKindMappingTests {
+  @Test("instance method maps to method")
+  func methods() {
+    #expect(SymbolKindMapping.scipKind(for: makeSymbol(kind: .instanceMethod)) == .method)
+  }
 }
 ```
 
@@ -183,15 +185,15 @@ file .build/release/scip-swift
 ### CI/CD
 
 - GitHub Actions (`.github/workflows/ci.yml`) runs on every push and PR.
-- Runs `swift build` and `swift test` on macOS-15 runners.
-- Produces a release binary on tagged commits (v*).
+- Runs `swift build` and `swift test` on `macos-26` runners.
+- Release binaries are cut automatically by `.github/workflows/release.yml` on `v*` tags (universal arm64 + x86_64 binary, GitHub Release, and tap formula update); both `ci.yml` and `release.yml` exist.
 
 ## Error Handling Philosophy
 
-- **BuildError** is exhaustive; no generic error strings.
-- **IndexStore query failures** are propagated with context (which file, which symbol failed).
-- **File system errors** (missing IndexStore, unwritable output path) are caught early with actionable messages.
-- **Subprocess failures** (build command exit != 0) include the last 50 lines of stdout/stderr.
+- **`BuildError`** is exhaustive; no generic error strings (see the seven cases above).
+- **Subprocess failures** (`buildFailed`) carry the tool name, exit code, and combined stdout+stderr.
+- **Missing IndexStore** (`indexStoreNotProduced`) points at the expected path and notes the common Apple-platform-on-non-macOS cause.
+- **Unlaunchable tool** (`toolNotLaunchable`) reports the executable and the underlying message.
 
 **Rationale**: Users can troubleshoot without needing to attach a debugger or read source code.
 

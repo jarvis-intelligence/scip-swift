@@ -1,3 +1,4 @@
+<!-- generated-by: gsd-doc-writer -->
 # scip-swift
 
 A [SCIP](https://github.com/sourcegraph/scip) indexer for Swift. It converts a Swift repo's build
@@ -12,7 +13,8 @@ that powers Xcode's own "jump to definition" and SourceKit-LSP.
    - SwiftPM repos: `swift build --enable-index-store`
    - Xcode-project repos: `xcodebuild ... COMPILER_INDEX_STORE_ENABLE=YES`
 2. It reads the resulting IndexStore via `IndexStoreDB`'s `SymbolOccurrence` query API.
-3. It maps each occurrence to a SCIP `Occurrence`/`SymbolInformation` and emits a `.scip` file.
+3. It maps each occurrence to a SCIP `Occurrence`/`SymbolInformation` — including symbol
+   relationships (overrides), role bits, and minimal signatures — and emits a `.scip` file.
 
 ## Architecture
 
@@ -23,14 +25,26 @@ breakdown.
 
 ## Install
 
-Build system requires: Swift toolchain, matching the pinned version in `.swift-version`.
+macOS 14 (Sonoma) or later is required.
+
+Homebrew:
 
 ```sh
-git clone https://github.com/phuongddx/scip-swift.git
+brew install phuongddx/scip-swift/scip-swift
+```
+
+Or build from source (requires a Swift toolchain matching the pinned version in
+`.swift-version`):
+
+```sh
+git clone https://github.com/jarvis-intelligence/scip-swift.git
 cd scip-swift
 swift build -c release
 cp .build/release/scip-swift /usr/local/bin/
 ```
+
+Prebuilt universal binaries (arm64 + x86_64) are attached to each
+[GitHub release](https://github.com/jarvis-intelligence/scip-swift/releases).
 
 ## Usage
 
@@ -54,7 +68,37 @@ Options:
 | `--build-tool swiftpm\|xcodebuild` | Override auto-detection (`Package.swift` → swiftpm, `.xcodeproj`/`.xcworkspace` → xcodebuild) |
 | `--configuration debug\|release` | Forwarded to the underlying build tool (default: `debug`) |
 | `--scheme <name>` | Xcode scheme to build (only for `xcodebuild`; auto-detected if the project has exactly one scheme) |
+| `--cache-dir <path>` | Directory for the incremental index cache (default: `<repo>/.scip-cache`). Passing this flag enables the persistent cache |
+| `--index-only` | Skip the build step and read an existing IndexStore directly (from the cache directory) |
 | `--version` | Print the converter version and the Swift toolchain version it was built against |
+
+### Indexing multiple repos
+
+`index-many` indexes two or more repos independently, writing one `.scip` per repo or merging
+them into a single index:
+
+```sh
+# one .scip per repo, written to --output-dir (default: current directory)
+scip-swift index-many /path/to/repoA /path/to/repoB --output-dir out/
+
+# merge into a single index (default: ./merged.scip)
+scip-swift index-many /path/to/repoA /path/to/repoB --merge --merged-output combined.scip
+```
+
+`index-many` supports `--configuration` and `--cache-dir` as well.
+
+### Incremental indexing
+
+Passing `--cache-dir` (or `--index-only`) switches the pipeline from a throwaway temp directory
+to a persistent cache:
+
+- Unchanged files reuse their previously computed `Scip_Document` (keyed by SHA256 content hash),
+  so re-indexing after small edits only reprocesses what changed.
+- The cache is invalidated wholesale when the Swift toolchain version, `scip-swift` version,
+  indexstore-db revision, or build backend changes (recorded in `manifest.json`).
+- `--index-only` reuses the already-built IndexStore under the cache directory (it does not
+  rebuild), so it fails with `indexStoreNotFoundForIndexOnly` if no prior indexed build exists
+  there.
 
 ## macOS-host requirement
 
@@ -66,7 +110,7 @@ the common case for a real iOS app repo. If the underlying build command fails f
 
 ## Known limitations
 
-- **Symbol identity, not full demangling**: `Symbol.scip_symbol` embeds the compiler's raw USR
+- **Symbol identity, not full demangling**: `Scip_SymbolInformation.symbol` embeds the compiler's raw USR
   (Unified Symbol Resolution string) as an opaque, escaped identifier rather than a demangled
   namespace/type/method descriptor chain. USRs are already a compiler-guaranteed, project-wide
   unique and stable identifier, so cross-references resolve correctly — but the raw symbol string
@@ -77,6 +121,10 @@ the common case for a real iOS app repo. If the underlying build command fails f
   and can be slightly off for compound names or unusual spellings.
 - **No call-hierarchy role**: real `scip.proto`'s `SymbolRole` enum has no call-specific bit; call
   sites are marked with the same `ReadAccess`/`WriteAccess` roles as any other reference.
+- **Minimal signatures**: reconstructed signatures carry the symbol name but lack parameter and
+  return types — IndexStoreDB's symbol data doesn't expose them.
+- **Relationships limited to overrides**: only override relationships are mapped; IndexStoreDB's
+  relation data doesn't cover the full SCIP relationship set.
 - **USR stability across toolchain versions is not guaranteed by Apple.** This project pins the
   Swift toolchain version it's built and tested against (see `.swift-version`); indexing with a
   different toolchain version may be fine in practice but isn't a supported/tested configuration.

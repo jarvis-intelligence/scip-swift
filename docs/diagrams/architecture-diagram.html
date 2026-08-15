@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>scip-swift · Architecture</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js" integrity="sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/" crossorigin="anonymous"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      background: #000000;
+      min-height: 100vh;
+      padding: 2.5rem 2rem;
+      color: #ffffff;
+      font-family: 'Inter', -apple-system, 'Helvetica Neue', sans-serif;
+      font-feature-settings: "ss01", "cv11";
+      -webkit-font-smoothing: antialiased;
+      letter-spacing: -0.01em;
+    }
+    .container { max-width: 1240px; margin: 0 auto; }
+
+    /* ---- Header ---- */
+    .header { margin-bottom: 2.5rem; }
+    .header-row {
+      display: flex; align-items: center; gap: 0.75rem;
+      margin-bottom: 0.6rem;
+    }
+    .mark {
+      width: 22px; height: 22px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: 1px solid #ffffff; border-radius: 4px;
+      font-size: 12px; font-weight: 600; letter-spacing: 0;
+    }
+    h1 {
+      font-size: 1.5rem; font-weight: 500;
+      letter-spacing: -0.03em; line-height: 1;
+    }
+    h1 .light { color: #8a8a8a; font-weight: 300; }
+    .subtitle {
+      color: #6b6b6b; font-size: 0.8rem;
+      margin-left: 2.25rem; letter-spacing: 0;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+    }
+
+    /* ---- Diagram card ---- */
+    .diagram-container {
+      background: #000000;
+      border-radius: 14px;
+      border: 1px solid #1a1a1a;
+      padding: 1.75rem;
+      overflow-x: auto;
+    }
+    svg { width: 100%; min-width: 1140px; display: block; }
+
+    /* ---- Cards ---- */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1px;
+      margin-top: 2.5rem;
+      background: #1a1a1a;
+      border: 1px solid #1a1a1a;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .card {
+      background: #000000;
+      padding: 1.5rem 1.4rem;
+    }
+    .card-header {
+      display: flex; align-items: center; gap: 0.5rem;
+      margin-bottom: 0.9rem;
+    }
+    .card-bar {
+      width: 14px; height: 1.5px; background: #ffffff;
+    }
+    .card h3 {
+      font-size: 0.72rem; font-weight: 500;
+      letter-spacing: 0.04em; text-transform: uppercase;
+      color: #ffffff;
+    }
+    .card ul { list-style: none; }
+    .card li {
+      font-size: 0.78rem; line-height: 1.65; color: #9a9a9a;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      letter-spacing: -0.005em;
+    }
+    .card li b { color: #e6e6e6; font-weight: 500; }
+
+    .footer {
+      text-align: center; margin-top: 1.75rem;
+      color: #444; font-size: 0.7rem;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      letter-spacing: 0.02em;
+    }
+
+    /* ---- Toolbar ---- */
+    .toolbar { display: flex; gap: 0.5rem; margin-left: auto; flex-shrink: 0; align-items: center; }
+    .toolbar-toggle {
+      background: transparent; border: 1px solid #2a2a2a; color: #888;
+      cursor: pointer; font-size: 1rem; line-height: 1;
+      padding: 0.35rem 0.6rem; border-radius: 6px;
+      transition: color 0.2s, border-color 0.2s;
+      font-family: inherit;
+    }
+    .toolbar-toggle:hover { color: #fff; border-color: #555; }
+    .toolbar-actions { display: none; gap: 0.4rem; }
+    .toolbar.expanded .toolbar-actions { display: flex; }
+    .toolbar-actions button {
+      background: #0a0a0a; border: 1px solid #2a2a2a; color: #b0b0b0;
+      padding: 0.4rem 0.7rem; border-radius: 6px; font-family: inherit;
+      font-size: 0.72rem; cursor: pointer; transition: all 0.2s;
+      white-space: nowrap; letter-spacing: 0;
+    }
+    .toolbar-actions button:hover { background: #141414; color: #fff; border-color: #555; }
+
+    @media print {
+      body { background: #000; padding: 1rem; }
+      .toolbar { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="report-container">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-row">
+        <span class="mark">x</span>
+        <h1>scip-swift <span class="light">/ architecture</span></h1>
+        <div class="toolbar">
+          <div class="toolbar-actions">
+            <button onclick="copyAsImage(this)">Copy</button>
+            <button onclick="downloadPNG(this)">PNG</button>
+            <button onclick="downloadPDF(this)">PDF</button>
+          </div>
+          <button class="toolbar-toggle" onclick="this.parentElement.classList.toggle('expanded')" title="Export" aria-label="Export options">⋯</button>
+        </div>
+      </div>
+      <p class="subtitle">Swift repo → build → IndexStore → SCIP protobuf → index.scip</p>
+    </div>
+
+    <!-- Main Diagram -->
+    <div class="diagram-container">
+      <svg viewBox="0 0 1180 640" font-family="Inter, -apple-system, sans-serif">
+        <defs>
+          <marker id="ah" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#ffffff"/>
+          </marker>
+          <marker id="ahd" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#555"/>
+          </marker>
+        </defs>
+
+        <!-- subtle stage guides (very faint vertical rules) -->
+        <g stroke="#141414" stroke-width="1" stroke-dasharray="2,5">
+          <line x1="360" y1="60" x2="360" y2="400"/>
+          <line x1="650" y1="60" x2="650" y2="400"/>
+          <line x1="835" y1="60" x2="835" y2="400"/>
+          <line x1="1015" y1="60" x2="1015" y2="400"/>
+        </g>
+
+        <!-- stage labels -->
+        <g fill="#5a5a5a" font-size="9" font-weight="500" letter-spacing="2">
+          <text x="186" y="80">01 — CLI</text>
+          <text x="376" y="80">02 — BUILD</text>
+          <text x="666" y="80">03 — INDEX</text>
+          <text x="851" y="80">04 — MAP</text>
+          <text x="1031" y="80">05 — OUTPUT</text>
+        </g>
+
+        <!-- =================================================================
+             ARROWS (behind boxes)
+             ================================================================= -->
+        <g fill="none" stroke="#ffffff" stroke-width="1">
+          <!-- input -> ScipSwiftCommand -->
+          <line x1="150" y1="195" x2="188" y2="158" marker-end="url(#ah)"/>
+          <!-- ScipSwiftCommand -> IndexCommand -->
+          <line x1="260" y1="180" x2="260" y2="210" marker-end="url(#ah)"/>
+          <!-- IndexCommand -> BuildBackendDetector -->
+          <line x1="332" y1="235" x2="378" y2="153" marker-end="url(#ah)"/>
+          <!-- BuildBackendDetector branches -->
+          <line x1="445" y1="178" x2="420" y2="218" marker-end="url(#ah)"/>
+          <line x1="515" y1="178" x2="548" y2="218" marker-end="url(#ah)"/>
+          <!-- runners -> SubprocessRunner -->
+          <line x1="430" y1="266" x2="470" y2="300" marker-end="url(#ahd)" stroke="#555"/>
+          <line x1="560" y1="266" x2="518" y2="300" marker-end="url(#ahd)" stroke="#555"/>
+          <!-- runners -> IndexStoreLoader (IndexStore path) -->
+          <line x1="495" y1="244" x2="663" y2="153" marker-end="url(#ah)"/>
+          <!-- IndexStoreLoader -> IndexStoreDB -->
+          <line x1="737" y1="178" x2="737" y2="210" marker-end="url(#ahd)" stroke="#555"/>
+          <!-- IndexStoreDB -> SCIPIndexBuilder -->
+          <line x1="800" y1="235" x2="848" y2="153" marker-end="url(#ah)"/>
+          <!-- SwiftFileDiscovery -> SCIPIndexBuilder -->
+          <line x1="800" y1="295" x2="848" y2="160" marker-end="url(#ah)"/>
+          <!-- SCIPIndexBuilder -> mappers (thin) -->
+          <line x1="920" y1="178" x2="920" y2="208" stroke="#666" stroke-dasharray="2,3" marker-end="url(#ahd)"/>
+          <line x1="920" y1="242" x2="920" y2="248" stroke="#666" stroke-dasharray="2,3" marker-end="url(#ahd)"/>
+          <line x1="920" y1="282" x2="920" y2="288" stroke="#666" stroke-dasharray="2,3" marker-end="url(#ahd)"/>
+          <!-- SCIPIndexBuilder -> Scip.pb.swift -->
+          <line x1="1000" y1="155" x2="1028" y2="155" marker-end="url(#ah)"/>
+          <!-- Scip.pb.swift -> index.scip -->
+          <line x1="1090" y1="178" x2="1090" y2="210" marker-end="url(#ah)"/>
+          <!-- index.scip -> consumers -->
+          <line x1="1090" y1="295" x2="1090" y2="438" marker-end="url(#ah)"/>
+          <line x1="1090" y1="438" x2="970" y2="438" marker-end="url(#ah)"/>
+        </g>
+
+        <!-- external toolchain invokes (dashed) -->
+        <g fill="none" stroke="#444" stroke-width="1" stroke-dasharray="4,4">
+          <line x1="495" y1="322" x2="495" y2="438" marker-end="url(#ahd)"/>
+          <line x1="660" y1="155" x2="640" y2="438" marker-end="url(#ahd)"/>
+        </g>
+        <text x="500" y="385" fill="#666" font-size="8">invokes</text>
+        <text x="628" y="300" fill="#666" font-size="8">loads .dylib</text>
+        <text x="556" y="188" fill="#888" font-size="8">IndexStore path</text>
+        <text x="798" y="198" fill="#888" font-size="8">SymbolOccurrence</text>
+        <text x="798" y="286" fill="#888" font-size="8">.swift files</text>
+        <text x="150" y="150" fill="#888" font-size="8">repo path</text>
+
+        <!-- =================================================================
+             INPUT
+             ================================================================= -->
+        <rect x="35" y="165" width="115" height="68" rx="4" fill="#0a0a0a" stroke="#3a3a3a" stroke-width="1"/>
+        <text x="92" y="190" fill="#fff" font-size="11" font-weight="500" text-anchor="middle">Swift repo</text>
+        <text x="92" y="207" fill="#777" font-size="8" text-anchor="middle">Package.swift</text>
+        <text x="92" y="220" fill="#777" font-size="8" text-anchor="middle">or .xcodeproj</text>
+
+        <!-- =================================================================
+             01 · CLI
+             ================================================================= -->
+        <rect x="190" y="135" width="140" height="45" rx="4" fill="#0d0d0d" stroke="#4a4a4a" stroke-width="1"/>
+        <text x="260" y="155" fill="#fff" font-size="11" font-weight="500" text-anchor="middle">ScipSwiftCommand</text>
+        <text x="260" y="169" fill="#777" font-size="8" text-anchor="middle">ArgumentParser root</text>
+
+        <rect x="190" y="212" width="140" height="45" rx="4" fill="#0d0d0d" stroke="#4a4a4a" stroke-width="1"/>
+        <text x="260" y="232" fill="#fff" font-size="11" font-weight="500" text-anchor="middle">IndexCommand</text>
+        <text x="260" y="246" fill="#777" font-size="8" text-anchor="middle">coordinates pipeline</text>
+
+        <!-- =================================================================
+             02 · BUILD
+             ================================================================= -->
+        <rect x="378" y="133" width="164" height="45" rx="4" fill="#0d0d0d" stroke="#5a5a5a" stroke-width="1"/>
+        <text x="460" y="153" fill="#fff" font-size="11" font-weight="500" text-anchor="middle">BuildBackendDetector</text>
+        <text x="460" y="167" fill="#777" font-size="8" text-anchor="middle">swiftpm / xcodebuild</text>
+
+        <rect x="375" y="220" width="110" height="46" rx="4" fill="#0a0a0a" stroke="#3a3a3a" stroke-width="1"/>
+        <text x="430" y="240" fill="#e6e6e6" font-size="9.5" font-weight="500" text-anchor="middle">SwiftPMBuildRunner</text>
+        <text x="430" y="254" fill="#666" font-size="6.8" text-anchor="middle">swift build --enable-index-store</text>
+
+        <rect x="505" y="220" width="110" height="46" rx="4" fill="#0a0a0a" stroke="#3a3a3a" stroke-width="1"/>
+        <text x="560" y="240" fill="#e6e6e6" font-size="9.5" font-weight="500" text-anchor="middle">XcodebuildBuildRunner</text>
+        <text x="560" y="254" fill="#666" font-size="6.8" text-anchor="middle">xcodebuild INDEX_STORE_ENABLE</text>
+
+        <rect x="408" y="302" width="140" height="40" rx="4" fill="#080808" stroke="#333" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="478" y="320" fill="#bbb" font-size="9.5" font-weight="500" text-anchor="middle">SubprocessRunner</text>
+        <text x="478" y="334" fill="#666" font-size="7.5" text-anchor="middle">spawns + captures output</text>
+
+        <!-- =================================================================
+             03 · INDEX
+             ================================================================= -->
+        <rect x="660" y="133" width="152" height="45" rx="4" fill="#0d0d0d" stroke="#4a4a4a" stroke-width="1"/>
+        <text x="736" y="153" fill="#fff" font-size="11" font-weight="500" text-anchor="middle">IndexStoreLoader</text>
+        <text x="736" y="167" fill="#777" font-size="8" text-anchor="middle">opens IndexStoreDB</text>
+
+        <rect x="660" y="212" width="152" height="46" rx="4" fill="#0a0a0a" stroke="#3a3a3a" stroke-width="1"/>
+        <text x="736" y="232" fill="#fff" font-size="11" font-weight="500" text-anchor="middle">IndexStoreDB</text>
+        <text x="736" y="247" fill="#777" font-size="7.5" text-anchor="middle">SymbolOccurrence query API</text>
+
+        <rect x="660" y="278" width="152" height="45" rx="4" fill="#0a0a0a" stroke="#3a3a3a" stroke-width="1"/>
+        <text x="736" y="298" fill="#e6e6e6" font-size="11" font-weight="500" text-anchor="middle">SwiftFileDiscovery</text>
+        <text x="736" y="312" fill="#777" font-size="8" text-anchor="middle">walks .swift files</text>
+
+        <!-- =================================================================
+             04 · MAP
+             ================================================================= -->
+        <rect x="848" y="133" width="154" height="45" rx="4" fill="#0d0d0d" stroke="#5a5a5a" stroke-width="1"/>
+        <text x="925" y="153" fill="#fff" font-size="11" font-weight="500" text-anchor="middle">SCIPIndexBuilder</text>
+        <text x="925" y="167" fill="#777" font-size="8" text-anchor="middle">main loop → Scip_Index</text>
+
+        <rect x="848" y="210" width="154" height="30" rx="3" fill="#080808" stroke="#333" stroke-width="1"/>
+        <text x="925" y="229" fill="#cfcfcf" font-size="9" font-weight="500" text-anchor="middle">SCIPSymbolFormatter</text>
+
+        <rect x="848" y="248" width="154" height="30" rx="3" fill="#080808" stroke="#333" stroke-width="1"/>
+        <text x="925" y="267" fill="#cfcfcf" font-size="9" font-weight="500" text-anchor="middle">SymbolKindMapping</text>
+
+        <rect x="848" y="286" width="154" height="30" rx="3" fill="#080808" stroke="#333" stroke-width="1"/>
+        <text x="925" y="305" fill="#cfcfcf" font-size="9" font-weight="500" text-anchor="middle">SymbolRoleMapping</text>
+
+        <rect x="848" y="324" width="154" height="30" rx="3" fill="#080808" stroke="#333" stroke-width="1"/>
+        <text x="925" y="343" fill="#cfcfcf" font-size="9" font-weight="500" text-anchor="middle">PositionMapping</text>
+
+        <!-- =================================================================
+             05 · OUTPUT
+             ================================================================= -->
+        <rect x="1025" y="133" width="138" height="45" rx="4" fill="#080808" stroke="#333" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="1094" y="153" fill="#bbb" font-size="11" font-weight="500" text-anchor="middle">Scip.pb.swift</text>
+        <text x="1094" y="167" fill="#666" font-size="7.5" text-anchor="middle">generated · vendored proto</text>
+
+        <rect x="1025" y="212" width="138" height="82" rx="4" fill="#ffffff" stroke="#ffffff" stroke-width="1"/>
+        <text x="1094" y="240" fill="#000" font-size="12" font-weight="600" text-anchor="middle">index.scip</text>
+        <text x="1094" y="258" fill="#666" font-size="7.5" text-anchor="middle">SCIP protobuf</text>
+        <text x="1094" y="272" fill="#666" font-size="7.5" text-anchor="middle">Index / Document /</text>
+        <text x="1094" y="284" fill="#666" font-size="7.5" text-anchor="middle">Symbol / Occurrence</text>
+
+        <!-- =================================================================
+             EXTERNAL · TOOLCHAIN
+             ================================================================= -->
+        <rect x="370" y="438" width="285" height="62" rx="6" fill="none" stroke="#2a2a2a" stroke-width="1" stroke-dasharray="4,4"/>
+        <text x="512" y="460" fill="#9a9a9a" font-size="11" font-weight="500" text-anchor="middle">Swift / Xcode toolchain · macOS host</text>
+        <text x="512" y="476" fill="#5a5a5a" font-size="8" text-anchor="middle">swift · xcodebuild · libIndexStore.dylib · Apple SDKs</text>
+        <text x="512" y="490" fill="#444" font-size="7" text-anchor="middle">external — not bundled</text>
+
+        <!-- =================================================================
+             CONSUMERS
+             ================================================================= -->
+        <rect x="700" y="418" width="270" height="100" rx="6" fill="#0a0a0a" stroke="#3a3a3a" stroke-width="1"/>
+        <text x="835" y="442" fill="#fff" font-size="12" font-weight="500" text-anchor="middle">SCIP consumers</text>
+        <text x="835" y="462" fill="#9a9a9a" font-size="9" text-anchor="middle">scip CLI (lint / upload)</text>
+        <text x="835" y="478" fill="#9a9a9a" font-size="9" text-anchor="middle">Sourcegraph</text>
+        <text x="835" y="494" fill="#9a9a9a" font-size="9" text-anchor="middle">Editor plugins — VS Code · JetBrains</text>
+        <text x="835" y="510" fill="#666" font-size="7" text-anchor="middle">go-to-definition · find-references · symbol search</text>
+
+        <!-- =================================================================
+             LEGEND
+             ================================================================= -->
+        <line x1="35" y1="544" x2="1145" y2="544" stroke="#1a1a1a" stroke-width="1"/>
+        <text x="35" y="566" fill="#5a5a5a" font-size="9" font-weight="500" letter-spacing="2">LEGEND</text>
+
+        <g font-size="8" fill="#7a7a7a">
+          <rect x="120" y="558" width="14" height="9" rx="1" fill="#0a0a0a" stroke="#3a3a3a" stroke-width="1"/>
+          <text x="140" y="566">artifact</text>
+
+          <rect x="200" y="558" width="14" height="9" rx="1" fill="#0d0d0d" stroke="#4a4a4a" stroke-width="1"/>
+          <text x="220" y="566">process</text>
+
+          <rect x="276" y="558" width="14" height="9" rx="1" fill="#080808" stroke="#333" stroke-width="1" stroke-dasharray="2,2"/>
+          <text x="296" y="566">generated / external</text>
+
+          <rect x="420" y="558" width="14" height="9" rx="1" fill="#ffffff" stroke="#ffffff"/>
+          <text x="440" y="566" fill="#7a7a7a">emitted output</text>
+
+          <line x1="540" y1="563" x2="568" y2="563" stroke="#fff" stroke-width="1" marker-end="url(#ah)"/>
+          <text x="576" y="566">data flow</text>
+
+          <line x1="660" y1="563" x2="688" y2="563" stroke="#666" stroke-width="1" stroke-dasharray="2,3" marker-end="url(#ahd)"/>
+          <text x="696" y="566">delegates</text>
+
+          <line x1="780" y1="563" x2="808" y2="563" stroke="#444" stroke-width="1" stroke-dasharray="4,4" marker-end="url(#ahd)"/>
+          <text x="816" y="566">invokes (external)</text>
+        </g>
+      </svg>
+    </div>
+
+    <!-- Info Cards -->
+    <div class="cards">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-bar"></span>
+          <h3>Pipeline</h3>
+        </div>
+        <ul>
+          <li>01 · CLI — <b>ScipSwiftCommand → IndexCommand</b></li>
+          <li>02 · Build — detect, build with indexing on</li>
+          <li>03 · Index — open IndexStoreDB, walk .swift</li>
+          <li>04 · Map — occurrences → SCIP messages</li>
+          <li>05 · Output — write <b>index.scip</b></li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-bar"></span>
+          <h3>Design</h3>
+        </div>
+        <ul>
+          <li>Does <b>not</b> parse Swift — uses compiler IndexStore</li>
+          <li>4 mappers are pure, stateless, exhaustive</li>
+          <li>Symbols use raw USRs — no demangling</li>
+          <li>Auto-detects swiftpm vs xcodebuild</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-bar"></span>
+          <h3>Constraints</h3>
+        </div>
+        <ul>
+          <li>macOS-only (Xcode + libIndexStore + SDKs)</li>
+          <li>Swift toolchain pinned to <b>6.2.4</b></li>
+          <li>Occurrence ranges approximated</li>
+          <li>No call-role in SCIP spec</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <p class="footer">
+      scip-swift v0.1.2 · macOS host · Swift 6.2.4 · Sources/scip-swift/
+    </p>
+  </div>
+
+  <script>
+    async function copyAsImage(btn) {
+      const orig = btn.textContent;
+      try {
+        const el = document.getElementById('report-container');
+        const r = el.getBoundingClientRect();
+        const pad = 32;
+        const canvas = await html2canvas(document.body, { backgroundColor: '#000000', scale: 2, useCORS: true, ignoreElements: (e) => e.classList && e.classList.contains('toolbar'), x: r.left + window.scrollX - pad, y: r.top + window.scrollY - pad, width: r.width + pad * 2, height: r.height + pad * 2 });
+        const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        btn.textContent = '✓ Copied';
+      } catch (e) { btn.textContent = '✗ Failed'; }
+      setTimeout(() => btn.textContent = orig, 2000);
+    }
+
+    async function downloadPNG(btn) {
+      const orig = btn.textContent; btn.textContent = '⏳ …';
+      try {
+        const el = document.getElementById('report-container');
+        const r = el.getBoundingClientRect();
+        const pad = 32;
+        const canvas = await html2canvas(document.body, { backgroundColor: '#000000', scale: 2, useCORS: true, ignoreElements: (e) => e.classList && e.classList.contains('toolbar'), x: r.left + window.scrollX - pad, y: r.top + window.scrollY - pad, width: r.width + pad * 2, height: r.height + pad * 2 });
+        const link = document.createElement('a');
+        link.download = 'scip-swift-architecture.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        btn.textContent = '✓ Done';
+      } catch (e) { btn.textContent = '✗ Failed'; }
+      setTimeout(() => btn.textContent = orig, 2000);
+    }
+
+    async function downloadPDF(btn) {
+      const orig = btn.textContent; btn.textContent = '⏳ …';
+      try {
+        const el = document.getElementById('report-container');
+        const r = el.getBoundingClientRect();
+        const pad = 32;
+        const canvas = await html2canvas(document.body, { backgroundColor: '#000000', scale: 2, useCORS: true, ignoreElements: (e) => e.classList && e.classList.contains('toolbar'), x: r.left + window.scrollX - pad, y: r.top + window.scrollY - pad, width: r.width + pad * 2, height: r.height + pad * 2 });
+        const imgData = canvas.toDataURL('image/png');
+        const { jsPDF } = window.jspdf;
+        const orientation = canvas.width > canvas.height ? 'landscape' : 'portrait';
+        const pdf = new jsPDF({ orientation, unit: 'px', format: [canvas.width, canvas.height], hotfixes: ['px_scaling'] });
+        pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+        pdf.save('scip-swift-architecture.pdf');
+        btn.textContent = '✓ Done';
+      } catch (e) { btn.textContent = '✗ Failed'; }
+      setTimeout(() => btn.textContent = orig, 2000);
+    }
+  </script>
+</body>
+</html>

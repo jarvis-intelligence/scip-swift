@@ -33,7 +33,7 @@ The SCIP ecosystem (a standard code intelligence protocol used by Sourcegraph, c
 - Documented limitations and known behaviors ✅
 - Open source (Apache-2.0) ✅
 
-## Feature Set (v0.1.0)
+## Feature Set
 
 - Automatic detection of build system (SwiftPM or Xcode projects).
 - Configurable build tool, configuration (debug/release), and Xcode scheme selection.
@@ -53,14 +53,13 @@ See [README.md](../README.md) for detailed limitations and platform requirements
 
 ## Development Status
 
-**Shipped**: v0.1.0 (GitHub Releases, arm64 macOS binary)
+**Shipped**: v0.2.1 (current; see `Sources/scip-swift/Version.swift`). The initial tagged release was v0.1.0 (macOS arm64 binary via GitHub Releases); v0.1.1 and v0.1.2 were follow-up patch releases (notably the `index` subcommand and disabled code signing for index-only `xcodebuild` runs); v0.2.0 shipped the Homebrew formula, incremental indexing (`--cache-dir`), extended symbol metadata (signatures, relationships), and cross-repo merge (`index-many --merge`); v0.2.1 is the current patch release.
 
 **Open items**:
-- Homebrew formula (distribution convenience, not functionality)
 - Exact range recovery (requires AST-level symbol location data)
 - Demangled symbol names (requires Swift compiler's mangling library)
 - Toolchain version compatibility testing
-- Cross-repo symbol indexing strategy (multi-repo SCIP merge)
+- Docstring extraction for extended symbol metadata (signatures and relationships shipped in v0.2.0)
 
 ## Technical Stack
 
@@ -70,7 +69,7 @@ See [README.md](../README.md) for detailed limitations and platform requirements
   - `swiftlang/indexstore-db` — IndexStore query API
   - `apple/swift-protobuf` — SCIP protobuf code generation
   - `apple/swift-argument-parser` — CLI argument handling
-- **CI/CD**: GitHub Actions (macOS-15 runners)
+- **CI/CD**: GitHub Actions (macOS-26 runners)
 - **Protobuf Source**: Upstream `sourcegraph/scip` (vendored at `Protos/scip.proto`)
 
 ## References

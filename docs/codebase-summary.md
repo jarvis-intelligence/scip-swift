@@ -59,7 +59,7 @@ scip-swift/
 ├── Fixtures/
 │   └── MiniSwiftPackage/                   # Small SwiftPM package for integration tests
 │       ├── Package.swift
-│       └── Sources/Greeter.swift           # Single test source file
+│       └── Sources/MiniSwiftPackage/Greeter.swift  # Single test source file (a `struct`)
 ```
 
 ## Key Modules
@@ -109,9 +109,10 @@ Implementations:
 6. Write the final protobuf `Index` to disk.
 
 **Mapping modules**:
-- **`SCIPSymbolFormatter`** — converts IndexStoreDB's compiler USR to a SCIP symbol string using the canonical grammar (`<scheme>/<package>/<descriptor>+` or `local <id>`). USRs are kept opaque (not demangled); per-document `.local` symbols get sequential IDs.
+- **`SCIPSymbolFormatter`** — renders an IndexStoreDB `Symbol` into the canonical SCIP symbol string (`<scheme> <manager> <package> <version> <descriptor>` or `local <id>`), using the raw compiler USR verbatim as a single opaque descriptor term (no demangling). `LocalSymbolNumberer` assigns stable per-document IDs to symbols IndexStoreDB marks `.local`. Space-fields are escaped per the SCIP grammar; non-identifier USRs are backtick-wrapped.
 - **`SymbolKindMapping`** — maps IndexStoreDB `Symbol.kind`/`subKind` to SCIP `SymbolInformation.Kind` (best-effort matching).
 - **`SymbolRoleMapping`** — maps IndexStoreDB `SymbolRole` bits to SCIP `SymbolRole` bits. Note: SCIP has no call-specific role bit.
+- **`SymbolRoleMapping`** — packs IndexStoreDB `SymbolRole` bits into SCIP's `Int32` bitfield (`scipRoles(for:)`). `write` is mutually exclusive with `read` (a `write`-implying role suppresses the read bit), and there is no call-specific bit in `scip.proto`, so `.call` contributes nothing beyond `.reference`.
 - **`PositionMapping`** — converts IndexStoreDB's single anchor point (1-based line/UTF8-column) to SCIP's 0-based half-open range; end column is approximated from symbol display-name length.
 
 ### Generated Code (`Generated/Scip.pb.swift`)
@@ -127,7 +128,7 @@ Vendored Swift code generated from upstream `sourcegraph/scip/Protos/scip.proto`
 
 - **Unit tests** in `Tests/scip-swiftTests/` cover mapping logic (`SymbolKindMapping`, `SymbolRoleMapping`, `SCIPSymbolFormatter`).
 - **Integration test** (`IntegrationTests.swift`) runs the full pipeline against `Fixtures/MiniSwiftPackage/`.
-- Run via `swift test` or `swift build` (tests are included).
+- Unit tests use Swift Testing (`@Suite`/`@Test`); run all with `swift test`, or one suite with `swift test --filter SymbolKindMapping`. The integration test shells out to a real `swift build` (no mocks), so it's slower than the unit suites.
 
 ## Dependencies
 
