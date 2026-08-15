@@ -42,7 +42,11 @@ Full details: `.planning/milestones/v0.2.0-ROADMAP.md`
   1. User can run `scip-swift index <repo>` on an Xcode-project repo and get a `.scip` index built through the xcodebuild backend (integration test against the existing Xcode fixture passes)
   2. User can pass `--destination "platform=iOS Simulator,name=iPhone 16"` and xcodebuild builds for that destination; omitting the flag preserves today's generic-destination behavior
   3. When a `--destination` build fails, the error output tells the user to run `xcodebuild -showdestinations` to discover valid destination strings
-**Plans**: TBD
+**Plans**: 2
+
+Plans:
+- [ ] 06-01-PLAN.md — Restore the lost `.xcodebuild` dispatch in `indexOneRepo` via one shared switch-tool helper called from both cache branches (REPAIR-01), with integration tests on the temp and cache paths
+- [ ] 06-02-PLAN.md — Opt-in `--destination` flag threaded CLI → `indexOneRepo` → `XcodebuildBuildRunner` arguments splice, plus the destination-gated `xcodebuildDestinationFailed` error with `-showdestinations` hint (REPAIR-02, REPAIR-03)
 
 ### Phase 7: Demangled Symbol Names
 **Goal**: Users see human-readable symbol names in the index while symbol identity, incremental caching, and cross-repo merges behave unchanged
@@ -82,7 +86,7 @@ Phases execute in numeric order: 6 → 7 → 8 → 9 (Phases 7 and 8 are indepen
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 6. Xcode Backend Repair & Destination Selection | v0.3.0 | 0/TBD | Not started | - |
+| 6. Xcode Backend Repair & Destination Selection | v0.3.0 | 0/2 | Not started | - |
 | 7. Demangled Symbol Names | v0.3.0 | 0/TBD | Not started | - |
 | 8. Exact Occurrence Ranges | v0.3.0 | 0/TBD | Not started | - |
 | 9. Symbol Documentation | v0.3.0 | 0/TBD | Not started | - |
