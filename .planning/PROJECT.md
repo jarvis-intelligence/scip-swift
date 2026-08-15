@@ -37,14 +37,17 @@ Produce valid, `scip lint`-passing `.scip` indexes from any Swift repository (Sw
 
 ### Active
 
-(Dependencies, demangled symbols, and Linux support are candidates for v1.0+ — not yet scoped.)
+- [ ] Demangle USRs into human-readable symbol names (e.g. `MiniSwift.greet(name:)` instead of `s:9MiniSwift5greetyySSF`) — v0.3.0
+- [ ] Emit exact occurrence ranges (replace display-name-length end-column approximation) — v0.3.0
+- [ ] Support `xcodebuild -destination` selection so iOS-only targets fully index — v0.3.0
+- [ ] Emit symbol documentation (doc comments and markdown `documentation` field) — v0.3.0
 
 ### Out of Scope
 
 - Linux support — `libIndexStore.dylib` and Apple SDKs are macOS-only; architectural, not a feature gap
 - Source code parsing — the compiler's own IndexStore is the data source; no custom Swift parser
 - Custom code navigation format — SCIP protobuf spec is used as-is
-- Demangled symbol names — deferred to v1.0+; needs compiler mangling library or custom demangler (H2 2027)
+- Demangled symbol names — ~~deferred to v1.0+~~ now scoped for v0.3.0 (SwiftDemangler feasibility to be validated in research)
 
 ## Context
 
@@ -58,6 +61,16 @@ Produce valid, `scip lint`-passing `.scip` indexes from any Swift repository (Sw
 **Peer comparison:** scip-typescript and scip-rust both emit human-readable symbol names and provide documentation. scip-swift now matches on relationships and role bits but still trails on readable symbol names (demangling pending).
 
 **Codebase characteristics:** Single executable target (~6000 lines of hand-written Swift + 3190 lines generated protobuf). Five-stage pipeline architecture with stateless pure-function mappers. Swift Testing framework (not XCTest). 2-space indentation, enum-as-namespace pattern for mappers. 95 tests across 16 suites including real-build integration tests.
+
+## Current Milestone: v0.3.0 Readable Indexes
+
+**Goal:** Make scip-swift's output human-readable and precise — demangled symbol names, exact occurrence ranges, iOS destination support, and symbol documentation.
+
+**Target features:**
+- Demangle USRs into readable Swift symbol names
+- Exact occurrence ranges (no display-name-length approximation)
+- `xcodebuild -destination` selection for iOS-only targets
+- Symbol documentation (doc comments → SCIP `documentation` fields)
 
 ## Constraints
 
@@ -99,4 +112,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-13 after v0.2.0 milestone*
+*Last updated: 2026-08-15 after v0.2.0 milestone; v0.3.0 scoped*
