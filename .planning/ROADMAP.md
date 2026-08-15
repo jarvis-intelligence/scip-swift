@@ -36,7 +36,7 @@ Full details: `.planning/milestones/v0.2.0-ROADMAP.md`
 
 ### Phase 6: Xcode Backend Repair & Destination Selection
 **Goal**: Xcode-project repos index again, and users can point xcodebuild at an explicit destination so iOS-only targets fully index
-**Depends on**: Nothing (first phase of v0.3.0; restores v0.2.x capability lost in the c06c050 refactor)
+**Depends on**: Nothing (first phase of v0.3.0; restores v0.2.x capability lost in the 0cdefd7 cache rewrite)
 **Requirements**: REPAIR-01, REPAIR-02, REPAIR-03
 **Success Criteria** (what must be TRUE):
   1. User can run `scip-swift index <repo>` on an Xcode-project repo and get a `.scip` index built through the xcodebuild backend (integration test against the existing Xcode fixture passes)
