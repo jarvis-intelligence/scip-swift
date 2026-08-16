@@ -57,6 +57,80 @@ struct IntegrationTests {
     #expect(index.metadata.toolInfo.name == "scip-swift")
   }
 
+  @Test("demangle off reproduces v0.2.x opaque display names")
+  func demangleOffReproducesV02xDisplayNames() throws {
+    let fixtureRepoPath = Self.fixtureRepoPath()
+    let workDirectory = try Self.makeTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(atPath: workDirectory) }
+
+    let runner = SwiftPMBuildRunner(
+      repoPath: fixtureRepoPath,
+      configuration: .debug,
+      scratchPath: (workDirectory as NSString).appendingPathComponent("scratch")
+    )
+    let buildResult = try runner.produceIndexStore()
+
+    let builder = SCIPIndexBuilder(
+      repoPath: fixtureRepoPath,
+      indexStorePath: buildResult.indexStorePath,
+      databasePath: (workDirectory as NSString).appendingPathComponent("index-db"),
+      buildToolName: BuildTool.swiftpm.rawValue,
+      converterVersion: "test",
+      demangle: false
+    )
+    let index = try builder.build()
+
+    let document = try #require(index.documents.first)
+    let displayNames = Set(document.symbols.map(\.displayName))
+    #expect(displayNames.contains("Greeter"), "v0.2.x parity: short struct name")
+    #expect(displayNames.contains("greet()"), "v0.2.x parity: short method name")
+    #expect(displayNames.contains("name"), "v0.2.x parity: short property name")
+    #expect(
+      !displayNames.contains("MiniSwiftPackage.Greeter"),
+      "demangled names must not appear with demangling off"
+    )
+  }
+
+  @Test("external symbols stay empty when demangle is off")
+  func externalSymbolsStayEmptyWhenDemangleOff() throws {
+    let fixtureRepoPath = Self.fixtureRepoPath()
+    let workDirectory = try Self.makeTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(atPath: workDirectory) }
+
+    let runner = SwiftPMBuildRunner(
+      repoPath: fixtureRepoPath,
+      configuration: .debug,
+      scratchPath: (workDirectory as NSString).appendingPathComponent("scratch")
+    )
+    let buildResult = try runner.produceIndexStore()
+
+    let builder = SCIPIndexBuilder(
+      repoPath: fixtureRepoPath,
+      indexStorePath: buildResult.indexStorePath,
+      databasePath: (workDirectory as NSString).appendingPathComponent("index-db"),
+      buildToolName: BuildTool.swiftpm.rawValue,
+      converterVersion: "test",
+      demangle: false
+    )
+    let index = try builder.build()
+
+    #expect(!index.externalSymbols.isEmpty, "fixture must reference at least one external symbol (String)")
+    #expect(
+      index.externalSymbols.allSatisfy { $0.displayName.isEmpty },
+      "v0.2.x parity: external symbols carry no display names when demangling is off"
+    )
+  }
+
+  @Test("index --help advertises --no-demangle")
+  func helpListsNoDemangleFlag() throws {
+    let result = try SubprocessRunner.run(
+      executable: Self.builtBinaryPath(),
+      arguments: ["index", "--help"],
+      currentDirectory: "/"
+    )
+    #expect(result.combinedOutput.contains("--no-demangle"))
+  }
+
   private static func fixtureRepoPath() -> String {
     // Tests/scip-swiftTests/IntegrationTests.swift -> repo root
     let repoRoot = URL(fileURLWithPath: #filePath)
@@ -70,5 +144,13 @@ struct IntegrationTests {
     let path = (NSTemporaryDirectory() as NSString).appendingPathComponent("scip-swift-tests-\(UUID().uuidString)")
     try FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: true)
     return path
+  }
+
+  private static func builtBinaryPath() -> String {
+    let repoRoot = URL(fileURLWithPath: #filePath)
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+    return repoRoot.appendingPathComponent(".build/debug/scip-swift").path
   }
 }
