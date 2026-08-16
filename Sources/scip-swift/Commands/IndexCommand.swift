@@ -23,6 +23,9 @@ struct IndexCommand: ParsableCommand {
   @Option(name: .long, help: "Xcode scheme to build. Only used with xcodebuild; auto-detected if the project has exactly one scheme.")
   var scheme: String?
 
+  @Option(name: .long, help: "xcodebuild destination specifier. Only used with xcodebuild; e.g. 'generic/platform=iOS Simulator' (needs no device attached).")
+  var destination: String?
+
   @Option(name: .long, help: "Directory for the incremental index cache. Defaults to <repo>/.scip-cache/.")
   var cacheDir: String?
 
@@ -39,6 +42,7 @@ struct IndexCommand: ParsableCommand {
       buildTool: buildTool,
       configuration: configuration,
       scheme: scheme,
+      destination: destination,
       cacheDir: cacheDir,
       indexOnly: indexOnly,
       symbolVersion: ""
@@ -55,6 +59,7 @@ struct IndexCommand: ParsableCommand {
     buildTool: BuildTool?,
     configuration: BuildConfiguration,
     scheme: String?,
+    destination: String? = nil,
     cacheDir: String?,
     indexOnly: Bool,
     symbolVersion: String
@@ -89,6 +94,7 @@ struct IndexCommand: ParsableCommand {
           repoPath: repoPath,
           configuration: configuration,
           scheme: scheme,
+          destination: destination,
           scratchPath: scratchPath
         )
       }
@@ -102,6 +108,7 @@ struct IndexCommand: ParsableCommand {
         repoPath: repoPath,
         configuration: configuration,
         scheme: scheme,
+        destination: destination,
         scratchPath: scratchPath
       )
     }
@@ -152,6 +159,7 @@ struct IndexCommand: ParsableCommand {
     repoPath: String,
     configuration: BuildConfiguration,
     scheme: String?,
+    destination: String? = nil,
     scratchPath: String
   ) throws -> String {
     switch tool {
@@ -177,7 +185,8 @@ struct IndexCommand: ParsableCommand {
         configuration: configuration,
         scheme: resolvedScheme,
         derivedDataPath: derivedDataPath,
-        projectArguments: projectArguments
+        projectArguments: projectArguments,
+        destination: destination
       )
       return try runner.produceIndexStore().indexStorePath
     }
