@@ -5,16 +5,16 @@ milestone_name: Readable Indexes
 current_phase: 6
 current_phase_name: Xcode Backend Repair & Destination Selection
 status: complete
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-08-16T04:33:18.221Z"
+stopped_at: Completed 07-02-PLAN.md
+last_updated: "2026-08-16T17:31:31.942Z"
 last_activity: 2026-08-16
 last_activity_desc: "06-01 executed: restored xcodebuild dispatch via shared produceIndexStore helper on both indexOneRepo cache branches"
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 0
+  completed_phases: 2
+  total_plans: 4
+  completed_plans: 4
+  percent: 50
 ---
 
 # Project State
@@ -29,11 +29,11 @@ See: .planning/PROJECT.md (updated 2026-08-15)
 ## Current Position
 
 Phase: 6 of 9 (Xcode Backend Repair & Destination Selection)
-Plan: 1 of 2 in current phase
+Plan: 2 of 2 in current phase
 Status: Executing — plan 06-01 complete, 06-02 next
 Last activity: 2026-08-16 — 06-01 executed: restored xcodebuild dispatch via shared produceIndexStore helper on both indexOneRepo cache branches
 
-Progress: [█████░░░░░] 50%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -49,6 +49,7 @@ Progress: [█████░░░░░] 50%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 06 P01 | 21m | 2 tasks | 2 files |
+| Phase 07 P02 | 58m | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -62,6 +63,7 @@ Recent decisions affecting current work:
 - Phase 8: swift-syntax is the one new dependency; one shared per-file refiner pass feeds both ranges (8) and docs (9)
 - Cross-phase: bump IndexManifest cache version when serialized output changes; keep `scip lint` passing
 - [Phase ?]: Derived data placed beside scratch dir (parent + /derived-data): temp under work dir, cache runs under cache dir, mirroring 1c5ba8f convention
+- [Phase ?]: Phase 7: external-symbol USRs recovered by inverting the canonical symbol string (cache-safe); invalidateAll scoped to docs/+manifest.json after it was found deleting build scratch on version upgrades
 
 ### Pending Todos
 
@@ -81,6 +83,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-16T04:33:18.203Z
-Stopped at: Completed 06-01-PLAN.md
-Resume file: 06-02-PLAN.md
+Last session: 2026-08-16T17:31:17.587Z
+Stopped at: Completed 07-02-PLAN.md
+Resume file: None
