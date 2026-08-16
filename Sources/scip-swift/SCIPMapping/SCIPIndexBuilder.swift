@@ -11,6 +11,7 @@ struct SCIPIndexBuilder {
   let converterVersion: String
   let symbolVersion: String
   let cacheStore: CacheStore?
+  let demangle: Bool
 
   init(
     repoPath: String,
@@ -19,7 +20,8 @@ struct SCIPIndexBuilder {
     buildToolName: String,
     converterVersion: String,
     symbolVersion: String = "",
-    cacheStore: CacheStore? = nil
+    cacheStore: CacheStore? = nil,
+    demangle: Bool = true
   ) {
     self.repoPath = repoPath
     self.indexStorePath = indexStorePath
@@ -28,11 +30,14 @@ struct SCIPIndexBuilder {
     self.converterVersion = converterVersion
     self.symbolVersion = symbolVersion
     self.cacheStore = cacheStore
+    self.demangle = demangle
   }
 
   func build() throws -> Scip_Index {
     let indexStoreDB = try IndexStoreLoader.open(storePath: indexStorePath, databasePath: databasePath)
     indexStoreDB.pollForUnitChangesAndWait()
+
+    let demangler = demangle ? USRDemangler.load() : nil
 
     var index = Scip_Index()
     index.metadata = makeMetadata()
@@ -57,6 +62,7 @@ struct SCIPIndexBuilder {
           if let fresh = makeDocument(
             filePath: filePath,
             indexStoreDB: indexStoreDB,
+            demangler: demangler,
             referencedSymbols: &referencedSymbols,
             systemReferencedSymbols: &systemReferencedSymbols
           ) {
@@ -70,6 +76,7 @@ struct SCIPIndexBuilder {
         document = makeDocument(
           filePath: filePath,
           indexStoreDB: indexStoreDB,
+          demangler: demangler,
           referencedSymbols: &referencedSymbols,
           systemReferencedSymbols: &systemReferencedSymbols
         )
@@ -113,6 +120,7 @@ struct SCIPIndexBuilder {
   private func makeDocument(
     filePath: String,
     indexStoreDB: IndexStoreDB,
+    demangler: USRDemangler?,
     referencedSymbols: inout [String: Scip_SymbolInformation],
     systemReferencedSymbols: inout [String: Scip_SymbolInformation]
   ) -> Scip_Document? {
@@ -154,7 +162,8 @@ struct SCIPIndexBuilder {
 
       var symbolInformation = Scip_SymbolInformation()
       symbolInformation.symbol = symbolString
-      symbolInformation.displayName = symbol.name
+      symbolInformation.displayName =
+        isLocal ? symbol.name : (demangler?.demangledDisplayName(usr: symbol.usr) ?? symbol.name)
       symbolInformation.kind = SymbolKindMapping.scipKind(for: symbol)
       if let signature = SignatureMapping.signature(for: symbol) {
         symbolInformation.signatureDocumentation = signature

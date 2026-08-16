@@ -114,7 +114,7 @@ struct RelationSpikeTests {
     #expect(index.documents.count > 0, "should have at least one document from the spike fixture")
     let document = try #require(index.documents.first)
     let displayNames = Set(document.symbols.map(\.displayName))
-    #expect(displayNames.contains("Dog"), "Dog class should be in the index")
+    #expect(displayNames.contains("RelationSpike.Dog"), "Dog class should be in the index")
   }
 
   private func printDiagnostic(_ label: String, _ occ: SymbolOccurrence) {

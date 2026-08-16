@@ -29,4 +29,21 @@ enum ToolchainInfo {
     let toolchainUsrRoot = usrRoot.deletingLastPathComponent
     return (toolchainUsrRoot as NSString).appendingPathComponent("lib/libIndexStore.dylib")
   }
+
+  /// Locates `libswiftDemangle.dylib` in the active toolchain, mirroring
+  /// `libIndexStoreDylibPath()`'s `xcrun --find swift` toolchain-root derivation.
+  static func libswiftDemangleDylibPath() throws -> String {
+    let xcrun = try SubprocessRunner.resolveExecutable(named: "xcrun")
+    let result = try SubprocessRunner.run(executable: xcrun, arguments: ["--find", "swift"], currentDirectory: "/")
+    let swiftPath = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard result.exitCode == 0, !swiftPath.isEmpty else {
+      throw BuildError.toolNotLaunchable(tool: "swift", underlying: "xcrun --find swift failed: \(result.stderr)")
+    }
+
+    // .../usr/bin/swift -> .../usr
+    let usrRoot = (swiftPath as NSString)
+      .deletingLastPathComponent as NSString
+    let toolchainUsrRoot = usrRoot.deletingLastPathComponent
+    return (toolchainUsrRoot as NSString).appendingPathComponent("lib/libswiftDemangle.dylib")
+  }
 }
