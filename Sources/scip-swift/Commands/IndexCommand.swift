@@ -96,12 +96,13 @@ struct IndexCommand: ParsableCommand {
       scratchPath = (workDirectory as NSString).appendingPathComponent("scratch")
       databasePath = (workDirectory as NSString).appendingPathComponent("index-db")
 
-      let runner = SwiftPMBuildRunner(
+      indexStorePath = try produceIndexStore(
+        tool: tool,
         repoPath: repoPath,
         configuration: configuration,
+        scheme: scheme,
         scratchPath: scratchPath
       )
-      indexStorePath = try runner.produceIndexStore().indexStorePath
     }
 
     var cacheStore: CacheStore?
@@ -143,6 +144,42 @@ struct IndexCommand: ParsableCommand {
       cacheStore: cacheStore
     )
     return try builder.build()
+  }
+
+  private static func produceIndexStore(
+    tool: BuildTool,
+    repoPath: String,
+    configuration: BuildConfiguration,
+    scheme: String?,
+    scratchPath: String
+  ) throws -> String {
+    switch tool {
+    case .swiftpm:
+      let runner = SwiftPMBuildRunner(
+        repoPath: repoPath,
+        configuration: configuration,
+        scratchPath: scratchPath
+      )
+      return try runner.produceIndexStore().indexStorePath
+
+    case .xcodebuild:
+      let projectArguments = try XcodeProjectLocator.workspaceOrProjectArguments(repoPath: repoPath)
+      let resolvedScheme = try XcodeProjectLocator.resolveScheme(
+        explicitScheme: scheme,
+        projectArguments: projectArguments,
+        repoPath: repoPath
+      )
+      let derivedDataPath = ((scratchPath as NSString).deletingLastPathComponent as NSString)
+        .appendingPathComponent("derived-data")
+      let runner = XcodebuildBuildRunner(
+        repoPath: repoPath,
+        configuration: configuration,
+        scheme: resolvedScheme,
+        derivedDataPath: derivedDataPath,
+        projectArguments: projectArguments
+      )
+      return try runner.produceIndexStore().indexStorePath
+    }
   }
 
   private static func makeTemporaryDirectory() -> String {
