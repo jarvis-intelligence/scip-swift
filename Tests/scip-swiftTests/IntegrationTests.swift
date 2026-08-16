@@ -121,6 +121,66 @@ struct IntegrationTests {
     )
   }
 
+  @Test("external symbols carry demangled display names when demangle is on")
+  func externalSymbolsCarryDemangledNamesWhenDemangleOn() throws {
+    let fixtureRepoPath = Self.fixtureRepoPath()
+    let workDirectory = try Self.makeTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(atPath: workDirectory) }
+
+    let runner = SwiftPMBuildRunner(
+      repoPath: fixtureRepoPath,
+      configuration: .debug,
+      scratchPath: (workDirectory as NSString).appendingPathComponent("scratch")
+    )
+    let buildResult = try runner.produceIndexStore()
+
+    let builder = SCIPIndexBuilder(
+      repoPath: fixtureRepoPath,
+      indexStorePath: buildResult.indexStorePath,
+      databasePath: (workDirectory as NSString).appendingPathComponent("index-db"),
+      buildToolName: BuildTool.swiftpm.rawValue,
+      converterVersion: "test"
+    )
+    let index = try builder.build()
+
+    #expect(!index.externalSymbols.isEmpty)
+    let displayNames = index.externalSymbols.map(\.displayName)
+    #expect(
+      displayNames.contains { $0.contains("Swift.String") },
+      "stdlib String references should carry demangled external display names"
+    )
+
+    let demangler = try #require(USRDemangler.load())
+    for external in index.externalSymbols {
+      let expected = displayNamesSafeDemangle(demangler, external.symbol)
+      if let expected {
+        #expect(
+          external.displayName == expected,
+          "external whose USR demangles must not be empty: \(external.symbol)"
+        )
+      }
+    }
+
+    let symbols = index.externalSymbols.map(\.symbol)
+    #expect(symbols == symbols.sorted(), "external symbol ordering must be unchanged")
+  }
+
+  private func displayNamesSafeDemangle(_ demangler: USRDemangler, _ canonicalSymbol: String) -> String? {
+    guard let usr = Self.usrFromCanonicalSymbolString(canonicalSymbol) else { return nil }
+    return demangler.demangledDisplayName(usr: usr)
+  }
+
+  private static func usrFromCanonicalSymbolString(_ symbolString: String) -> String? {
+    guard let separator = symbolString.lastIndex(of: " ") else { return nil }
+    let descriptor = symbolString[separator...].dropFirst()
+    guard descriptor.hasSuffix(".") else { return nil }
+    let body = descriptor.dropLast()
+    if body.hasPrefix("`"), body.hasSuffix("`") {
+      return String(body.dropFirst().dropLast()).replacingOccurrences(of: "``", with: "`")
+    }
+    return String(body)
+  }
+
   @Test("index --help advertises --no-demangle")
   func helpListsNoDemangleFlag() throws {
     let result = try SubprocessRunner.run(
