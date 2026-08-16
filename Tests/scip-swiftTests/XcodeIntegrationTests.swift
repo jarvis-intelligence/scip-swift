@@ -87,6 +87,52 @@ struct XcodeIntegrationTests {
     #expect(FileManager.default.fileExists(atPath: derivedDataPath))
   }
 
+  @Test("explicit destination builds the fixture and produces an index")
+  func explicitDestinationBuildsFixture() throws {
+    let index = try IndexCommand.indexOneRepo(
+      repoPath: Self.fixtureRepoPath(),
+      output: nil,
+      buildTool: nil,
+      configuration: .debug,
+      scheme: nil,
+      destination: "platform=macOS",
+      cacheDir: nil,
+      indexOnly: false,
+      symbolVersion: ""
+    )
+
+    #expect(index.documents.count > 0)
+    let document = try #require(index.documents.first)
+    #expect(document.language == "Swift")
+    #expect(!document.symbols.isEmpty)
+  }
+
+  @Test("bogus destination fails with the discoverable hint")
+  func bogusDestinationFailsWithHint() throws {
+    do {
+      _ = try IndexCommand.indexOneRepo(
+        repoPath: Self.fixtureRepoPath(),
+        output: nil,
+        buildTool: nil,
+        configuration: .debug,
+        scheme: nil,
+        destination: "platform=iOS Simulator,name=Nonexistent Device 999",
+        cacheDir: nil,
+        indexOnly: false,
+        symbolVersion: ""
+      )
+      Issue.record("expected a bogus destination to fail the build")
+    } catch {
+      let description = String(describing: error)
+      #expect(description.contains("-showdestinations"))
+      #expect(
+        description.contains(
+          "Unable to find a device matching the provided destination specifier:"
+        )
+      )
+    }
+  }
+
   private static func fixtureRepoPath() -> String {
     let repoRoot = URL(fileURLWithPath: #filePath)
       .deletingLastPathComponent()
