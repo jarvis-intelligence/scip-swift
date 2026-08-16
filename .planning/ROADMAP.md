@@ -27,7 +27,7 @@ Full details: `.planning/milestones/v0.2.0-ROADMAP.md`
 
 **Cross-phase invariants:** every phase keeps `scip lint` passing and second-run byte-identity tests green (re-baseline where serialized output changes; bump the IndexManifest cache version when it does).
 
-- [ ] **Phase 6: Xcode Backend Repair & Destination Selection** - Restore the xcodebuild dispatch branch and add opt-in `--destination`
+- [x] **Phase 6: Xcode Backend Repair & Destination Selection** - Restore the xcodebuild dispatch branch and add opt-in `--destination`
 - [ ] **Phase 7: Demangled Symbol Names** - Human-readable Swift symbol names with opaque fallback and stable identity
 - [ ] **Phase 8: Exact Occurrence Ranges** - SwiftSyntax identifier extents replace display-name-length approximation
 - [ ] **Phase 9: Symbol Documentation** - Doc comments as Markdown `documentation` riding the same parse pass
@@ -48,7 +48,7 @@ Full details: `.planning/milestones/v0.2.0-ROADMAP.md`
 **Plans**: 1/2 plans executed:
 
 - [x] 06-01-PLAN.md — Restore the lost `.xcodebuild` dispatch in `indexOneRepo` via one shared switch-tool helper called from both cache branches (REPAIR-01), with integration tests on the temp and cache paths
-- [ ] 06-02-PLAN.md — Opt-in `--destination` flag threaded CLI → `indexOneRepo` → `XcodebuildBuildRunner` arguments splice, plus the destination-gated `xcodebuildDestinationFailed` error with `-showdestinations` hint (REPAIR-02, REPAIR-03)
+- [x] 06-02-PLAN.md — Opt-in `--destination` flag threaded CLI → `indexOneRepo` → `XcodebuildBuildRunner` arguments splice, plus the destination-gated `xcodebuildDestinationFailed` error with `-showdestinations` hint (REPAIR-02, REPAIR-03)
 
 ### Phase 7: Demangled Symbol Names
 

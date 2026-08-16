@@ -8,8 +8,8 @@
 ### Repair & Targeting (REPAIR)
 
 - [x] **REPAIR-01**: User can index an Xcode-project repo via `scip-swift index <repo>` and it builds through the xcodebuild backend again (restore the `.xcodebuild` dispatch branch lost in the 0cdefd7 cache rewrite (code recoverable from 1c5ba8f)), verified by an integration test against the existing Xcode fixture.
-- [ ] **REPAIR-02**: User can pass `--destination <spec>` (e.g. `platform=iOS Simulator,name=iPhone 16`) to select the xcodebuild destination; omitting the flag preserves today's generic-destination behavior.
-- [ ] **REPAIR-03**: When a `--destination` build fails, the error output includes a hint to run `xcodebuild -showdestinations` so the user can discover valid destination strings.
+- [x] **REPAIR-02**: User can pass `--destination <spec>` (e.g. `platform=iOS Simulator,name=iPhone 16`) to select the xcodebuild destination; omitting the flag preserves today's generic-destination behavior.
+- [x] **REPAIR-03**: When a `--destination` build fails, the error output includes a hint to run `xcodebuild -showdestinations` so the user can discover valid destination strings.
 
 ### Readable Symbols (SYMBOL)
 
@@ -48,8 +48,8 @@
 | REQ | Phase | Status |
 |-----|-------|--------|
 | REPAIR-01 | Phase 6 | Complete |
-| REPAIR-02 | Phase 6 | pending |
-| REPAIR-03 | Phase 6 | pending |
+| REPAIR-02 | Phase 6 | Complete |
+| REPAIR-03 | Phase 6 | Complete |
 | SYMBOL-01 | Phase 7 | pending |
 | SYMBOL-02 | Phase 7 | pending |
 | SYMBOL-03 | Phase 7 | pending |

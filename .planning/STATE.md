@@ -4,16 +4,16 @@ milestone: v0.3.0
 milestone_name: Readable Indexes
 current_phase: 6
 current_phase_name: Xcode Backend Repair & Destination Selection
-status: planning
+status: complete
 stopped_at: Completed 06-01-PLAN.md
 last_updated: "2026-08-16T04:33:18.221Z"
 last_activity: 2026-08-16
 last_activity_desc: "06-01 executed: restored xcodebuild dispatch via shared produceIndexStore helper on both indexOneRepo cache branches"
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
