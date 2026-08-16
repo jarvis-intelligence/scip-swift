@@ -12,29 +12,34 @@ struct XcodebuildBuildRunner: BuildRunner {
   let scheme: String
   let derivedDataPath: String
   let projectArguments: [String]
+  var destination: String? = nil
 
   /// The full `xcodebuild` argument list. Kept pure and separate from
   /// `produceIndexStore()` so it can be asserted on without spawning Xcode.
   var arguments: [String] {
     let xcodeConfiguration = configuration == .debug ? "Debug" : "Release"
-    return projectArguments + [
+    var arguments = projectArguments + [
       "-scheme", scheme,
       "-configuration", xcodeConfiguration,
       "-derivedDataPath", derivedDataPath,
       "COMPILER_INDEX_STORE_ENABLE=YES",
       // An index build never runs, installs, or ships the product — it exists only to write
-      // Index.noindex/DataStore. Signing is pure overhead here, and because no -destination
-      // is passed, xcodebuild targets "My Mac", whose device ID iOS provisioning profiles
-      // don't include — so signed app-extension targets fail during
-      // GatherProvisioningInputs, before anything compiles. Do not restore signing, and do
-      // not "fix" this with -destination: repos with a checked-in .xcodeproj may be macOS
-      // apps, which a forced iOS destination would break instead.
+      // Index.noindex/DataStore. Signing is pure overhead here: forced-signing app-extension
+      // targets fail during GatherProvisioningInputs before anything compiles. Do not
+      // restore signing. No -destination is passed by default (xcodebuild then targets
+      // "My Mac"); --destination opts in for repos whose iOS-only targets need an explicit
+      // simulator/device to index at all.
       "CODE_SIGNING_ALLOWED=NO",
       "CODE_SIGNING_REQUIRED=NO",
       "CODE_SIGN_IDENTITY=",
       "CODE_SIGN_ENTITLEMENTS=",
       "build",
     ]
+    if let destination {
+      let derivedDataIndex = arguments.firstIndex(of: "-derivedDataPath")!
+      arguments.insert(contentsOf: ["-destination", destination], at: derivedDataIndex)
+    }
+    return arguments
   }
 
   func produceIndexStore() throws -> IndexStoreBuildResult {
