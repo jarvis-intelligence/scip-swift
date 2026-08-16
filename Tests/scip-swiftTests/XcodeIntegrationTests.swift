@@ -47,6 +47,25 @@ struct XcodeIntegrationTests {
     #expect(!document.symbols.isEmpty)
   }
 
+  @Test("indexOneRepo builds an Xcode fixture through the xcodebuild backend")
+  func indexOneRepoDispatchesXcodeFixtures() throws {
+    let index = try IndexCommand.indexOneRepo(
+      repoPath: Self.fixtureRepoPath(),
+      output: nil,
+      buildTool: nil,
+      configuration: .debug,
+      scheme: nil,
+      cacheDir: nil,
+      indexOnly: false,
+      symbolVersion: ""
+    )
+
+    #expect(index.documents.count > 0)
+    let document = try #require(index.documents.first)
+    #expect(document.language == "Swift")
+    #expect(!document.symbols.isEmpty)
+  }
+
   private static func fixtureRepoPath() -> String {
     let repoRoot = URL(fileURLWithPath: #filePath)
       .deletingLastPathComponent()
