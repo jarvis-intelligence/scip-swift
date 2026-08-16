@@ -66,6 +66,27 @@ struct XcodeIntegrationTests {
     #expect(!document.symbols.isEmpty)
   }
 
+  @Test("indexOneRepo with --cache-dir also builds an Xcode fixture through xcodebuild")
+  func indexOneRepoDispatchesXcodeFixturesThroughCache() throws {
+    let cacheDir = try Self.makeTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(atPath: cacheDir) }
+
+    let index = try IndexCommand.indexOneRepo(
+      repoPath: Self.fixtureRepoPath(),
+      output: nil,
+      buildTool: nil,
+      configuration: .debug,
+      scheme: nil,
+      cacheDir: cacheDir,
+      indexOnly: false,
+      symbolVersion: ""
+    )
+
+    #expect(index.documents.count > 0)
+    let derivedDataPath = (cacheDir as NSString).appendingPathComponent("derived-data")
+    #expect(FileManager.default.fileExists(atPath: derivedDataPath))
+  }
+
   private static func fixtureRepoPath() -> String {
     let repoRoot = URL(fileURLWithPath: #filePath)
       .deletingLastPathComponent()
