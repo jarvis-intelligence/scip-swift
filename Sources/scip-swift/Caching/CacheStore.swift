@@ -48,7 +48,11 @@ struct CacheStore {
     try data.write(to: URL(fileURLWithPath: manifestPath))
   }
 
+  /// Removes only this store's own artifacts — `docs/` and `manifest.json`. The cache dir may
+  /// also hold the caller's build scratch (`build-scratch/`, `index-db/`), which is owned by the
+  /// build step, not the document cache, and must survive invalidation.
   func invalidateAll() throws {
-    try? FileManager.default.removeItem(atPath: cacheDir)
+    try? FileManager.default.removeItem(atPath: docsDir)
+    try? FileManager.default.removeItem(atPath: manifestPath)
   }
 }
