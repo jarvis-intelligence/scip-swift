@@ -84,12 +84,13 @@ struct IndexCommand: ParsableCommand {
         }
         indexStorePath = foundPath
       } else {
-        let runner = SwiftPMBuildRunner(
+        indexStorePath = try produceIndexStore(
+          tool: tool,
           repoPath: repoPath,
           configuration: configuration,
+          scheme: scheme,
           scratchPath: scratchPath
         )
-        indexStorePath = try runner.produceIndexStore().indexStorePath
       }
     } else {
       let workDirectory = makeTemporaryDirectory()
