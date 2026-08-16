@@ -54,6 +54,21 @@ struct IndexManifestTests {
       indexstoreDbRevision: "C", buildToolName: "D"))
   }
 
+  @Test("manifest written by converter 0.2.1 is incompatible with the current version constant")
+  func converterVersionBumpInvalidatesOldCache() {
+    let manifest = IndexManifest(
+      toolchainVersion: ToolchainInfo.pinnedSwiftVersion,
+      converterVersion: "0.2.1",
+      indexstoreDbRevision: IndexCommand.indexstoreDbRevision,
+      buildToolName: BuildTool.swiftpm.rawValue
+    )
+    #expect(!manifest.isCompatibleWith(
+      toolchainVersion: ToolchainInfo.pinnedSwiftVersion,
+      converterVersion: ScipSwiftVersion.version,
+      indexstoreDbRevision: IndexCommand.indexstoreDbRevision,
+      buildToolName: BuildTool.swiftpm.rawValue))
+  }
+
   @Test("isCompatibleWith returns false when indexstoreDbRevision differs")
   func revisionMismatch() {
     let manifest = IndexManifest(
