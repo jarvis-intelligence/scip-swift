@@ -40,9 +40,19 @@ struct IntegrationTests {
     #expect(!document.occurrences.isEmpty)
 
     let displayNames = Set(document.symbols.map(\.displayName))
-    #expect(displayNames.contains("Greeter"))
-    #expect(displayNames.contains("greet()"))
-    #expect(displayNames.contains("name"))
+    #expect(displayNames.contains("MiniSwiftPackage.Greeter"), "struct Greeter should be demangled")
+    #expect(
+      displayNames.contains("MiniSwiftPackage.Greeter.greet() -> Swift.String"),
+      "greet() should be demangled"
+    )
+
+    let greetSymbol = try #require(
+      document.symbols.first { $0.displayName == "MiniSwiftPackage.Greeter.greet() -> Swift.String" }
+    )
+    #expect(
+      greetSymbol.symbol == "scip-swift swiftpm MiniSwiftPackage . `s:16MiniSwiftPackage7GreeterV5greetSSyF`.",
+      "canonical symbol string must still embed the raw USR verbatim"
+    )
 
     #expect(index.metadata.toolInfo.name == "scip-swift")
   }
