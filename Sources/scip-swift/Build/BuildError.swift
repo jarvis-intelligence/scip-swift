@@ -17,6 +17,12 @@ enum BuildError: Error, CustomStringConvertible {
   /// and `xcodebuild` print their own compiler diagnostics to stdout, not stderr.
   case buildFailed(tool: String, exitCode: Int32, output: String)
 
+  /// An `xcodebuild` build with an explicit `--destination` exited non-zero — usually a
+  /// destination specifier that matches no installed simulator/device. `output` combines
+  /// stdout+stderr untruncated; `hintCommand` is the copyable command that lists valid
+  /// destinations for the project and scheme.
+  case xcodebuildDestinationFailed(exitCode: Int32, output: String, hintCommand: String)
+
   /// The build reported success, but no IndexStore was found where one was expected.
   case indexStoreNotProduced(expectedPath: String)
 
@@ -43,6 +49,14 @@ enum BuildError: Error, CustomStringConvertible {
       return """
         '\(tool)' failed with exit code \(exitCode):
         \(output)
+        """
+    case .xcodebuildDestinationFailed(let exitCode, let output, let hintCommand):
+      return """
+        'xcodebuild' failed with exit code \(exitCode) for the requested destination:
+        \(output)
+
+        Hint: list valid destinations for this scheme with:
+          \(hintCommand)
         """
     case .indexStoreNotProduced(let expectedPath):
       return """

@@ -51,6 +51,15 @@ struct XcodebuildBuildRunner: BuildRunner {
       currentDirectory: repoPath
     )
     guard result.exitCode == 0 else {
+      if let destination {
+        let hintCommand = (projectArguments + ["-scheme", scheme, "-showdestinations"])
+          .joined(separator: " ")
+        throw BuildError.xcodebuildDestinationFailed(
+          exitCode: result.exitCode,
+          output: result.combinedOutput,
+          hintCommand: "xcodebuild \(hintCommand)"
+        )
+      }
       throw BuildError.buildFailed(tool: "xcodebuild", exitCode: result.exitCode, output: result.combinedOutput)
     }
 
