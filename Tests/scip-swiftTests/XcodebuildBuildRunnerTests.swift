@@ -6,13 +6,17 @@ import Testing
 struct XcodebuildBuildRunnerTests {
   private static let projectArguments = ["-project", "My.xcodeproj"]
 
-  private func makeRunner(configuration: BuildConfiguration = .debug) -> XcodebuildBuildRunner {
+  private func makeRunner(
+    configuration: BuildConfiguration = .debug,
+    destination: String? = nil
+  ) -> XcodebuildBuildRunner {
     XcodebuildBuildRunner(
       repoPath: "/repo",
       configuration: configuration,
       scheme: "My Scheme",
       derivedDataPath: "/tmp/derived-data",
-      projectArguments: Self.projectArguments
+      projectArguments: Self.projectArguments,
+      destination: destination
     )
   }
 
@@ -70,6 +74,41 @@ struct XcodebuildBuildRunnerTests {
     #expect(buildAction != nil)
     if let lastSetting, let buildAction {
       #expect(lastSetting < buildAction)
+    }
+  }
+
+  @Test("nil destination keeps the argument list identical to the no-flag form")
+  func nilDestinationKeepsArgumentListIdentical() {
+    #expect(makeRunner().arguments == makeRunner(destination: nil).arguments)
+    #expect(!makeRunner().arguments.contains("-destination"))
+  }
+
+  @Test("non-nil destination splices after -configuration and before -derivedDataPath")
+  func destinationSplicesBetweenConfigurationAndDerivedDataPath() {
+    let spec = "platform=iOS Simulator,name=iPhone 16"
+    let args = makeRunner(destination: spec).arguments
+    #expect(value(after: "-destination", in: args) == spec)
+    let configurationIndex = args.firstIndex(of: "-configuration")
+    let destinationIndex = args.firstIndex(of: "-destination")
+    let derivedDataIndex = args.firstIndex(of: "-derivedDataPath")
+    #expect(configurationIndex != nil)
+    #expect(destinationIndex != nil)
+    #expect(derivedDataIndex != nil)
+    if let configurationIndex, let destinationIndex, let derivedDataIndex {
+      #expect(configurationIndex < destinationIndex)
+      #expect(destinationIndex < derivedDataIndex)
+    }
+  }
+
+  @Test("destination precedes the build action")
+  func destinationPrecedesBuildAction() {
+    let args = makeRunner(destination: "platform=macOS").arguments
+    let destinationIndex = args.firstIndex(of: "-destination")
+    let buildAction = args.firstIndex(of: "build")
+    #expect(destinationIndex != nil)
+    #expect(buildAction != nil)
+    if let destinationIndex, let buildAction {
+      #expect(destinationIndex < buildAction)
     }
   }
 }
