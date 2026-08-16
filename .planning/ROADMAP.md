@@ -62,7 +62,10 @@ Full details: `.planning/milestones/v0.2.0-ROADMAP.md`
   3. A second run over unchanged sources produces byte-identical output and cross-repo merges dedupe correctly — the wrapped USR stays the canonical `symbol` field (existing tests re-baselined, cache version bumped)
   4. User can pass `--no-demangle` to reproduce v0.2.x-style opaque output
 
-**Plans**: TBD
+**Plans**: 2 plans:
+
+- [ ] 07-01-PLAN.md — USRDemangler module (dlopen toolchain libswiftDemangle, s:→_$s rewrite, caller-owned buffer with n+1 truncation retry, fail-soft fallback) wired as a tracer: one real fixture USR demangled into the .scip display_name with identity untouched, plus the unit corpus and the 0.3.0 cache-version bump (SYMBOL-01, SYMBOL-02)
+- [ ] 07-02-PLAN.md — `--no-demangle` flag threaded CLI → indexOneRepo → builder, external-symbol display names, cache-upgrade invalidation test, and the untouched merge/incremental regression gates (SYMBOL-03, SYMBOL-04)
 
 ### Phase 8: Exact Occurrence Ranges
 
@@ -98,6 +101,6 @@ Phases execute in numeric order: 6 → 7 → 8 → 9 (Phases 7 and 8 are indepen
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 6. Xcode Backend Repair & Destination Selection | v0.3.0 | 1/2 | In Progress|  |
-| 7. Demangled Symbol Names | v0.3.0 | 0/TBD | Not started | - |
+| 7. Demangled Symbol Names | v0.3.0 | 0/2 | Not started | - |
 | 8. Exact Occurrence Ranges | v0.3.0 | 0/TBD | Not started | - |
 | 9. Symbol Documentation | v0.3.0 | 0/TBD | Not started | - |
