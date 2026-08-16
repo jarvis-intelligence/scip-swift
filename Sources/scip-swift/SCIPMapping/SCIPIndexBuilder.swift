@@ -95,6 +95,9 @@ struct SCIPIndexBuilder {
         if !sym.hasPrefix("local ") && !definedSymbolStrings.contains(sym) && externalSymbols[sym] == nil {
           var info = Scip_SymbolInformation()
           info.symbol = sym
+          if let demangler, let usr = Self.usr(fromCanonicalSymbolString: sym) {
+            info.displayName = demangler.demangledDisplayName(usr: usr) ?? ""
+          }
           externalSymbols[sym] = info
         }
       }
@@ -102,6 +105,20 @@ struct SCIPIndexBuilder {
     index.externalSymbols = externalSymbols.values.sorted { $0.symbol < $1.symbol }
 
     return index
+  }
+
+  /// Inverse of `SCIPSymbolFormatter.globalSymbolString`'s descriptor rendering: the USR rides
+  /// verbatim in the trailing `` `<usr>`. `` descriptor, so it can be recovered even for
+  /// documents served from cache (where no IndexStoreDB symbol is at hand).
+  private static func usr(fromCanonicalSymbolString symbolString: String) -> String? {
+    guard let separator = symbolString.lastIndex(of: " ") else { return nil }
+    let descriptor = symbolString[separator...].dropFirst()
+    guard descriptor.hasSuffix(".") else { return nil }
+    let name = descriptor.dropLast()
+    if name.hasPrefix("`"), name.hasSuffix("`") {
+      return String(name.dropFirst().dropLast().replacingOccurrences(of: "``", with: "`"))
+    }
+    return String(name)
   }
 
   private func makeMetadata() -> Scip_Metadata {
