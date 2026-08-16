@@ -32,6 +32,9 @@ struct IndexCommand: ParsableCommand {
   @Flag(name: .long, help: "Skip the build step and read an existing IndexStore directly.")
   var indexOnly: Bool = false
 
+  @Flag(name: .long, help: "Emit v0.2.x opaque symbol display names instead of demangled ones.")
+  var noDemangle: Bool = false
+
   static let indexstoreDbRevision = "c993f4fb"
 
   func run() throws {
@@ -45,7 +48,8 @@ struct IndexCommand: ParsableCommand {
       destination: destination,
       cacheDir: cacheDir,
       indexOnly: indexOnly,
-      symbolVersion: ""
+      symbolVersion: "",
+      demangle: !noDemangle
     )
 
     let outputPath = output ?? (resolvedRepoPath as NSString).appendingPathComponent("index.scip")
@@ -62,7 +66,8 @@ struct IndexCommand: ParsableCommand {
     destination: String? = nil,
     cacheDir: String?,
     indexOnly: Bool,
-    symbolVersion: String
+    symbolVersion: String,
+    demangle: Bool = true
   ) throws -> Scip_Index {
     let tool = try buildTool ?? BuildBackendDetector.detect(repoPath: repoPath)
 
@@ -149,7 +154,8 @@ struct IndexCommand: ParsableCommand {
       buildToolName: tool.rawValue,
       converterVersion: ScipSwiftVersion.version,
       symbolVersion: symbolVersion,
-      cacheStore: cacheStore
+      cacheStore: cacheStore,
+      demangle: demangle
     )
     return try builder.build()
   }
