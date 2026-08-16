@@ -13,8 +13,8 @@
 
 ### Readable Symbols (SYMBOL)
 
-- [ ] **SYMBOL-01**: User sees demangled, human-readable symbol names (e.g. `null.Greeter.greet(name: Swift.String) -> Swift.String`) in place of raw `s:`-prefixed USRs for Swift symbols in the generated `.scip` index.
-- [ ] **SYMBOL-02**: Symbols that cannot be demangled (ObjC/C `c:`-prefixed USRs, future mangling constructs) keep the existing opaque wrapped-USR form — indexing never fails because of demangling.
+- [x] **SYMBOL-01**: User sees demangled, human-readable symbol names (e.g. `null.Greeter.greet(name: Swift.String) -> Swift.String`) in place of raw `s:`-prefixed USRs for Swift symbols in the generated `.scip` index.
+- [x] **SYMBOL-02**: Symbols that cannot be demangled (ObjC/C `c:`-prefixed USRs, future mangling constructs) keep the existing opaque wrapped-USR form — indexing never fails because of demangling.
 - [x] **SYMBOL-03**: Symbol identity remains stable — the wrapped USR stays the canonical `symbol` field so incremental cache hits and cross-repo merge dedup behave unchanged when demangling is enabled (verified by existing second-run byte-identity and merge tests, re-baselined).
 - [x] **SYMBOL-04**: User can disable demangling (`--no-demangle`) to reproduce v0.2.x-style opaque output.
 
@@ -50,8 +50,8 @@
 | REPAIR-01 | Phase 6 | Complete |
 | REPAIR-02 | Phase 6 | Complete |
 | REPAIR-03 | Phase 6 | Complete |
-| SYMBOL-01 | Phase 7 | pending |
-| SYMBOL-02 | Phase 7 | pending |
+| SYMBOL-01 | Phase 7 | Complete |
+| SYMBOL-02 | Phase 7 | Complete |
 | SYMBOL-03 | Phase 7 | Complete |
 | SYMBOL-04 | Phase 7 | Complete |
 | RANGE-01 | Phase 8 | pending |

@@ -28,7 +28,7 @@ Full details: `.planning/milestones/v0.2.0-ROADMAP.md`
 **Cross-phase invariants:** every phase keeps `scip lint` passing and second-run byte-identity tests green (re-baseline where serialized output changes; bump the IndexManifest cache version when it does).
 
 - [x] **Phase 6: Xcode Backend Repair & Destination Selection** - Restore the xcodebuild dispatch branch and add opt-in `--destination`
-- [ ] **Phase 7: Demangled Symbol Names** - Human-readable Swift symbol names with opaque fallback and stable identity
+- [x] **Phase 7: Demangled Symbol Names** - Human-readable Swift symbol names with opaque fallback and stable identity
 - [ ] **Phase 8: Exact Occurrence Ranges** - SwiftSyntax identifier extents replace display-name-length approximation
 - [ ] **Phase 9: Symbol Documentation** - Doc comments as Markdown `documentation` riding the same parse pass
 

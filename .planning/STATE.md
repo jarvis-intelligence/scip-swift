@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v0.3.0
 milestone_name: Readable Indexes
-current_phase: 6
-current_phase_name: Xcode Backend Repair & Destination Selection
+current_phase: 8
+current_phase_name: Exact Occurrence Ranges
 status: complete
 stopped_at: Completed 07-02-PLAN.md
 last_updated: "2026-08-16T17:31:31.942Z"
