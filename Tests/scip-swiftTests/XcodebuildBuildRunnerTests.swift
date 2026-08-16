@@ -111,4 +111,32 @@ struct XcodebuildBuildRunnerTests {
       #expect(destinationIndex < buildAction)
     }
   }
+
+  @Test("destination failure description carries full output and the hint")
+  func destinationFailureDescriptionCarriesOutputAndHint() {
+    let sample = """
+      xcodebuild: error: Unable to find a device matching the provided destination specifier:
+      { platform:iOS Simulator, OS:latest, name:Nonexistent Device 999 }
+      """
+    let error = BuildError.xcodebuildDestinationFailed(
+      exitCode: 65,
+      output: sample,
+      hintCommand: "xcodebuild -project My.xcodeproj -scheme \"My Scheme\" -showdestinations"
+    )
+    let description = String(describing: error)
+    #expect(description.contains("65"))
+    #expect(description.contains(sample))
+    #expect(description.contains("-showdestinations"))
+    #expect(description.contains("My Scheme"))
+  }
+
+  @Test("non-destination failures keep the plain buildFailed error")
+  func nonDestinationFailuresKeepBuildFailed() {
+    let sample = "some compiler diagnostic"
+    let description = String(describing:(
+      BuildError.buildFailed(tool: "xcodebuild", exitCode: 65, output: sample)
+    ))
+    #expect(!description.contains("-showdestinations"))
+    #expect(description.contains(sample))
+  }
 }
