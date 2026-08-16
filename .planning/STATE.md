@@ -1,17 +1,19 @@
 ---
-gsd_state_version: '1.0'
+gsd_state_version: 1.0
 milestone: v0.3.0
 milestone_name: Readable Indexes
-status: planning
 current_phase: 6
 current_phase_name: Xcode Backend Repair & Destination Selection
-last_updated: "2026-08-15T15:52:16.000Z"
-last_activity: 2026-08-15
+status: planning
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-08-16T04:33:18.221Z"
+last_activity: 2026-08-16
+last_activity_desc: "06-01 executed: restored xcodebuild dispatch via shared produceIndexStore helper on both indexOneRepo cache branches"
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
   percent: 0
 ---
 
@@ -27,20 +29,26 @@ See: .planning/PROJECT.md (updated 2026-08-15)
 ## Current Position
 
 Phase: 6 of 9 (Xcode Backend Repair & Destination Selection)
-Plan: 0 of TBD in current phase
-Status: Planning — roadmap drafted, awaiting approval
-Last activity: 2026-08-15 — v0.3.0 roadmap created (Phases 6–9, 13 REQs mapped)
+Plan: 1 of 2 in current phase
+Status: Executing — plan 06-01 complete, 06-02 next
+Last activity: 2026-08-16 — 06-01 executed: restored xcodebuild dispatch via shared produceIndexStore helper on both indexOneRepo cache branches
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
+
 - Total plans completed: 0 (v0.3.0; v0.2.0 closed with 10 plans / 5 phases)
 - Average duration: —
 - Total execution time: —
 
 *Updated after each plan completion*
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 06 P01 | 21m | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -53,6 +61,7 @@ Recent decisions affecting current work:
 - Phase 7: demangling via `swift_demangle` through `@_silgen_name`, no new dependency; `s:`→`_$s` rewrite; wrapped USR stays canonical symbol identity
 - Phase 8: swift-syntax is the one new dependency; one shared per-file refiner pass feeds both ranges (8) and docs (9)
 - Cross-phase: bump IndexManifest cache version when serialized output changes; keep `scip lint` passing
+- [Phase ?]: Derived data placed beside scratch dir (parent + /derived-data): temp under work dir, cache runs under cache dir, mirroring 1c5ba8f convention
 
 ### Pending Todos
 
@@ -72,6 +81,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-15
-Stopped at: v0.3.0 roadmap drafted — 4 phases (6–9), 13/13 REQs mapped, awaiting approval
-Resume file: None
+Last session: 2026-08-16T04:33:18.203Z
+Stopped at: Completed 06-01-PLAN.md
+Resume file: 06-02-PLAN.md
