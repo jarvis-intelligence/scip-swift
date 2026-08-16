@@ -37,24 +37,30 @@ enum SubprocessRunner {
       throw BuildError.toolNotLaunchable(tool: executable, underlying: error.localizedDescription)
     }
 
-    // Read both pipes concurrently: reading them sequentially can deadlock if the process fills
-    // one pipe's kernel buffer while we're still blocked reading the other. `DataBox` is only
-    // mutated before `readGroup.wait()` returns and only read after, so the access is safe despite
-    // not being visible to the compiler's data-race checker.
+    // Read both pipes concurrently on dedicated threads: reading them sequentially can
+    // deadlock if the process fills one pipe's kernel buffer while we're still blocked
+    // reading the other. These must be Foundation Threads, not DispatchQueue.global()
+    // blocks — a caller blocking a cooperative-pool thread (swift-testing runs tests there)
+    // in a pool-wait starves the global queue of threads for the reader blocks, deadlocking
+    // parallel test runs. `DataBox` is only mutated before its semaphore is signaled and
+    // only read after the wait returns, so the access is safe despite not being visible to
+    // the compiler's data-race checker.
     let stdoutBox = DataBox()
     let stderrBox = DataBox()
-    let readGroup = DispatchGroup()
-    readGroup.enter()
-    DispatchQueue.global().async {
+    let stdoutSemaphore = DispatchSemaphore(value: 0)
+    let stderrSemaphore = DispatchSemaphore(value: 0)
+    let stdoutThread = Thread {
       stdoutBox.value = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-      readGroup.leave()
+      stdoutSemaphore.signal()
     }
-    readGroup.enter()
-    DispatchQueue.global().async {
+    let stderrThread = Thread {
       stderrBox.value = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-      readGroup.leave()
+      stderrSemaphore.signal()
     }
-    readGroup.wait()
+    stdoutThread.start()
+    stderrThread.start()
+    stdoutSemaphore.wait()
+    stderrSemaphore.wait()
     process.waitUntilExit()
 
     return Result(
