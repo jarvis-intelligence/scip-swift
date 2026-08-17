@@ -40,7 +40,7 @@ Empirically (scratch probe joining a real IndexStoreDB against a SwiftSyntax tok
 
 **F3 — Where the current approximation actually drifts** `[VERIFIED: probe output]`: (a) accessor occurrences — `getter:name` anchored at token `name` [13,17) but display name gives end 24 (+7); `getter:名前` exact [4,10) vs approx 17 (+13); (b) `init(stringInterpolation:)` anchored at the `"` token [4,5) vs approx [4,8) (into the literal); (c) plain identifiers/compound call refs (`greet(name:)` → base `greet`) are already correct — the approximation's `prefix(while: != "(")` handles them, and `utf8Column` is already byte-based, so **current output is already UTF-8-correct**; RANGE-02 pins the NEW path against UTF-16 regressions, it does not fix existing drift on ASCII-pure simple names.
 
-**F4 — Unicode fixture + expected columns** (hexdump-verified bytes): `let emoji = "🦖"` / `let 名前 = greet(name: "日本語")` / blank / `func greet(name: String) -> String {` / `  "Hello, \(name) 🎉"`. Expected 0-based SCIP ranges: emoji def L0 [4,9); getter:emoji L0 [4,9) (approx 16 ✗); 名前 def L1 [4,10); getter:名前 L1 [4,10) (approx 17 ✗); greet ref L1 [13,18); greet def L3 [5,10); name param def L3 [11,15); String refs L3 [17,23) and [28,35); `init(stringInterpolation:)` L4 [2,3); name ref L4 [12,16). (名前=6 bytes, 日本語=9, 🦖=4, 🎉=4.)
+**F4 — Unicode fixture + expected columns** (hexdump-verified bytes): `let emoji = "🦖"` / `let 名前 = greet(name: "日本語")` / blank / `func greet(name: String) -> String {` / `  "Hello, \(name) 🎉"`. Expected 0-based SCIP ranges: emoji def L0 [4,9); getter:emoji L0 [4,9) (approx 16 ✗); 名前 def L1 [4,10); getter:名前 L1 [4,10) (approx 17 ✗); greet ref L1 [13,18); greet def L3 [5,10); name param def L3 [11,15); String refs L3 [17,23) and [28,34); `init(stringInterpolation:)` L4 [2,3); name ref L4 [12,16). (名前=6 bytes, 日本語=9, 🦖=4, 🎉=4.)
 
 **F5 — Error recovery (RANGE-03)** `[VERIFIED: scratch]`: `Parser.parse(source:)` is non-throwing; on `struct Broken { let x: = }` the tree reports `hasError=true` yet tokens `ok`, `Broken`, `x`, `alsoOk`, `print` are all `.presence == .present` with correct exact extents (31 tokens, 0 missing). Fallback therefore only fires for anchors that miss the map (unreadable file → `String(contentsOfFile:)` nil → nil refinement; anchor inside a garbled region).
 
@@ -174,10 +174,10 @@ struct SwiftSyntaxRefiner {
 | A1 | CI macos-26 resolves swift-syntax 602.0.0 identically (same pinned toolchain) | D1 | CI failure on first build; fixed by pin, low risk |
 | A2 | Anchor hit rate stays ~100% on real-world repos beyond the two fixtures | F2 | More fallbacks than expected — output still valid, just approximate (RANGE-03 covers) |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Homebrew stance on a 24 MB binary** — measured (F6), accepted in D1, but the distribution channel owner should confirm at release time.
-2. **Macro-heavy repos** — probes covered none; the nil-lookup fallback is the safety net, and A2 flags real-world validation for the verifier phase.
+1. **Homebrew stance on a 24 MB binary** — RESOLVED: measured (F6), size accepted per D1; README note added by 08-01, distribution-channel owner to confirm at release time.
+2. **Macro-heavy repos** — RESOLVED for this phase: probes covered none; the nil-lookup fallback (RANGE-03) is the safety net, anchor-rate sampling deferred to the verifier phase (A2 flags it).
 
 ## Sources
 
