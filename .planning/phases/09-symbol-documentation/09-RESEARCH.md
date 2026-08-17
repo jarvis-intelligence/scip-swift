@@ -16,9 +16,7 @@
 
 ## Summary
 
-Documentation is pure trivia classification + normalization, and SwiftParser already did the classification: `docLineComment`/`docBlockComment` vs `lineComment`/`blockComment` are **distinct enum cases** — no text heuristics needed for the doc-vs-comment split (only `////` needs an explicit text check). Doc comments attach as leading trivia of the **declaration's first token** — the `@` of the attribute list when attributes precede the declaration (probed: `@inline(__always) public func compute` carries its doc on `@`). The decisive alignment fact: IndexStoreDB definition anchors land on the **declaration's name token** (`compute` anchor (22,14) = name token, not `@`), while the doc sits on the *first* token — so the doc map MUST be keyed by the name-token anchor, never by the first-token anchor.
-
-The refiner already parses once and stores the tree (`Parser.parse` at Sources/scip-swift/SourceRefinement/SwiftSyntaxRefiner.swift:25 `[VERIFIED: read this session]`); extending its init to also build a doc map satisfies DOCS-03 by construction. Cache is free: `CacheStore.saveDocument` serializes the whole `Scip_Document` protobuf and `documentation` is a field of `Scip_SymbolInformation` (`public var documentation: [String] = []`, Sources/scip-swift/Generated/Scip.pb.swift:1450-1456 `[VERIFIED: read this session]`) — cached docs round-trip with zero cache changes.
+Documentation is pure trivia classification + normalization, and SwiftParser already did the classification: `docLineComment`/`docBlockComment` vs `lineComment`/`blockComment` are **distinct enum cases** — no text heuristics needed for the doc-vs-comment split (only `////` needs an explicit text check). Doc comments attach as leading trivia of the **declaration's first token** — the `@` of the attribute list when attributes precede the declaration (probed: `@inline(__always) public func compute` carries its doc on `@`). The decisive alignment fact: IndexStoreDB definition anchors land on the **declaration's name token** (`compute` anchor (22,14) = name token, not `@`), while the doc sits on the *first* token — so the doc map MUST be keyed by the name-token anchor, never by the first-token anchor. The refiner already parses once and stores the tree (`Parser.parse` at SwiftSyntaxRefiner.swift:25 `[VERIFIED: read this session]`); extending its init to also build a doc map satisfies DOCS-03 by construction. Cache is free: `CacheStore` serializes the whole `Scip_Document` and `documentation` is a field of `Scip_SymbolInformation` (`public var documentation: [String] = []`, Scip.pb.swift:1450-1456 `[VERIFIED: read this session]`) — cached docs round-trip with zero cache changes.
 
 **Primary recommendation:** Extend `SwiftSyntaxRefiner` to walk `DeclSyntax` nodes in its existing init, collect doc trivia from the decl's first token, normalize (§D4), key by the decl's **name-token anchor** (0-based line/byte-col, same convention as `exactEndColumn`); `makeDocument` sets `symbolInformation.documentation = [doc]` on definition occurrences whose anchor hits the map.
 
@@ -37,7 +35,7 @@ The refiner already parses once and stores the tree (`Parser.parse` at Sources/s
 
 **F1 — Trivia taxonomy & attachment** `[VERIFIED: probe P0/P1]`: raw dump shows `docLineComment("/// Struct doc.")`, `docLineComment("///")` (empty doc line), `lineComment("// License header line 1")`, `docBlockComment("/**\n Block doc first.\n - parameter x: an int\n */")`. Doc trivia attaches to the **declaration's first token**; with `@inline(__always) public func compute`, the doc is on `@` (probe: `firstTok='@' docPieces=["docBlock"]`).
 
-**F2 — Exclusion falls out of the kind filter** `[VERIFIED: probe P3]`: the license `//` header lands on the `import` token as `lineComment` pieces — filtered out by kind. `// noise between doc and decl` after a `///` doc: both pieces sit on the decl; taking only doc-kind pieces yields just the doc. A trailing `// noise` after a statement is trailing trivia — never seen by a leading-trivia walk. **Caveat:** `//// not-a-doc` IS classified `docLineComment("//// b")` (probe P4: `LINE<//// b>`) — SwiftParser calls any `////+` a doc comment (cf. TriviaParser.swift:178-181, `.build/checkouts/swift-syntax`, read this session: `is(offset: 1, at: "/")` decides). DOCS-02 therefore needs an explicit rule: drop doc-line pieces whose content (after the `///` prefix) starts with `/`.
+**F2 — Exclusion falls out of the kind filter** `[VERIFIED: probe P3]`: the license `//` header lands on the `import` token as `lineComment` pieces — filtered out by kind. `// noise between doc and decl` after a `///` doc: both pieces sit on the decl; taking only doc-kind pieces yields just the doc. A trailing `// noise` after a statement is trailing trivia — never seen by a leading-trivia walk. **Caveat:** `//// not-a-doc` IS classified `docLineComment("//// b")` (probe P4) — SwiftParser calls any `////+` a doc comment (TriviaParser.swift:178-181: `is(offset: 1, at: "/")` decides). DOCS-02 needs an explicit rule: drop doc-line pieces whose content (after `///`) starts with `/`.
 
 **F3 — Normalization inputs from raw piece text** `[VERIFIED: probe P4]`: `docLineComment` text **includes** `///`; `docBlockComment` text **includes** the `/**` and `*/` wrappers. Multiple `///` pieces arrive as separate pieces in reading order (`/// Var doc line 1.`, `/// Var doc line 2.`).
 
@@ -53,34 +51,31 @@ The refiner already parses once and stores the tree (`Parser.parse` at Sources/s
 
 **D2 — Name-token extraction per decl kind.** `decl.asProtocol(NamedDeclSyntax.self)?.name` (covers class/struct/enum/protocol/func/typealias — probe verified for `Documented`, `compute`, `Finalizer`, `Whole`, `extra`, `tight`), plus explicit fallbacks: `VariableDeclSyntax` → `bindings.first?.pattern.as(IdentifierPatternSyntax.self)?.identifier`; `InitializerDeclSyntax` → `initKeyword`; `DeinitializerDeclSyntax` → `deinitKeyword`; `ExtensionDeclSyntax` → `extendedType.firstToken`; `EnumCaseDeclSyntax` → each `elements[].name`. All casts compile and align on 602.0.0 (probe P1/P2). Multi-element `case a, b` shares one doc — acceptable, documented limitation.
 
-**D3 — Builder wiring (accessors inherit; params get none).** In `makeDocument`, after signatureDocumentation: if `occurrence.roles.contains(.definition)` and the doc-map lookup at `(line, utf8Column)` hits, set `symbolInformation.documentation = [doc]`. Attach to **all** definition occurrences hitting the map — getter/setter USRs share the property's anchor and inherit the property doc, which is the correct hover behavior (the `///` documents the property and its accessors; scip-typescript does the same). Params: `FunctionParameterSyntax` never carries doc trivia in Swift (params are documented via `- parameter` lines in the func doc) and the walk only reads decl first tokens — params naturally get no docs. **Re-baseline surface: none** — grep verified zero tests assert `documentation`/`signatureDocumentation` (Tests grep this session returned nothing).
+**D3 — Builder wiring (accessors inherit; params get none).** In `makeDocument`, after signatureDocumentation: if `occurrence.roles.contains(.definition)` and the doc-map lookup hits, set `symbolInformation.documentation = [doc]`. Attach to **all** definition occurrences hitting the map — getter/setter USRs share the property's anchor and inherit the property doc (correct hover behavior; scip-typescript does the same). Params: `FunctionParameterSyntax` never carries doc trivia in Swift (documented via `- parameter` lines in the func doc) and the walk reads decl first tokens only — params naturally get no docs. **Re-baseline surface: none** — grep verified zero tests assert `documentation`/`signatureDocumentation`.
 
 **D4 — Normalization spec (locked).**
 - `.docLineComment(text)`: `content = text.hasPrefix("///") ? String(text.dropFirst(3)) : text`; **skip the piece when `content.hasPrefix("/")`** (the `////` case); else drop at most one leading space. `docLineComment("///")` → `""` (blank Markdown line — paragraph separator).
-- `.docBlockComment(text)`: strip `/**` prefix and `*/` suffix, split on `\n`, drop the first/last artifact lines when empty after stripping, strip per-line leading `*` then one optional space.
+- `.docBlockComment(text)`: strip `/**` and `*/`, split on `\n`, drop empty artifact first/last lines, strip per-line leading `*` then one optional space.
 - Pieces arrive in reading order; append lines in order; join multi-piece docs with `\n`.
-- Emit a **single-element** `documentation` array (one Markdown blob per symbol; consumer-side join convention `[ASSUMED]` — A1).
+- Emit a **single-element** `documentation` array (consumer-side join convention `[ASSUMED]` — A1).
 
 **D5 — One-parse proof (DOCS-03).** By construction the only `Parser.parse` in Sources/ is the refiner's (F5). Test-proof: `SwiftSyntaxRefiner` gains a package-visible `static var parseCount` incremented in init; unit test asserts one refiner instance bumps it by exactly 1; integration test asserts pipeline parseCount == number of documents built (catches any second parse sneaking into the builder). Cheap, concrete, preferable to review-only assurance.
 
 **D5b — Version/cache.** No bump. `Version.swift` is `0.3.0` (read this session: `static let version = "0.3.0"`), latest tag `v0.2.1`, 0.3.0 unreleased (Phase 8 D4 precedent). Residual: dev machines hold doc-less 0.3.0 caches under unchanged content hashes; self-heal on content change. Document in plan; don't bump the milestone version.
 
-**D6 — New fixture `Fixtures/DocumentationFixture`** (SwiftPM package mirroring UnicodeRangeFixture): license `//` header; `///` single- and multi-line; `/** */` block with `- parameter` line and blank paragraph line; attribute-interleaved (`@inline(__always)` after doc); `//` noise between doc and decl; trailing `//` after a statement; `////` line; undocumented decls; enum with per-case docs; extension with doc; init/deinit docs; typealias doc. Integration asserts exact per-symbol documentation strings and that license/noise/four-slash text appears in no documentation field.
+**D6 — New fixture `Fixtures/DocumentationFixture`** (SwiftPM package mirroring UnicodeRangeFixture): license `//` header; `///` single- and multi-line; `/** */` block with `- parameter` line and blank paragraph line; attribute-interleaved (`@inline(__always)` after doc); `//` noise between doc and decl; trailing `//` after a statement; `////` line; undocumented decls; enum with per-case docs; extension/init/deinit/typealias docs. Integration asserts exact per-symbol documentation strings and that license/noise/four-slash text appears in no documentation field.
 
 ## Common Pitfalls
 
 ### Pitfall 1: Attribute-attachment confusion
 **What goes wrong:** Keying the doc map at the decl's first-token anchor — docs attach to `@` of `@inline(__always)` (F1), missing every attributed decl.
 **Avoid:** Walk decls, key at the name token (F4). **Warning sign:** attributed fixture decls show empty docs.
-
 ### Pitfall 2: Anchor misalignment (name vs keyword tokens)
 **What goes wrong:** Assuming uniform name-token anchors; `init`/`deinit` anchor on keywords, extensions on the extended type, enum cases on element names (F4).
 **Avoid:** D2's per-kind extraction. **Warning sign:** init/deinit/extension docs missing while others work.
-
 ### Pitfall 3: Trivia-kind confusion (`////`, wrapper prefixes)
 **What goes wrong:** (a) Trusting `docLineComment` classification — `////` is also `docLineComment` (F2). (b) Forgetting piece text includes `///`/`/** */` wrappers — output carries literal prefixes (F3).
 **Avoid:** D4 rules + exact-string corpus tests. **Warning sign:** any `///` or `*` artifact surviving into output.
-
 ### Pitfall 4: Doc-vs-comment leakage
 **What goes wrong:** `//` comments near decls become docs.
 **Avoid:** Kind filter only — license headers land on `import` trivia as `lineComment` and drop naturally (F2). **Warning sign:** license text on the first symbol.
@@ -88,11 +83,9 @@ The refiner already parses once and stores the tree (`Parser.parse` at Sources/s
 ### Pitfall 5: Markdown normalization losses
 **What goes wrong:** Flat-joining pieces kills paragraph breaks; block-comment `*` prefixes leak; `- parameter` loses its leading space.
 **Avoid:** Preserve blank doc lines; per-line `*`-then-one-space strip (D4). **Warning sign:** single-paragraph output for multi-paragraph docs.
-
 ### Pitfall 6: Second parse sneaking in (DOCS-03)
 **What goes wrong:** A separate extractor type re-parses per file.
 **Avoid:** Extraction inside the refiner init (D1); parse-count hook (D5) makes it a failing test, not a review note. **Warning sign:** parseCount > document count.
-
 ### Pitfall 7: Accessor doc handling
 **What goes wrong:** Either special-casing getter/setter USRs to skip docs (hover gap) or worrying about "wrong" inheritance.
 **What's correct:** Accessor definitions share the property's name-token anchor (F4) and inherit its doc — same hover content as Swift-Docc for the property. **Avoid:** No accessor special-casing in code; assert inheritance in the integration test.
@@ -120,12 +113,7 @@ for decl in syntaxTree.descendants(ofType: DeclSyntax.self) {  // or manual recu
     Self.assign(doc, toToken: token, lineStarts: lineStarts, into: &docs)
   }
 }
-
-// lookup mirrors exactEndColumn: IndexStoreDB 1-based in, 0-based map, nil on miss
-func documentation(line: Int, utf8Column: Int) -> String? {
-  guard line >= 1, utf8Column >= 1 else { return nil }
-  return docsByAnchor[AnchorKey(line: line, col: utf8Column - 1)]
-}
+// lookup mirrors exactEndColumn: 1-based in, 0-based map, nil on miss
 ```
 
 ### Builder wiring (SCIPIndexBuilder.swift, after the signatureDocumentation assignment ~line 189)
@@ -180,9 +168,9 @@ Markdown is consumer-rendered (out of scope per REQUIREMENTS.md) — no sanitiza
 ## Sources
 
 ### Primary (HIGH)
-- Empirical scratch probes P0–P4 (2026-08-17, in-repo swift-syntax 602.0.0 / Swift 6.2.4): raw trivia piece dumps (incl. `////` classification, `/** */` wrapper text); decl-walk attachment (docs on `@`/`public` first tokens); name-token anchor alignment joined against a real IndexStoreDB (struct/class/func/var/let/enum-case/typealias/init/deinit/extension all aligned); exclusion cases (license header, interleaved noise, trailing, four-slash). Scratch files deleted after probing (`git status` clean).
+- Empirical scratch probes P0–P4 (2026-08-17, in-repo swift-syntax 602.0.0 / Swift 6.2.4): raw trivia dumps (incl. `////` classification, `/** */` wrapper text); decl-walk attachment (docs on `@`/`public` first tokens); name-token anchor alignment joined against a real IndexStoreDB (struct/class/func/var/let/enum-case/typealias/init/deinit/extension all aligned); exclusion cases (license header, interleaved noise, trailing, four-slash). Scratch files deleted after probing (`git status` clean).
 - Read this session: `SwiftSyntaxRefiner.swift` (sole `Parser.parse`:25; refiner instantiated once per file in `makeDocument`, SCIPIndexBuilder.swift:155), `Scip.pb.swift:1450-1456` (`public var documentation: [String] = []`), `CacheStore.swift:31-35` (whole-document serialization), `REQUIREMENTS.md` (DOCS-01..03), `IntegrationTests.swift:66-72` (line-number assertions), `SwiftSyntaxRefinerTests.swift` (suite to extend), `Package.swift` (swift-syntax 602.0.0 exact), `Version.swift` (`static let version = "0.3.0"`), `Greeter.swift` (no docs), `TriviaParser.swift:178-192` (doc-comment classification rules)
-- grep (this session): `Parser.parse` exactly once in Sources/; zero `documentation` assertions in Tests/; no `@` attributes in existing fixtures
+- grep: `Parser.parse` exactly once in Sources/; zero `documentation` assertions in Tests/; no `@` attributes in existing fixtures
 
 ## Metadata
 
