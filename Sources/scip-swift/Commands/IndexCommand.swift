@@ -72,7 +72,8 @@ struct IndexCommand: ParsableCommand {
     let tool = try buildTool ?? BuildBackendDetector.detect(repoPath: repoPath)
 
     let persistentCache = cacheDir != nil || indexOnly
-    let resolvedCacheDir = cacheDir ?? (repoPath as NSString).appendingPathComponent(".scip-cache")
+    let rawCacheDir = cacheDir ?? (repoPath as NSString).appendingPathComponent(".scip-cache")
+    let resolvedCacheDir = URL(fileURLWithPath: rawCacheDir).standardizedFileURL.path
 
     let scratchPath: String
     let databasePath: String
