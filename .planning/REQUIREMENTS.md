@@ -26,9 +26,9 @@
 
 ### Symbol Documentation (DOCS)
 
-- [ ] **DOCS-01**: User sees Swift doc comments (`///` and `/** */`) attached to the corresponding symbols in the `.scip` index, rendered as Markdown in `SymbolInformation.documentation` (hover parity with scip-typescript/scip-rust).
-- [ ] **DOCS-02**: Non-doc comments (`//`), license headers, and comments on non-declaration tokens are excluded from documentation extraction.
-- [ ] **DOCS-03**: Documentation extraction shares the same per-file parse pass as range refinement (one SwiftSyntax parse per file, not two).
+- [x] **DOCS-01**: User sees Swift doc comments (`///` and `/** */`) attached to the corresponding symbols in the `.scip` index, rendered as Markdown in `SymbolInformation.documentation` (hover parity with scip-typescript/scip-rust).
+- [x] **DOCS-02**: Non-doc comments (`//`), license headers, and comments on non-declaration tokens are excluded from documentation extraction.
+- [x] **DOCS-03**: Documentation extraction shares the same per-file parse pass as range refinement (one SwiftSyntax parse per file, not two).
 
 ## Future Requirements (deferred)
 
@@ -57,6 +57,6 @@
 | RANGE-01 | Phase 8 | Complete |
 | RANGE-02 | Phase 8 | Complete |
 | RANGE-03 | Phase 8 | Complete |
-| DOCS-01 | Phase 9 | pending |
-| DOCS-02 | Phase 9 | pending |
-| DOCS-03 | Phase 9 | pending |
+| DOCS-01 | Phase 9 | Complete |
+| DOCS-02 | Phase 9 | Complete |
+| DOCS-03 | Phase 9 | Complete |

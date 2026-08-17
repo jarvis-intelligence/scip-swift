@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v0.3.0
 milestone_name: Readable Indexes
-current_phase: 9
+current_phase: 6
 current_phase_name: Symbol Documentation
 status: complete
-stopped_at: Completed 07-02-PLAN.md
-last_updated: "2026-08-16T17:31:31.942Z"
+stopped_at: Completed 09-01-PLAN.md
+last_updated: "2026-08-17T09:58:34.644Z"
 last_activity: 2026-08-16
 last_activity_desc: "06-01 executed: restored xcodebuild dispatch via shared produceIndexStore helper on both indexOneRepo cache branches"
 progress:
   total_phases: 4
-  completed_phases: 3
-  total_plans: 4
-  completed_plans: 6
-  percent: 50
+  completed_phases: 4
+  total_plans: 7
+  completed_plans: 7
+  percent: 100
 ---
 
 # Project State
@@ -50,6 +50,7 @@ Progress: [██████████] 100%
 |------|----------|-------|-------|
 | Phase 06 P01 | 21m | 2 tasks | 2 files |
 | Phase 07 P02 | 58m | 3 tasks | 7 files |
+| Phase 09 P01 | 43m | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -64,6 +65,8 @@ Recent decisions affecting current work:
 - Cross-phase: bump IndexManifest cache version when serialized output changes; keep `scip lint` passing
 - [Phase ?]: Derived data placed beside scratch dir (parent + /derived-data): temp under work dir, cache runs under cache dir, mirroring 1c5ba8f convention
 - [Phase ?]: Phase 7: external-symbol USRs recovered by inverting the canonical symbol string (cache-safe); invalidateAll scoped to docs/+manifest.json after it was found deleting build scratch on version upgrades
+- [Phase ?]: Accessor doc inheritance covers synthesized accessors (shared name-token anchor); explicit get/set bodies anchor at their own keywords and stay uncovered by design
+- [Phase ?]: Doc map keyed at name-token anchors in the same single parse; per-file parse-count dictionary guarded by NSLock proves DOCS-03
 
 ### Pending Todos
 
@@ -83,6 +86,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-16T17:31:17.587Z
-Stopped at: Completed 07-02-PLAN.md
+Last session: 2026-08-17T09:58:34.626Z
+Stopped at: Completed 09-01-PLAN.md
 Resume file: None
