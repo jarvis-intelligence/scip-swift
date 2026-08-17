@@ -9,6 +9,9 @@ import SwiftSyntax
 /// never an error: `exactEndColumn` returns nil and callers fall back to the existing
 /// name-length approximation (research D2).
 struct SwiftSyntaxRefiner {
+  private static let parseCountsGuard = NSLock()
+  nonisolated(unsafe) private static var parseCounts: [String: Int] = [:]
+
   private let tokenEndColumns: [Int: [Int: Int]]
   private let docComments: [Int: [Int: String]]
   private let source: String
@@ -24,6 +27,9 @@ struct SwiftSyntaxRefiner {
     }
 
     let tree = Parser.parse(source: source)
+    Self.parseCountsGuard.lock()
+    Self.parseCounts[filePath, default: 0] += 1
+    Self.parseCountsGuard.unlock()
     var map: [Int: [Int: Int]] = [:]
     for token in tree.tokens(viewMode: .sourceAccurate) {
       let start = token.positionAfterSkippingLeadingTrivia.utf8Offset
@@ -54,6 +60,13 @@ struct SwiftSyntaxRefiner {
     self.syntaxTree = tree
   }
 
+  /// Number of `Parser.parse` calls recorded for `filePath` — the DOCS-03 exactly-once proof.
+  static func parseCount(forFilePath filePath: String) -> Int {
+    parseCountsGuard.lock()
+    defer { parseCountsGuard.unlock() }
+    return parseCounts[filePath] ?? 0
+  }
+
   /// IndexStoreDB reports 1-based `line` / 1-based UTF-8 byte `utf8Column`; the map is keyed
   /// 0-based, so the column shifts by one on lookup. A nil result means "no token starts at
   /// this anchor" — the caller must fall back, never fail.
@@ -74,9 +87,8 @@ struct SwiftSyntaxRefiner {
     for child in node.children(viewMode: .sourceAccurate) {
       if let decl = child.as(DeclSyntax.self) {
         result.append(decl)
-      } else {
-        result.append(contentsOf: declarations(in: child))
       }
+      result.append(contentsOf: declarations(in: child))
     }
     return result
   }
@@ -116,6 +128,8 @@ struct SwiftSyntaxRefiner {
       switch piece {
       case .docLineComment(let text):
         let content = text.hasPrefix("///") ? String(text.dropFirst(3)) : text
+        // The parser classifies any slash-run header (e.g. a //// divider) as a doc comment,
+        // so the divider case needs this explicit content check.
         if content.hasPrefix("/") { continue }
         lines.append(Self.stripOneLeadingSpace(content))
       case .docBlockComment(let text):
@@ -129,17 +143,19 @@ struct SwiftSyntaxRefiner {
 
   private static func blockLines(_ text: String) -> [String] {
     guard text.hasPrefix("/**"), text.hasSuffix("*/") else { return [] }
-    let body = String(text.dropFirst(3).dropLast(2))
-    return body
-      .components(separatedBy: "\n")
-      .dropFirst(text.dropFirst(3).hasPrefix("\n") ? 1 : 0)
-      .dropLast(text.dropFirst(3).dropLast(2).hasSuffix("\n") ? 1 : 0)
-      .map { line in
-        var stripped = line
-        if stripped.hasPrefix(" ") { stripped = String(stripped.dropFirst()) }
-        if stripped.hasPrefix("*") { stripped = String(stripped.dropFirst()) }
-        return stripOneLeadingSpace(stripped)
-      }
+    var lines = String(text.dropFirst(3).dropLast(2)).components(separatedBy: "\n")
+    if let first = lines.first, first.trimmingCharacters(in: .whitespaces).isEmpty {
+      lines.removeFirst()
+    }
+    if let last = lines.last, last.trimmingCharacters(in: .whitespaces).isEmpty {
+      lines.removeLast()
+    }
+    return lines.map { line in
+      var stripped = line
+      if stripped.hasPrefix(" ") { stripped = String(stripped.dropFirst()) }
+      if stripped.hasPrefix("*") { stripped = String(stripped.dropFirst()) }
+      return stripOneLeadingSpace(stripped)
+    }
   }
 
   private static func stripOneLeadingSpace(_ content: String) -> String {

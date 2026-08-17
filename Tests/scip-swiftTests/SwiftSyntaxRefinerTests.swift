@@ -150,7 +150,7 @@ struct SwiftSyntaxRefinerTests {
       """
     let refiner = try makeRefiner(source: source)
     #expect(
-      refiner.documentation(line: 8, utf8Column: 13)
+      refiner.documentation(line: 7, utf8Column: 13)
         == "Block line one.\n- parameter x: an int\n\nBlock line two."
     )
   }
@@ -168,7 +168,7 @@ struct SwiftSyntaxRefinerTests {
       """
     let refiner = try makeRefiner(source: source)
     #expect(
-      refiner.documentation(line: 8, utf8Column: 13)
+      refiner.documentation(line: 7, utf8Column: 13)
         == "Block doc first.\n- parameter x: an int\n\nSecond paragraph."
     )
   }
