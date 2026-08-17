@@ -281,11 +281,11 @@ struct SymbolSchemeGoldenTests {
 
   @Test("a getter and a zero-arg method of the same name collapse to one SymbolInformation whose Kind is last-in-source-order (Pitfall 6)")
   func getterMethodMergeIsDeterministic() {
-    let getter = Scip_SymbolInformation()
+    var getter = Scip_SymbolInformation()
     getter.symbol = "scip-swift swiftpm MyMod . Shape#area()."
     getter.kind = .getter
 
-    let method = Scip_SymbolInformation()
+    var method = Scip_SymbolInformation()
     method.symbol = "scip-swift swiftpm MyMod . Shape#area()."
     method.kind = .method
 

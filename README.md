@@ -110,11 +110,21 @@ the common case for a real iOS app repo. If the underlying build command fails f
 
 ## Known limitations
 
-- **Symbol identity, not full demangling**: `Scip_SymbolInformation.symbol` embeds the compiler's raw USR
-  (Unified Symbol Resolution string) as an opaque, escaped identifier rather than a demangled
-  namespace/type/method descriptor chain. USRs are already a compiler-guaranteed, project-wide
-  unique and stable identifier, so cross-references resolve correctly — but the raw symbol string
-  isn't human-readable the way `com/example/MyClass#myMethod().` is for some other SCIP indexers.
+- **Canonical descriptor symbols, raw-USR fallback**: `Scip_SymbolInformation.symbol` is a
+  canonical descriptor chain (`scip-swift swiftpm MyMod . Shape#resize(+1).`) parsed straight from
+  the compiler's USR — never derived from the demangler, which stays display-only. A USR the
+  parser cannot handle (exotic substitutions, parameters, malformed input) falls back to the raw
+  USR as a single escaped Term under the canonical module header; each run prints how many
+  symbols took that fallback. Known carried-forward scheme limitations (frozen with the Phase-1
+  spec):
+  - **Term-family retroactive collisions cannot carry `(+N)`** — the SCIP grammar allows
+    disambiguators only on Method descriptors, so retroactive property/let/case collisions
+    across declaring modules render the same string.
+  - **A getter and a zero-arg method of the same name collapse to one `SymbolInformation`**
+    (they render the identical string); the surviving Kind is the definition last in source
+    order.
+  - **Parameters take the raw-USR fallback** — their canonical form needs enclosing-function
+    container parsing, planned for a later phase.
 - **Occurrence ranges**: IndexStoreDB (like the underlying IndexStore format) only records a
   single anchor point per occurrence — not a start/end range. The end column is the exact
   identifier-token extent from a `SwiftSyntax` parse of the file; the name-length approximation

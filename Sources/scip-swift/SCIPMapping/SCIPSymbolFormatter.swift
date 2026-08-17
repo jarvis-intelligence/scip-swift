@@ -39,10 +39,6 @@ enum SCIPSymbolFormatter {
     return "\(escapeSpaceField(scheme)) \(manager) \(packageName) \(versionField) \(descriptor)"
   }
 
-  static func localSymbolString(localID: Int) -> String {
-    "local \(localID)"
-  }
-
   /// Escapes a `<scheme>`/`<manager>`/`<package-name>`/`<version>` field. Delegates to
   /// `CanonicalSymbolFormatter` — exactly one escaping implementation exists.
   static func escapeSpaceField(_ raw: String) -> String {

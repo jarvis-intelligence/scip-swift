@@ -42,6 +42,11 @@ struct SCIPIndexBuilder {
 
     let demangler = demangle ? USRDemangler.load() : nil
 
+    // Phase A (D-07): a light definitions pre-pass fills the USR-keyed overload table before
+    // any document is emitted, so definitions and references render identical strings by
+    // construction (Pitfall 4 — the lint missingSymbolForOccurrenceError contract).
+    let overloadTable = buildOverloadTable(indexStoreDB: indexStoreDB)
+
     var index = Scip_Index()
     index.metadata = makeMetadata()
 
@@ -66,6 +71,7 @@ struct SCIPIndexBuilder {
             filePath: filePath,
             indexStoreDB: indexStoreDB,
             demangler: demangler,
+            overloadTable: overloadTable,
             referencedSymbols: &referencedSymbols,
             systemReferencedSymbols: &systemReferencedSymbols
           ) {
@@ -80,6 +86,7 @@ struct SCIPIndexBuilder {
           filePath: filePath,
           indexStoreDB: indexStoreDB,
           demangler: demangler,
+          overloadTable: overloadTable,
           referencedSymbols: &referencedSymbols,
           systemReferencedSymbols: &systemReferencedSymbols
         )
@@ -129,14 +136,16 @@ struct SCIPIndexBuilder {
   /// takes the D-06 raw-USR fallback under the canonical module header, recorded in the
   /// per-run diagnostics; indexing never fails or drops a symbol here.
   private func canonicalSymbolString(
-    for symbol: Symbol, isSystemLocation: Bool, locationModuleName: String
+    for symbol: Symbol, isSystemLocation: Bool, locationModuleName: String,
+    overloadIndex: Int = 0
   ) -> String {
     if let parsed = USRSymbolParser.parse(symbol.usr),
       let canonical = USRSymbolMapper.canonicalSymbolString(
         parsed: parsed,
         symbol: symbol,
         isSystemLocation: isSystemLocation,
-        toolchainVersion: ToolchainInfo.pinnedSwiftVersion
+        toolchainVersion: ToolchainInfo.pinnedSwiftVersion,
+        overloadIndex: overloadIndex
       )
     {
       return canonical
@@ -169,6 +178,66 @@ struct SCIPIndexBuilder {
     return (String(name), false)
   }
 
+  /// Phase A of the two-phase build (D-07): collect every global definition occurrence's
+  /// group identity and source position into one `OverloadTable`. Light by design — it reads
+  /// the store's per-file occurrence streams once, filters to definitions, and touches
+  /// nothing else (no refiner, no demangler, no display names).
+  private func buildOverloadTable(indexStoreDB: IndexStoreDB) -> OverloadTable {
+    var definitions: [OverloadTable.Definition] = []
+    for filePath in SwiftFileDiscovery.swiftFiles(underRepoPath: repoPath) {
+      for occurrence in indexStoreDB.symbolOccurrences(inFilePath: filePath)
+      where occurrence.roles.contains(.definition)
+        && !occurrence.symbol.properties.contains(.local)
+      {
+        guard let parsed = USRSymbolParser.parse(occurrence.symbol.usr),
+          let kind = USRSymbolMapper.declKind(for: occurrence.symbol),
+          let name = USRSymbolMapper.sourceName(parsed: parsed, symbol: occurrence.symbol)
+        else { continue }
+        definitions.append(
+          OverloadTable.Definition(
+            usr: occurrence.symbol.usr,
+            module: parsed.module,
+            containerNames: parsed.containers.map(\.name),
+            name: name,
+            kind: kind,
+            relativePath: relativePath(of: filePath),
+            line: occurrence.location.line,
+            utf8Column: occurrence.location.utf8Column
+          ))
+      }
+    }
+    return OverloadTable(definitions: definitions)
+  }
+
+  /// Source position of one definition occurrence — the ordering key for both the overload
+  /// table (D-07) and the same-symbol merge decision (Pitfall 6).
+  struct DefinitionPosition: Comparable {
+    let relativePath: String
+    let line: Int
+    let utf8Column: Int
+
+    static func < (lhs: DefinitionPosition, rhs: DefinitionPosition) -> Bool {
+      if lhs.relativePath != rhs.relativePath { return lhs.relativePath < rhs.relativePath }
+      if lhs.line != rhs.line { return lhs.line < rhs.line }
+      return lhs.utf8Column < rhs.utf8Column
+    }
+  }
+
+  /// A getter and a zero-arg method of the same name render the IDENTICAL canonical string
+  /// (golden rows 9/14), so one `SymbolInformation` serves both; the surviving Kind is the
+  /// definition that is LAST in source order, regardless of the order occurrences stream in
+  /// (Pitfall 6, made explicit).
+  static func winningSymbolInformation(
+    _ candidates: [(info: Scip_SymbolInformation, position: DefinitionPosition)]
+  ) -> Scip_SymbolInformation {
+    precondition(!candidates.isEmpty)
+    var winner = candidates[0]
+    for candidate in candidates.dropFirst() where candidate.position > winner.position {
+      winner = candidate
+    }
+    return winner.info
+  }
+
   private func makeMetadata() -> Scip_Metadata {
     var toolInfo = Scip_ToolInfo()
     toolInfo.name = "scip-swift"
@@ -186,6 +255,7 @@ struct SCIPIndexBuilder {
     filePath: String,
     indexStoreDB: IndexStoreDB,
     demangler: USRDemangler?,
+    overloadTable: OverloadTable,
     referencedSymbols: inout [String: Scip_SymbolInformation],
     systemReferencedSymbols: inout [String: Scip_SymbolInformation]
   ) -> Scip_Document? {
@@ -198,19 +268,22 @@ struct SCIPIndexBuilder {
     document.positionEncoding = .utf8CodeUnitOffsetFromLineStart
 
     var localNumberer = LocalSymbolNumberer()
-    var definedSymbols: [String: Scip_SymbolInformation] = [:]
+    var definedSymbols: [String: (info: Scip_SymbolInformation, position: DefinitionPosition)] = [:]
     let refiner = SwiftSyntaxRefiner(filePath: filePath)
 
     for occurrence in occurrences.sorted() {
       let symbol = occurrence.symbol
       let isLocal = symbol.properties.contains(.local)
+      let overloadIndex = overloadTable.index(forUSR: symbol.usr)
       let symbolString =
         isLocal
-        ? SCIPSymbolFormatter.localSymbolString(localID: localNumberer.id(forUSR: symbol.usr))
+        ? CanonicalSymbolFormatter.localSymbol(
+          sourceName: symbol.name, ordinal: localNumberer.id(forUSR: symbol.usr))
         : canonicalSymbolString(
           for: symbol,
           isSystemLocation: occurrence.location.isSystem,
-          locationModuleName: occurrence.location.moduleName
+          locationModuleName: occurrence.location.moduleName,
+          overloadIndex: overloadIndex
         )
 
       var scipOccurrence = Scip_Occurrence()
@@ -261,12 +334,26 @@ struct SCIPIndexBuilder {
               canonicalSymbolString(
                 for: relSymbol,
                 isSystemLocation: occurrence.location.isSystem,
-                locationModuleName: occurrence.location.moduleName
+                locationModuleName: occurrence.location.moduleName,
+                overloadIndex: overloadTable.index(forUSR: relSymbol.usr)
               )
             }
           )
         }
-        definedSymbols[symbolString] = symbolInformation
+        // Same canonical string (getter + zero-arg method, or several local-context
+        // re-manglings): the last definition in source order wins (Pitfall 6).
+        let position = DefinitionPosition(
+          relativePath: relativePath(of: filePath),
+          line: occurrence.location.line,
+          utf8Column: occurrence.location.utf8Column
+        )
+        if let existing = definedSymbols[symbolString] {
+          if position > existing.position {
+            definedSymbols[symbolString] = (symbolInformation, position)
+          }
+        } else {
+          definedSymbols[symbolString] = (symbolInformation, position)
+        }
       } else if !isLocal, referencedSymbols[symbolString] == nil, systemReferencedSymbols[symbolString] == nil {
         if occurrence.location.isSystem {
           systemReferencedSymbols[symbolString] = symbolInformation
@@ -276,7 +363,7 @@ struct SCIPIndexBuilder {
       }
     }
 
-    document.symbols = definedSymbols.values.sorted { $0.symbol < $1.symbol }
+    document.symbols = definedSymbols.values.map(\.info).sorted { $0.symbol < $1.symbol }
     return document
   }
 

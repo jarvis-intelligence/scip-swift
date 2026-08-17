@@ -116,8 +116,8 @@ enum CanonicalSymbolFormatter {
       return "\(escaped)#"
     case .func, .method, .operator, .constructor, .destructor, .getter, .setter,
       .subscript, .protocolMethod:
-      let disambiguator = overloadIndex > 0 ? "(+\(overloadIndex))" : ""
-      return "\(escaped)\(disambiguator)()."
+      let disambiguator = overloadIndex > 0 ? "+\(overloadIndex)" : ""
+      return "\(escaped)(\(disambiguator))."
     case .property, .constant, .variable, .enumCase:
       return "\(escaped)."
     case .typeParameter:
@@ -228,6 +228,23 @@ enum CanonicalSymbolFormatter {
       index += 1
     }
     return name
+  }
+
+  /// Returns a document-scoped local symbol string `local <id>` where the id is the source
+  /// name sanitized to a simple identifier — every rune outside the simple-identifier set
+  /// collapses to `_` — with the ordinal appended as `_N` when it is greater than zero
+  /// (frozen Phase-1 rule; `LocalSymbolNumberer` stays the ordinal source). Unicode source
+  /// names (emoji, CJK) never appear raw in a local id.
+  static func localSymbol(sourceName: String, ordinal: Int) -> String {
+    var id = String(
+      sourceName.map { isIdentifierCharacter($0) ? $0 : "_" })
+    if id.isEmpty {
+      id = "_"
+    }
+    if ordinal > 0 {
+      id += "_\(ordinal)"
+    }
+    return "local \(id)"
   }
 
   // MARK: - Escaping (the single implementation; SCIPSymbolFormatter delegates here)
