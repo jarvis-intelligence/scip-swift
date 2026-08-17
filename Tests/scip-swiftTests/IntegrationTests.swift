@@ -233,6 +233,7 @@ struct IntegrationTests {
     // fixture's exact bytes. Getters ride on their accessor USRs (`vg` suffix), definitions on
     // `vp` — the getter rows are the load-bearing drift proof, so they must be symbol-linked:
     // the plain `emoji`/`名前` definitions would pass even under the display-name approximation.
+    // Swift mangles the non-ASCII identifier 名前 as `006ldrIFb` inside the USR.
     func expectRow(
       _ symbolFragment: String, _ line: Int32, _ start: Int32, _ end: Int32, _ what: String
     ) {
@@ -248,21 +249,15 @@ struct IntegrationTests {
 
     expectRow("5emojiSSvp", 0, 4, 9, "emoji definition")
     expectRow("5emojiSSvg", 0, 4, 9, "getter:emoji")
-    expectRow("6名前SSvp", 1, 4, 10, "名前 definition")
-    expectRow("6名前SSvg", 1, 4, 10, "getter:名前")
+    expectRow("006ldrIFbSSvp", 1, 4, 10, "名前 definition")
+    expectRow("006ldrIFbSSvg", 1, 4, 10, "getter:名前")
     expectRow("5greet", 1, 13, 18, "greet reference")
     expectRow("5greet", 3, 5, 10, "greet definition")
-    expectRow("4name", 3, 11, 15, "name parameter definition")
+    expectRow("ACL_SSvp", 3, 11, 15, "name parameter definition")
     expectRow("s:SS", 3, 17, 23, "first String reference")
     expectRow("s:SS", 3, 28, 34, "second String reference")
     expectRow("stringInterpolation", 4, 2, 3, "init(stringInterpolation:)")
-    expectRow("4name", 4, 12, 16, "name reference inside the interpolation")
-
-    let allRanges = document.occurrences.map(\.singleLineRange)
-    #expect(
-      allRanges.contains { $0.line == 4 && $0.startCharacter == 12 && $0.endCharacter == 16 },
-      "F4 name-ref row must be present even if it rides on a local symbol"
-    )
+    expectRow("ACL_SSvp", 4, 12, 16, "name reference inside the interpolation")
 
     // Drift proofs (RANGE-01): with the refiner removed these accessor rows would fall back to
     // the display-name approximation — end 16 for `getter:emoji` (7-byte prefix overshoot) and
@@ -275,7 +270,7 @@ struct IntegrationTests {
       "getter:emoji must not carry the approximate end 16 — the exact token end is 9"
     )
     let getterMeiEnds = document.occurrences
-      .filter { $0.symbol.contains("6名前SSvg") }
+      .filter { $0.symbol.contains("006ldrIFbSSvg") }
       .map(\.singleLineRange)
     #expect(
       !getterMeiEnds.contains { $0.line == 1 && $0.startCharacter == 4 && $0.endCharacter == 17 },
