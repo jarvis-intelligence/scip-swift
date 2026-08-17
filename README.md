@@ -115,10 +115,13 @@ the common case for a real iOS app repo. If the underlying build command fails f
   namespace/type/method descriptor chain. USRs are already a compiler-guaranteed, project-wide
   unique and stable identifier, so cross-references resolve correctly — but the raw symbol string
   isn't human-readable the way `com/example/MyClass#myMethod().` is for some other SCIP indexers.
-- **Approximate occurrence ranges**: IndexStoreDB (like the underlying IndexStore format) only
-  records a single anchor point per occurrence — not a start/end range — so the end column is
-  approximated from the symbol's display-name length. This is usually exact for simple identifiers
-  and can be slightly off for compound names or unusual spellings.
+- **Occurrence ranges**: IndexStoreDB (like the underlying IndexStore format) only records a
+  single anchor point per occurrence — not a start/end range. The end column is the exact
+  identifier-token extent from a `SwiftSyntax` parse of the file; the name-length approximation
+  remains only as a fallback for regions the parser cannot recover (e.g. severely malformed
+  syntax). Statically linking `SwiftSyntax`/`SwiftParser` grows the release binary from ~7 MB to
+  ~24.5 MB — an accepted trade-off for this milestone (compiler-grade token extents without
+  shipping a separate parser binary).
 - **No call-hierarchy role**: real `scip.proto`'s `SymbolRole` enum has no call-specific bit; call
   sites are marked with the same `ReadAccess`/`WriteAccess` roles as any other reference.
 - **Minimal signatures**: reconstructed signatures carry the symbol name but lack parameter and
