@@ -98,6 +98,11 @@ struct SCIPIndexBuilder {
       }
     }
 
+    // D-10 (02-02): documents ascend by relativePath, mirroring Go `SortDocuments`. Discovery
+    // already walks in sorted order; sorting here makes the emitted contract explicit rather
+    // than incidental on the directory walk.
+    index.documents.sort { $0.relativePath < $1.relativePath }
+
     var externalSymbols: [String: Scip_SymbolInformation] = [:]
     for doc in index.documents {
       for occurrence in doc.occurrences {
@@ -238,11 +243,15 @@ struct SCIPIndexBuilder {
     return winner.info
   }
 
-  private func makeMetadata() -> Scip_Metadata {
+  /// Requirement: SYM-03 / D-10 (02-02) — argv-normalized metadata. Raw `CommandLine.arguments`
+  /// are deliberately NOT embedded in ToolInfo: CLI double-runs invoked with different
+  /// `--output` paths must stay byte-identical, and argv also leaks local paths into shared
+  /// artifacts. `projectRoot` stays — the same repo yields the same value. Internal (not
+  /// private) as the determinism suite's test seam.
+  func makeMetadata() -> Scip_Metadata {
     var toolInfo = Scip_ToolInfo()
     toolInfo.name = "scip-swift"
     toolInfo.version = converterVersion
-    toolInfo.arguments = CommandLine.arguments
 
     var metadata = Scip_Metadata()
     metadata.toolInfo = toolInfo
@@ -364,7 +373,55 @@ struct SCIPIndexBuilder {
     }
 
     document.symbols = definedSymbols.values.map(\.info).sorted { $0.symbol < $1.symbol }
+    // D-10 (02-02): the emitted occurrence order is the canonical one, never the store's.
+    document.occurrences = Self.canonicalizedOccurrences(document.occurrences)
     return document
+  }
+
+  /// Requirement: SYM-03 / D-10 (02-02) — canonical occurrence post-pass, ported from the Go
+  /// bindings' rules (`bindings/go/scip`: `sort.go` `SortOccurrences` over `occurrence_range.go`
+  /// `Occurrence.Compare` / `Range.CompareStrict`): ascending by range start, then range end,
+  /// then symbol string, with stable dedup on (symbol, range, roles) — the exact key
+  /// `scip lint`'s `duplicateOccurrenceWarning` uses, so a getter/zero-arg-method pair sharing
+  /// a name-token anchor cannot emit an exact duplicate. IndexStoreDB's store order (location,
+  /// roles, symbol) is never the emitted order.
+  static func canonicalizedOccurrences(_ occurrences: [Scip_Occurrence]) -> [Scip_Occurrence] {
+    let sorted = occurrences.sorted { lhs, rhs in
+      let (l, r) = (lhs.singleLineRange, rhs.singleLineRange)
+      if l.line != r.line { return l.line < r.line }
+      if l.startCharacter != r.startCharacter { return l.startCharacter < r.startCharacter }
+      if l.endCharacter != r.endCharacter { return l.endCharacter < r.endCharacter }
+      return lhs.symbol < rhs.symbol
+    }
+
+    var seen = Set<OccurrenceDedupKey>()
+    seen.reserveCapacity(sorted.count)
+    var deduped: [Scip_Occurrence] = []
+    deduped.reserveCapacity(sorted.count)
+    for occurrence in sorted where seen.insert(Self.occurrenceDedupKey(occurrence)).inserted {
+      deduped.append(occurrence)
+    }
+    return deduped
+  }
+
+  /// Dedup key mirroring `scip lint`'s `occurrenceKey` (range + symbol roles), scoped per
+  /// symbol string within one document.
+  private struct OccurrenceDedupKey: Hashable {
+    let symbol: String
+    let line: Int32
+    let startCharacter: Int32
+    let endCharacter: Int32
+    let symbolRoles: Int32
+  }
+
+  private static func occurrenceDedupKey(_ occurrence: Scip_Occurrence) -> OccurrenceDedupKey {
+    OccurrenceDedupKey(
+      symbol: occurrence.symbol,
+      line: occurrence.singleLineRange.line,
+      startCharacter: occurrence.singleLineRange.startCharacter,
+      endCharacter: occurrence.singleLineRange.endCharacter,
+      symbolRoles: occurrence.symbolRoles
+    )
   }
 
   private func relativePath(of filePath: String) -> String {
