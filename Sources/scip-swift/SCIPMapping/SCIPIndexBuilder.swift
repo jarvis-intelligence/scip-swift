@@ -151,6 +151,7 @@ struct SCIPIndexBuilder {
 
     var localNumberer = LocalSymbolNumberer()
     var definedSymbols: [String: Scip_SymbolInformation] = [:]
+    let refiner = SwiftSyntaxRefiner(filePath: filePath)
 
     for occurrence in occurrences.sorted() {
       let symbol = occurrence.symbol
@@ -173,7 +174,10 @@ struct SCIPIndexBuilder {
       }
       scipOccurrence.singleLineRange = PositionMapping.singleLineRange(
         location: occurrence.location,
-        displayName: symbol.name
+        displayName: symbol.name,
+        exactEndColumn: refiner?
+          .exactEndColumn(line: occurrence.location.line, utf8Column: occurrence.location.utf8Column)
+          .map(Int32.init)
       )
       document.occurrences.append(scipOccurrence)
 

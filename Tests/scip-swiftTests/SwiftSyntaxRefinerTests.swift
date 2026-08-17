@@ -63,23 +63,24 @@ struct SwiftSyntaxRefinerTests {
   @Test("line and column math round-trips on multi-byte content")
   func lineTableMath() throws {
     // bytes: "let 名前 = greet(...)" — 名前 spans UTF-8 bytes 4..10 of line 2 (1-based col 5,
-    // 6 bytes); an anchor at the byte just after 名前 (1-based col 11) falls on the space and
-    // must miss the map, proving columns are byte deltas rather than UTF-16 units.
+    // 6 bytes); anchors must be byte deltas rather than UTF-16 units. The bytes after 名前 are
+    // space(10), `=`(11), space(12), g(13) — only the `=` is a token start.
     let refiner = try makeRefiner(source: Self.unicodeSource)
     #expect(refiner.exactEndColumn(line: 2, utf8Column: 5) == 10)
     #expect(refiner.exactEndColumn(line: 2, utf8Column: 11) == nil)
-    #expect(refiner.exactEndColumn(line: 2, utf8Column: 12) == nil)
+    #expect(refiner.exactEndColumn(line: 2, utf8Column: 12) == 12)
+    #expect(refiner.exactEndColumn(line: 2, utf8Column: 13) == nil)
     #expect(refiner.exactEndColumn(line: 2, utf8Column: 14) == 18)
   }
 
   @Test("broken source still yields tokens for valid regions; garbled region misses")
   func errorRecovery() throws {
     let refiner = try makeRefiner(source: Self.brokenSource)
-    // F5: ok L1 [4,6); Broken L2 [7,14); x L2 [12,13) overlaps Broken and is dropped by the
-    // last-writer-wins map; alsoOk L3 [4,11); print L4 [0,5); ok ref L4 [6,8).
+    // F5: ok L1 [4,6); Broken L2 [7,13); alsoOk L3 [4,10); print L4 [0,5); ok ref L4 [6,8).
+    // The `x` anchor at L2 col 13 falls inside the garbled region and must miss the map.
     #expect(refiner.exactEndColumn(line: 1, utf8Column: 5) == 6)
-    #expect(refiner.exactEndColumn(line: 2, utf8Column: 8) == 14)
-    #expect(refiner.exactEndColumn(line: 3, utf8Column: 5) == 11)
+    #expect(refiner.exactEndColumn(line: 2, utf8Column: 8) == 13)
+    #expect(refiner.exactEndColumn(line: 3, utf8Column: 5) == 10)
     #expect(refiner.exactEndColumn(line: 4, utf8Column: 1) == 5)
     #expect(refiner.exactEndColumn(line: 4, utf8Column: 7) == 8)
     #expect(refiner.exactEndColumn(line: 2, utf8Column: 13) == nil)

@@ -54,6 +54,24 @@ struct IntegrationTests {
       "canonical symbol string must still embed the raw USR verbatim"
     )
 
+    // Exact-range tracer (RANGE-01): the getter:name occurrences anchor at token `name` — the
+    // property definition on `  public let name: String` (line 2) has exact extent [13,17),
+    // where the display-name approximation would have produced 24 (+7 drift, research F3a).
+    // The interpolation use on line 9 (`\(name)`) has exact extent [14,18).
+    let getterUSR = "s:16MiniSwiftPackage7GreeterV4nameSSvg"
+    let getterNameRanges = document.occurrences
+      .filter { $0.symbol.contains(getterUSR) }
+      .map(\.singleLineRange)
+    #expect(!getterNameRanges.isEmpty, "fixture must emit at least one getter:name occurrence")
+    #expect(
+      getterNameRanges.contains { $0.line == 1 && $0.startCharacter == 13 && $0.endCharacter == 17 },
+      "getter:name on the property definition must carry the exact token extent [13,17), not the approximate 24"
+    )
+    #expect(
+      getterNameRanges.contains { $0.line == 8 && $0.startCharacter == 14 && $0.endCharacter == 18 },
+      "getter:name inside the string interpolation must carry the exact token extent [14,18)"
+    )
+
     #expect(index.metadata.toolInfo.name == "scip-swift")
   }
 
