@@ -122,27 +122,34 @@ struct IndexCommand: ParsableCommand {
     var cacheStore: CacheStore?
     if persistentCache {
       let store = CacheStore(cacheDir: resolvedCacheDir)
-      if let manifest = try store.loadManifest() {
+      if let manifest = store.loadManifest() {
         if !manifest.isCompatibleWith(
           toolchainVersion: ToolchainInfo.pinnedSwiftVersion,
           converterVersion: ScipSwiftVersion.version,
           indexstoreDbRevision: indexstoreDbRevision,
-          buildToolName: tool.rawValue
+          buildToolName: tool.rawValue,
+          symbolFormatVersion: SymbolFormatVersion.current
         ) {
           try store.invalidateAll()
           try store.saveManifest(IndexManifest(
             toolchainVersion: ToolchainInfo.pinnedSwiftVersion,
             converterVersion: ScipSwiftVersion.version,
             indexstoreDbRevision: indexstoreDbRevision,
-            buildToolName: tool.rawValue
+            buildToolName: tool.rawValue,
+            symbolFormatVersion: SymbolFormatVersion.current
           ))
         }
       } else {
+        // D-09 (02-02): a missing OR undecodable manifest (older engine, pre-
+        // symbolFormatVersion) means docs/ cannot be trusted — wholesale-invalidate before the
+        // fresh save so old-format documents never mix with new-format output.
+        try store.invalidateAll()
         try store.saveManifest(IndexManifest(
           toolchainVersion: ToolchainInfo.pinnedSwiftVersion,
           converterVersion: ScipSwiftVersion.version,
           indexstoreDbRevision: indexstoreDbRevision,
-          buildToolName: tool.rawValue
+          buildToolName: tool.rawValue,
+          symbolFormatVersion: SymbolFormatVersion.current
         ))
       }
       cacheStore = store

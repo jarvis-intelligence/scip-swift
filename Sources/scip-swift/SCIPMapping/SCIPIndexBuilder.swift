@@ -53,6 +53,11 @@ struct SCIPIndexBuilder {
     var referencedSymbols: [String: Scip_SymbolInformation] = [:]
     var systemReferencedSymbols: [String: Scip_SymbolInformation] = [:]
     var definedSymbolStrings: Set<String> = []
+    // D-09 (02-02): per-document canonicalSymbol -> USR side maps, keyed by relativePath. Fresh
+    // documents capture theirs during emission; cache-served documents load theirs from
+    // docs/<hash>.usrmap — either way the external display-name pass never reverse-extracts a
+    // USR from the symbol string.
+    var usrMapsByPath: [String: [String: String]] = [:]
 
     for filePath in SwiftFileDiscovery.swiftFiles(underRepoPath: repoPath) {
       var document: Scip_Document?
@@ -63,11 +68,12 @@ struct SCIPIndexBuilder {
           if let cached = cacheStore.loadDocument(hash: hash),
              indexStoreDB.dateOfLatestUnitFor(filePath: filePath) != nil {
             document = cached
+            usrMapsByPath[cached.relativePath] = cacheStore.loadUSRMap(hash: hash) ?? [:]
           }
         }
 
         if document == nil {
-          if let fresh = makeDocument(
+          if let (fresh, sideMap) = makeDocument(
             filePath: filePath,
             indexStoreDB: indexStoreDB,
             demangler: demangler,
@@ -77,19 +83,26 @@ struct SCIPIndexBuilder {
           ) {
             if let hash = contentHash {
               try? cacheStore.saveDocument(fresh, hash: hash)
+              // The side map rides the same content hash and document directory as its
+              // .scipdoc — it invalidates atomically with the document (T-02-05).
+              try? cacheStore.saveUSRMap(sideMap, hash: hash)
             }
+            usrMapsByPath[fresh.relativePath] = sideMap
             document = fresh
           }
         }
       } else {
-        document = makeDocument(
+        if let (fresh, sideMap) = makeDocument(
           filePath: filePath,
           indexStoreDB: indexStoreDB,
           demangler: demangler,
           overloadTable: overloadTable,
           referencedSymbols: &referencedSymbols,
           systemReferencedSymbols: &systemReferencedSymbols
-        )
+        ) {
+          usrMapsByPath[fresh.relativePath] = sideMap
+          document = fresh
+        }
       }
 
       if let document {
@@ -105,18 +118,20 @@ struct SCIPIndexBuilder {
 
     var externalSymbols: [String: Scip_SymbolInformation] = [:]
     for doc in index.documents {
+      let usrSideMap = usrMapsByPath[doc.relativePath] ?? [:]
       for occurrence in doc.occurrences {
         let sym = occurrence.symbol
         if !sym.hasPrefix("local ") && !definedSymbolStrings.contains(sym) && externalSymbols[sym] == nil {
           var info = Scip_SymbolInformation()
           info.symbol = sym
           if let demangler {
-            // D-06 fallback symbols still embed the raw USR in their trailing descriptor, so
-            // they keep their demangled display names. Canonical descriptor chains no longer
-            // embed a USR: their display name is derived deterministically from the symbol
-            // string itself, so fresh and cache-served documents agree (byte-identical runs).
-            if let usr = Self.usr(fromCanonicalSymbolString: sym), usr.wasFallbackForm {
-              info.displayName = demangler.demangledDisplayName(usr: usr.usr) ?? ""
+            // D-06 fallback symbols ride the canonicalSymbol -> USR side map (captured during
+            // emission on fresh runs, loaded from docs/<hash>.usrmap on cache-hit runs), so
+            // they keep their demangled display names identically in both. Canonical descriptor
+            // chains never enter the side map: their display name derives deterministically
+            // from the symbol string itself.
+            if let usr = usrSideMap[sym] {
+              info.displayName = demangler.demangledDisplayName(usr: usr) ?? ""
             } else {
               info.displayName = CanonicalSymbolFormatter.displayName(fromCanonicalString: sym)
             }
@@ -142,7 +157,8 @@ struct SCIPIndexBuilder {
   /// per-run diagnostics; indexing never fails or drops a symbol here.
   private func canonicalSymbolString(
     for symbol: Symbol, isSystemLocation: Bool, locationModuleName: String,
-    overloadIndex: Int = 0
+    overloadIndex: Int = 0,
+    fallbackRecorder: USRSideMapRecorder? = nil
   ) -> String {
     if let parsed = USRSymbolParser.parse(symbol.usr),
       let canonical = USRSymbolMapper.canonicalSymbolString(
@@ -156,31 +172,27 @@ struct SCIPIndexBuilder {
       return canonical
     }
     symbolMappingDiagnostics.recordFallback(usr: symbol.usr)
-    return SCIPSymbolFormatter.fallbackSymbolString(
+    let fallback = SCIPSymbolFormatter.fallbackSymbolString(
       isSystem: isSystemLocation,
       moduleName: locationModuleName,
       toolchainVersion: ToolchainInfo.pinnedSwiftVersion,
       usr: symbol.usr
     )
+    fallbackRecorder?.record(symbolString: fallback, usr: symbol.usr)
+    return fallback
   }
 
-  /// Inverse of the D-06 fallback rendering: a raw USR rides verbatim in the trailing
-  /// `` `<usr>`. `` descriptor, so it can be recovered even for documents served from cache
-  /// (where no IndexStoreDB symbol is at hand). `wasFallbackForm` distinguishes that shape
-  /// from a canonical Term descriptor, which never embeds a USR.
-  private static func usr(
-    fromCanonicalSymbolString symbolString: String
-  ) -> (usr: String, wasFallbackForm: Bool)? {
-    guard let separator = symbolString.lastIndex(of: " ") else { return nil }
-    let descriptor = symbolString[separator...].dropFirst()
-    guard descriptor.hasSuffix(".") else { return nil }
-    let name = descriptor.dropLast()
-    if name.hasPrefix("`"), name.hasSuffix("`") {
-      return (
-        String(name.dropFirst().dropLast().replacingOccurrences(of: "``", with: "`")), true
-      )
+  /// Requirement: SYM-03 / D-09 (02-02, research Pitfall 3) — accumulates the per-document
+  /// canonicalSymbol -> USR side map for D-06 fallback symbols during emission; persisted by
+  /// `CacheStore.saveUSRMap` so cache-hit runs demangle external display names identically to
+  /// fresh runs. A class (not a value) so the relationship-formatter closure can record through
+  /// it without capturing inout storage.
+  final class USRSideMapRecorder {
+    private(set) var entries: [String: String] = [:]
+
+    func record(symbolString: String, usr: String) {
+      entries[symbolString] = usr
     }
-    return (String(name), false)
   }
 
   /// Phase A of the two-phase build (D-07): collect every global definition occurrence's
@@ -260,6 +272,8 @@ struct SCIPIndexBuilder {
     return metadata
   }
 
+  /// Returns nil when the store holds no occurrences for the file; otherwise the document plus
+  /// its canonicalSymbol -> USR side map for D-06 fallback symbols (D-09, 02-02).
   private func makeDocument(
     filePath: String,
     indexStoreDB: IndexStoreDB,
@@ -267,7 +281,7 @@ struct SCIPIndexBuilder {
     overloadTable: OverloadTable,
     referencedSymbols: inout [String: Scip_SymbolInformation],
     systemReferencedSymbols: inout [String: Scip_SymbolInformation]
-  ) -> Scip_Document? {
+  ) -> (document: Scip_Document, usrSideMap: [String: String])? {
     let occurrences = indexStoreDB.symbolOccurrences(inFilePath: filePath)
     guard !occurrences.isEmpty else { return nil }
 
@@ -279,6 +293,7 @@ struct SCIPIndexBuilder {
     var localNumberer = LocalSymbolNumberer()
     var definedSymbols: [String: (info: Scip_SymbolInformation, position: DefinitionPosition)] = [:]
     let refiner = SwiftSyntaxRefiner(filePath: filePath)
+    let fallbackRecorder = USRSideMapRecorder()
 
     for occurrence in occurrences.sorted() {
       let symbol = occurrence.symbol
@@ -292,7 +307,8 @@ struct SCIPIndexBuilder {
           for: symbol,
           isSystemLocation: occurrence.location.isSystem,
           locationModuleName: occurrence.location.moduleName,
-          overloadIndex: overloadIndex
+          overloadIndex: overloadIndex,
+          fallbackRecorder: fallbackRecorder
         )
 
       var scipOccurrence = Scip_Occurrence()
@@ -331,7 +347,8 @@ struct SCIPIndexBuilder {
         symbolInformation.enclosingSymbol = canonicalSymbolString(
           for: childOfRelation.symbol,
           isSystemLocation: occurrence.location.isSystem,
-          locationModuleName: occurrence.location.moduleName
+          locationModuleName: occurrence.location.moduleName,
+          fallbackRecorder: fallbackRecorder
         )
       }
 
@@ -344,7 +361,8 @@ struct SCIPIndexBuilder {
                 for: relSymbol,
                 isSystemLocation: occurrence.location.isSystem,
                 locationModuleName: occurrence.location.moduleName,
-                overloadIndex: overloadTable.index(forUSR: relSymbol.usr)
+                overloadIndex: overloadTable.index(forUSR: relSymbol.usr),
+                fallbackRecorder: fallbackRecorder
               )
             }
           )
@@ -375,7 +393,7 @@ struct SCIPIndexBuilder {
     document.symbols = definedSymbols.values.map(\.info).sorted { $0.symbol < $1.symbol }
     // D-10 (02-02): the emitted occurrence order is the canonical one, never the store's.
     document.occurrences = Self.canonicalizedOccurrences(document.occurrences)
-    return document
+    return (document, fallbackRecorder.entries)
   }
 
   /// Requirement: SYM-03 / D-10 (02-02) — canonical occurrence post-pass, ported from the Go

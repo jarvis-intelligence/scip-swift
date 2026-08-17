@@ -60,7 +60,7 @@ struct CacheStoreTests {
       buildToolName: "swiftpm"
     )
     try cache.saveManifest(manifest)
-    let loaded = try cache.loadManifest()
+    let loaded = cache.loadManifest()
     #expect(loaded != nil)
     #expect(loaded?.toolchainVersion == "6.2.4")
     #expect(loaded?.buildToolName == "swiftpm")
@@ -69,7 +69,7 @@ struct CacheStoreTests {
   @Test("loadManifest returns nil when no manifest exists")
   func loadManifestEmpty() throws {
     let cache = CacheStore(cacheDir: makeTempDir())
-    let loaded = try cache.loadManifest()
+    let loaded = cache.loadManifest()
     #expect(loaded == nil)
   }
 
@@ -99,7 +99,7 @@ struct CacheStoreTests {
       "cache dir itself must survive — callers park build scratch beside the document cache"
     )
     #expect(cache.loadDocument(hash: "testhash") == nil)
-    #expect(try cache.loadManifest() == nil)
+    #expect(cache.loadManifest() == nil)
   }
 
   @Test("saveDocument creates nested docs directory")

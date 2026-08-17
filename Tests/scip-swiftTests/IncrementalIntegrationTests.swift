@@ -174,7 +174,7 @@ struct IncrementalIntegrationTests {
       "v0.2.x short display name must not survive the version upgrade"
     )
 
-    let refreshedManifest = try #require(try store.loadManifest())
+    let refreshedManifest = try #require(store.loadManifest())
     #expect(refreshedManifest.converterVersion == ScipSwiftVersion.version)
   }
 
