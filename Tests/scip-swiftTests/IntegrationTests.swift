@@ -75,6 +75,61 @@ struct IntegrationTests {
     #expect(index.metadata.toolInfo.name == "scip-swift")
   }
 
+  @Test("canonical descriptor symbols replace raw USRs end-to-end")
+  func canonicalSymbolsReplaceRawUSRs() throws {
+    let fixtureRepoPath = Self.fixtureRepoPath()
+    let fixtureBuildPath = (fixtureRepoPath as NSString).appendingPathComponent(".build")
+    defer { try? FileManager.default.removeItem(atPath: fixtureBuildPath) }
+
+    let workDirectory = try Self.makeTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(atPath: workDirectory) }
+
+    let runner = SwiftPMBuildRunner(
+      repoPath: fixtureRepoPath,
+      configuration: .debug,
+      scratchPath: (workDirectory as NSString).appendingPathComponent("scratch")
+    )
+    let buildResult = try runner.produceIndexStore()
+
+    let builder = SCIPIndexBuilder(
+      repoPath: fixtureRepoPath,
+      indexStorePath: buildResult.indexStorePath,
+      databasePath: (workDirectory as NSString).appendingPathComponent("index-db"),
+      buildToolName: BuildTool.swiftpm.rawValue,
+      converterVersion: "test"
+    )
+    let index = try builder.build()
+
+    let document = try #require(
+      index.documents.first { $0.relativePath == "Sources/MiniSwiftPackage/Greeter.swift" }
+    )
+    let occurrenceSymbols = Set(document.occurrences.map(\.symbol))
+    let definedSymbols = Set(document.symbols.map(\.symbol))
+
+    // The frozen Phase-1 scheme (SYM-03): descriptor chains, not escaped USRs. The struct is a
+    // Type descriptor (`Greeter#`), the method a Method descriptor (`greet().`).
+    #expect(
+      occurrenceSymbols.contains("scip-swift swiftpm MiniSwiftPackage . Greeter#"),
+      "Greeter struct definition/reference must carry the canonical Type descriptor symbol"
+    )
+    #expect(
+      occurrenceSymbols.contains("scip-swift swiftpm MiniSwiftPackage . Greeter#greet()."),
+      "greet method must carry the canonical Method descriptor symbol"
+    )
+    #expect(
+      definedSymbols.contains("scip-swift swiftpm MiniSwiftPackage . Greeter#"),
+      "Greeter must have a SymbolInformation under its canonical symbol string"
+    )
+    #expect(
+      definedSymbols.contains("scip-swift swiftpm MiniSwiftPackage . Greeter#greet()."),
+      "greet must have a SymbolInformation under its canonical symbol string"
+    )
+    #expect(
+      !occurrenceSymbols.contains { $0.contains("s:16MiniSwiftPackage7GreeterV") },
+      "no Greeter occurrence may embed the raw USR once the canonical scheme is wired"
+    )
+  }
+
   @Test("demangle off reproduces v0.2.x opaque display names")
   func demangleOffReproducesV02xDisplayNames() throws {
     let fixtureRepoPath = Self.fixtureRepoPath()
