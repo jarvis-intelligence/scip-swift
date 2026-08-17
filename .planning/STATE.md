@@ -2,7 +2,7 @@
 gsd_state_version: 1.0
 milestone: v0.3.0
 milestone_name: Readable Indexes
-current_phase: 6
+current_phase: 9
 current_phase_name: Symbol Documentation
 status: complete
 stopped_at: Completed 09-01-PLAN.md

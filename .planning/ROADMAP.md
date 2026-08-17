@@ -30,7 +30,7 @@ Full details: `.planning/milestones/v0.2.0-ROADMAP.md`
 - [x] **Phase 6: Xcode Backend Repair & Destination Selection** - Restore the xcodebuild dispatch branch and add opt-in `--destination`
 - [x] **Phase 7: Demangled Symbol Names** - Human-readable Swift symbol names with opaque fallback and stable identity
 - [x] **Phase 8: Exact Occurrence Ranges** - SwiftSyntax identifier extents replace display-name-length approximation
-- [ ] **Phase 9: Symbol Documentation** - Doc comments as Markdown `documentation` riding the same parse pass
+- [x] **Phase 9: Symbol Documentation** - Doc comments as Markdown `documentation` riding the same parse pass
 
 ## Phase Details
 
