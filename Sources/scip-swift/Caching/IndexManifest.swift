@@ -12,25 +12,33 @@ import Foundation
 ///   - symbolFormatVersion: emitted symbol-string format (D-09). Format 1 is the raw-USR era;
 ///     format 2 is the canonical descriptor-chain scheme. A bump wholesale-invalidates cached
 ///     documents so old-format caches never mix with new-format output.
+///   - overloadTableFingerprint: SHA-256 over the overload table's groups and their
+///     source-ordered member USRs (D-10 / T-02-04, 02-02 Task 3). NOT compared by
+///     `isCompatibleWith` — it depends on the opened index store, which the caller cannot
+///     know before the build; `SCIPIndexBuilder` validates it right after its definitions
+///     pre-pass, and any change wholesale-invalidates cached documents.
 struct IndexManifest: Codable {
   var toolchainVersion: String
   var converterVersion: String
   var indexstoreDbRevision: String
   var buildToolName: String
   var symbolFormatVersion: Int
+  var overloadTableFingerprint: String
 
   init(
     toolchainVersion: String,
     converterVersion: String,
     indexstoreDbRevision: String,
     buildToolName: String,
-    symbolFormatVersion: Int = SymbolFormatVersion.current
+    symbolFormatVersion: Int = SymbolFormatVersion.current,
+    overloadTableFingerprint: String = ""
   ) {
     self.toolchainVersion = toolchainVersion
     self.converterVersion = converterVersion
     self.indexstoreDbRevision = indexstoreDbRevision
     self.buildToolName = buildToolName
     self.symbolFormatVersion = symbolFormatVersion
+    self.overloadTableFingerprint = overloadTableFingerprint
   }
 
   func isCompatibleWith(

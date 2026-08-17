@@ -95,10 +95,34 @@ to a persistent cache:
 - Unchanged files reuse their previously computed `Scip_Document` (keyed by SHA256 content hash),
   so re-indexing after small edits only reprocesses what changed.
 - The cache is invalidated wholesale when the Swift toolchain version, `scip-swift` version,
-  indexstore-db revision, or build backend changes (recorded in `manifest.json`).
+  indexstore-db revision, build backend, or the emitted symbol format version
+  (`symbolFormatVersion`, currently 2 — format 1 is the raw-USR era) changes (recorded in
+  `manifest.json`). A manifest that fails to decode — e.g. written by an older engine without
+  the current fields — is treated as no manifest: the cache is discarded wholesale, so
+  old-format caches never mix with new-format output.
+- The index builder additionally fingerprints the overload table (SHA-256 over each overload
+  group's identity and its source-ordered member USRs) as a global cache-validation key:
+  overload indices `(+N)` depend on every group member repo-wide, so any overload change
+  anywhere — even in files whose own content did not change — invalidates cached documents.
+  This granularity is deliberately conservative (any overload edit invalidates everything);
+  a per-group precise refinement is a recorded v2 follow-up.
+- Each cached document is accompanied by `docs/<hash>.usrmap`, a canonicalSymbol → USR side map
+  for raw-USR fallback symbols, so external display names demangle identically on fresh and
+  cache-hit runs. It rides the same content hash as its `.scipdoc` and invalidates atomically
+  with it.
 - `--index-only` reuses the already-built IndexStore under the cache directory (it does not
   rebuild), so it fails with `indexStoreNotFoundForIndexOnly` if no prior indexed build exists
   there.
+
+### Determinism
+
+Indexing the same store twice is byte-identical, regardless of cache state:
+
+- Occurrences are ordered by the canonical SCIP rules (ascending by range start, then range
+  end, then symbol string) and deduplicated on (symbol, range, roles); documents ascend by
+  relative path and document symbols by symbol string.
+- `ToolInfo` metadata never embeds raw command-line arguments (they would differ between two
+  CLI runs with different `--output` paths, and they leak local paths into shared artifacts).
 
 ## macOS-host requirement
 

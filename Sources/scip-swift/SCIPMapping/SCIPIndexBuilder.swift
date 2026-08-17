@@ -47,6 +47,39 @@ struct SCIPIndexBuilder {
     // construction (Pitfall 4 — the lint missingSymbolForOccurrenceError contract).
     let overloadTable = buildOverloadTable(indexStoreDB: indexStoreDB)
 
+    // D-10 / T-02-04 (02-02 Task 3): the overload-table fingerprint is a GLOBAL cache
+    // validation key. Documents are keyed by their own file's content hash, but overload
+    // indices depend on every group member repo-wide — an overload added in file B shifts the
+    // (+N) suffixes of unchanged file A's symbols. Any fingerprint change — or a cache with no
+    // (trustable) manifest — wholesale-invalidates docs/ via the existing invalidateAll()
+    // path. `isCompatibleWith` deliberately does not carry this key: it depends on the opened
+    // store, which the caller cannot know before the build.
+    if let cacheStore {
+      let fingerprint = overloadTable.cacheValidationFingerprint()
+      if let manifest = cacheStore.loadManifest() {
+        if manifest.overloadTableFingerprint != fingerprint {
+          try? cacheStore.invalidateAll()
+          var updated = manifest
+          updated.overloadTableFingerprint = fingerprint
+          try? cacheStore.saveManifest(updated)
+        }
+      } else {
+        // No manifest: docs/ content cannot be trusted (older engine, or direct-builder use
+        // that never went through IndexCommand's manifest block). Discard it and record the
+        // fingerprint; the static version keys are IndexCommand's to fill — "" never matches
+        // its check, so a later CLI run invalidates once more and writes the authoritative
+        // manifest.
+        try? cacheStore.invalidateAll()
+        try? cacheStore.saveManifest(IndexManifest(
+          toolchainVersion: ToolchainInfo.pinnedSwiftVersion,
+          converterVersion: converterVersion,
+          indexstoreDbRevision: "",
+          buildToolName: buildToolName,
+          overloadTableFingerprint: fingerprint
+        ))
+      }
+    }
+
     var index = Scip_Index()
     index.metadata = makeMetadata()
 
