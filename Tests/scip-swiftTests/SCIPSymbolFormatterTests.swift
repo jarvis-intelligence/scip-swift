@@ -48,10 +48,10 @@ struct SCIPSymbolFormatterTests {
     #expect(SCIPSymbolFormatter.escapeSpaceField("has space") == "has  space")
   }
 
-  @Test("local symbols use SCIP's bare 'local <n>' grammar")
+  @Test("local symbols use the frozen 'local <sanitized-id>' form via the canonical formatter")
   func localSymbolFormat() {
-    #expect(SCIPSymbolFormatter.localSymbolString(localID: 0) == "local 0")
-    #expect(SCIPSymbolFormatter.localSymbolString(localID: 3) == "local 3")
+    #expect(CanonicalSymbolFormatter.localSymbol(sourceName: "name", ordinal: 0) == "local name")
+    #expect(CanonicalSymbolFormatter.localSymbol(sourceName: "count", ordinal: 3) == "local count_3")
   }
 
   @Test("LocalSymbolNumberer assigns stable per-USR IDs, increasing on first sight")
