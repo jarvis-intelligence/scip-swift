@@ -50,17 +50,17 @@ struct IntegrationTests {
       document.symbols.first { $0.displayName == "MiniSwiftPackage.Greeter.greet() -> Swift.String" }
     )
     #expect(
-      greetSymbol.symbol == "scip-swift swiftpm MiniSwiftPackage . `s:16MiniSwiftPackage7GreeterV5greetSSyF`.",
-      "canonical symbol string must still embed the raw USR verbatim"
+      greetSymbol.symbol == "scip-swift swiftpm MiniSwiftPackage . Greeter#greet().",
+      "canonical symbol string must be the descriptor-chain form (raw USRs are gone)"
     )
 
     // Exact-range tracer (RANGE-01): the getter:name occurrences anchor at token `name` — the
     // property definition on `  public let name: String` (line 2) has exact extent [13,17),
     // where the display-name approximation would have produced 24 (+7 drift, research F3a).
     // The interpolation use on line 9 (`\(name)`) has exact extent [14,18).
-    let getterUSR = "s:16MiniSwiftPackage7GreeterV4nameSSvg"
+    let getterSymbol = "scip-swift swiftpm MiniSwiftPackage . Greeter#name()."
     let getterNameRanges = document.occurrences
-      .filter { $0.symbol.contains(getterUSR) }
+      .filter { $0.symbol == getterSymbol }
       .map(\.singleLineRange)
     #expect(!getterNameRanges.isEmpty, "fixture must emit at least one getter:name occurrence")
     #expect(
@@ -124,9 +124,15 @@ struct IntegrationTests {
       definedSymbols.contains("scip-swift swiftpm MiniSwiftPackage . Greeter#greet()."),
       "greet must have a SymbolInformation under its canonical symbol string"
     )
+    // Parameters take the D-06 raw-USR fallback in this phase (their canonical form needs
+    // enclosing-function container parsing); the struct and the method must NOT fall back.
     #expect(
-      !occurrenceSymbols.contains { $0.contains("s:16MiniSwiftPackage7GreeterV") },
-      "no Greeter occurrence may embed the raw USR once the canonical scheme is wired"
+      !occurrenceSymbols.contains("`s:16MiniSwiftPackage7GreeterV`."),
+      "the Greeter struct must not embed its raw USR once the canonical scheme is wired"
+    )
+    #expect(
+      !occurrenceSymbols.contains("`s:16MiniSwiftPackage7GreeterV5greetSSyF`."),
+      "the greet method must not embed its raw USR once the canonical scheme is wired"
     )
   }
 
@@ -290,10 +296,10 @@ struct IntegrationTests {
     // the plain `emoji`/`名前` definitions would pass even under the display-name approximation.
     // Swift mangles the non-ASCII identifier 名前 as `006ldrIFb` inside the USR.
     func expectRow(
-      _ symbolFragment: String, _ line: Int32, _ start: Int32, _ end: Int32, _ what: String
+      _ symbolString: String, _ line: Int32, _ start: Int32, _ end: Int32, _ what: String
     ) {
       let rows = document.occurrences
-        .filter { $0.symbol.contains(symbolFragment) }
+        .filter { $0.symbol == symbolString }
         .map(\.singleLineRange)
       #expect(!rows.isEmpty, "fixture must emit \(what) occurrences")
       #expect(
@@ -302,30 +308,39 @@ struct IntegrationTests {
       )
     }
 
-    expectRow("5emojiSSvp", 0, 4, 9, "emoji definition")
-    expectRow("5emojiSSvg", 0, 4, 9, "getter:emoji")
-    expectRow("006ldrIFbSSvp", 1, 4, 10, "名前 definition")
-    expectRow("006ldrIFbSSvg", 1, 4, 10, "getter:名前")
-    expectRow("5greet", 1, 13, 18, "greet reference")
-    expectRow("5greet", 3, 5, 10, "greet definition")
-    expectRow("ACL_SSvp", 3, 11, 15, "name parameter definition")
-    expectRow("s:SS", 3, 17, 23, "first String reference")
-    expectRow("s:SS", 3, 28, 34, "second String reference")
-    expectRow("stringInterpolation", 4, 2, 3, "init(stringInterpolation:)")
-    expectRow("ACL_SSvp", 4, 12, 16, "name reference inside the interpolation")
+    expectRow("scip-swift swiftpm UnicodeRange . emoji.", 0, 4, 9, "emoji definition")
+    expectRow("scip-swift swiftpm UnicodeRange . emoji().", 0, 4, 9, "getter:emoji")
+    expectRow(
+      "scip-swift swiftpm UnicodeRange . `s:12UnicodeRange006ldrIFbSSvp`.", 1, 4, 10,
+      "名前 definition (punycode USR takes the D-06 fallback until the punycode pass lands)")
+    expectRow(
+      "scip-swift swiftpm UnicodeRange . `s:12UnicodeRange006ldrIFbSSvg`.", 1, 4, 10,
+      "getter:名前 (D-06 fallback)")
+    expectRow("scip-swift swiftpm UnicodeRange . greet().", 1, 13, 18, "greet reference")
+    expectRow("scip-swift swiftpm UnicodeRange . greet().", 3, 5, 10, "greet definition")
+    expectRow(
+      "scip-swift swiftpm UnicodeRange . `s:12UnicodeRange5greet4nameS2S_tFACL_SSvp`.", 3, 11, 15,
+      "name parameter definition (parameters take the D-06 fallback)")
+    expectRow("scip-swift swift Swift 6.2.4 String#", 3, 17, 23, "first String reference")
+    expectRow("scip-swift swift Swift 6.2.4 String#", 3, 28, 34, "second String reference")
+    expectRow(
+      "scip-swift swift Swift 6.2.4 String#init().", 4, 2, 3, "init(stringInterpolation:)")
+    expectRow(
+      "scip-swift swiftpm UnicodeRange . `s:12UnicodeRange5greet4nameS2S_tFACL_SSvp`.", 4, 12, 16,
+      "name reference inside the interpolation (D-06 fallback)")
 
     // Drift proofs (RANGE-01): with the refiner removed these accessor rows would fall back to
     // the display-name approximation — end 16 for `getter:emoji` (7-byte prefix overshoot) and
     // 17 for `getter:名前` (13-byte overshoot). Asserting exactness, not equality with old output.
     let getterEmojiEnds = document.occurrences
-      .filter { $0.symbol.contains("5emojiSSvg") }
+      .filter { $0.symbol == "scip-swift swiftpm UnicodeRange . emoji()." }
       .map(\.singleLineRange)
     #expect(
       !getterEmojiEnds.contains { $0.line == 0 && $0.startCharacter == 4 && $0.endCharacter == 16 },
       "getter:emoji must not carry the approximate end 16 — the exact token end is 9"
     )
     let getterMeiEnds = document.occurrences
-      .filter { $0.symbol.contains("006ldrIFbSSvg") }
+      .filter { $0.symbol == "scip-swift swiftpm UnicodeRange . `s:12UnicodeRange006ldrIFbSSvg`." }
       .map(\.singleLineRange)
     #expect(
       !getterMeiEnds.contains { $0.line == 1 && $0.startCharacter == 4 && $0.endCharacter == 17 },
@@ -377,7 +392,7 @@ struct IntegrationTests {
     // Parser.parse never throws: the corrupted file still yields a token map, and line 0 is
     // byte-identical, so its anchors hit `.present` tokens and keep exact ends.
     let getterValueEnds = document.occurrences
-      .filter { $0.symbol.contains("5valueSivg") }
+      .filter { $0.symbol == "scip-swift swiftpm BrokenSource . value()." }
       .map(\.singleLineRange)
     #expect(!getterValueEnds.isEmpty, "corrupted file must still emit getter:value occurrences")
     #expect(
@@ -394,7 +409,7 @@ struct IntegrationTests {
     // misses and the occurrence carries the name-length approximate end:
     // 4 + "getter:tailValue".utf8.count == 20.
     let getterTailValueEnds = document.occurrences
-      .filter { $0.symbol.contains("9tailValueSivg") }
+      .filter { $0.symbol == "scip-swift swiftpm BrokenSource . tailValue()." }
       .map(\.singleLineRange)
     #expect(!getterTailValueEnds.isEmpty, "corrupted file must still emit getter:tailValue occurrences")
     #expect(
@@ -434,9 +449,9 @@ struct IntegrationTests {
       index.documents.first { $0.relativePath == "Sources/DocumentationFixture/Documented.swift" }
     )
 
-    func expectDoc(_ fragment: String, _ expected: String, _ what: String) throws {
+    func expectDoc(_ symbolString: String, _ expected: String, _ what: String) throws {
       let symbol = try #require(
-        document.symbols.first { $0.symbol.contains(fragment) },
+        document.symbols.first { $0.symbol == symbolString },
         "\(what) must appear in the document's symbols"
       )
       #expect(
@@ -445,46 +460,48 @@ struct IntegrationTests {
       )
     }
 
-    try expectDoc("3addyS2i_SitF", "Adds two integers.", "documented func add")
+    try expectDoc("scip-swift swiftpm DocumentationFixture . add().", "Adds two integers.", "documented func add")
     try expectDoc(
-      "7computeyS2iF",
+      "scip-swift swiftpm DocumentationFixture . compute().",
       "Computes with an attribute between the doc and the declaration.",
       "attributed func compute (doc keyed at the name token past the attribute)"
     )
     try expectDoc(
-      "6blocky5valueS2i_tF`.",
+      "scip-swift swiftpm DocumentationFixture . blocky().",
       "Block doc first.\n- parameter value: an int\n\nBlock second paragraph.",
       "block-documented func blocky"
     )
     try expectDoc(
-      "5noisySiyF",
+      "scip-swift swiftpm DocumentationFixture . noisy().",
       "Documented with noise interleaved.",
       "func noisy with a plain comment between doc and decl"
     )
-    try expectDoc("10DocumentedC`.", "A documented container.", "class Documented")
-    try expectDoc("6storedSivp", "A stored value with accessors.", "var stored definition")
-    try expectDoc("6frozenSivg", "Frozen constant.", "let frozen getter")
-    try expectDoc("ACycfc", "Makes a documented thing.", "init")
-    try expectDoc("5Wholea", "Documented container alias.", "typealias Whole")
-    try expectDoc("8SpectrumO`.", "Color spectrum.", "enum Spectrum")
-    try expectDoc("8SpectrumO3redy", "Warm hue.", "enum case red")
-    try expectDoc("8SpectrumO4bluey", "Cool hue.", "enum case blue")
-    try expectDoc("6helperSiyF", "Extension helper.", "extension member helper")
+    try expectDoc("scip-swift swiftpm DocumentationFixture . Documented#", "A documented container.", "class Documented")
+    try expectDoc("scip-swift swiftpm DocumentationFixture . Documented#stored.", "A stored value with accessors.", "var stored definition")
+    try expectDoc("scip-swift swiftpm DocumentationFixture . Documented#frozen().", "Frozen constant.", "let frozen getter")
+    try expectDoc("scip-swift swiftpm DocumentationFixture . Documented#init().", "Makes a documented thing.", "init")
+    try expectDoc(
+      "scip-swift swiftpm DocumentationFixture . Documented#Whole#", "Documented container alias.",
+      "typealias Whole")
+    try expectDoc("scip-swift swiftpm DocumentationFixture . Spectrum#", "Color spectrum.", "enum Spectrum")
+    try expectDoc("scip-swift swiftpm DocumentationFixture . Spectrum#red.", "Warm hue.", "enum case red")
+    try expectDoc("scip-swift swiftpm DocumentationFixture . Spectrum#blue.", "Cool hue.", "enum case blue")
+    try expectDoc("scip-swift swiftpm DocumentationFixture . Documented#helper().", "Extension helper.", "extension member helper")
 
     let subtract = try #require(
-      document.symbols.first { $0.symbol.contains("8subtractyS2i_SitF") }
+      document.symbols.first { $0.symbol == "scip-swift swiftpm DocumentationFixture . subtract()." }
     )
     #expect(subtract.documentation.isEmpty, "undocumented func must keep documentation empty")
 
     // Accessor inheritance (research D3): synthesized accessor definitions share the property's
     // name-token anchor and inherit its doc — no accessor special-casing anywhere. Explicit
     // accessor bodies anchor at their own get/set keywords and are deliberately not covered.
-    let frozenGetter = try #require(document.symbols.first { $0.symbol.contains("6frozenSivg") })
+    let frozenGetter = try #require(document.symbols.first { $0.symbol == "scip-swift swiftpm DocumentationFixture . Documented#frozen()." })
     #expect(
       frozenGetter.documentation == ["Frozen constant."],
       "getter:frozen must inherit the property doc"
     )
-    let frozenSetter = try #require(document.symbols.first { $0.symbol.contains("6frozenSivs") })
+    let frozenSetter = try #require(document.symbols.first { $0.symbol == "scip-swift swiftpm DocumentationFixture . Documented#`frozen=`()." })
     #expect(
       frozenSetter.documentation == ["Frozen constant."],
       "setter:frozen must inherit the property doc"
@@ -565,7 +582,7 @@ struct IntegrationTests {
       }
     )
     let cachedAdd = try #require(
-      cacheDocument2.symbols.first { $0.symbol.contains("3addyS2i_SitF") }
+      cacheDocument2.symbols.first { $0.symbol == "scip-swift swiftpm DocumentationFixture . add()." }
     )
     #expect(
       cachedAdd.documentation == ["Adds two integers."],

@@ -1,25 +1,35 @@
 import IndexStoreDB
 
-/// Requirement: IndexStoreDB to SCIP protobuf conversion (task 3.1).
+/// Requirement: SYM-03 / D-06 — the raw-USR fallback renderer.
 ///
-/// Renders an IndexStoreDB `Symbol` into the canonical SCIP symbol string, per the grammar
-/// documented on the `Symbol` message in `scip.proto`:
+/// Since the Phase-2 symbol-scheme port, canonical symbols are descriptor chains assembled by
+/// `CanonicalSymbolFormatter` from the parsed USR. When `USRSymbolParser` cannot handle a USR,
+/// this type emits the pre-Phase-2 form — the raw USR verbatim as a single backtick-escaped
+/// `Term` descriptor — under the canonical module header (`scip-swift swiftpm <Module> .` for
+/// target modules, `scip-swift swift <Module> <toolchain>` for system modules). Indexing never
+/// fails or drops a symbol because of an exotic USR; the caller records each fallback in
+/// `SymbolMappingDiagnostics`.
 ///
-/// ```
-/// <symbol> ::= <scheme> ' ' <package> ' ' (<descriptor>)+ | 'local ' <local-id>
-/// <package> ::= <manager> ' ' <package-name> ' ' <version>
-/// ```
-///
-/// Swift's USR (Unified Symbol Resolution) string is already a compiler-guaranteed,
-/// project-wide-unique stable identifier, so this uses the raw USR verbatim as a single `Term`
-/// descriptor rather than attempting to demangle it into a namespace/type/method descriptor
-/// chain — see design.md Decision 3 / Open Questions for the full rationale.
-///
-/// Symbols IndexStoreDB marks `.local` (locals, parameters, etc. that cannot be referenced
-/// outside their document) are instead rendered as SCIP local symbols (`local <n>`), numbered
-/// per-document by `LocalSymbolNumberer`.
+/// The escaping helpers remain re-exported here (delegating to `CanonicalSymbolFormatter`, the
+/// single implementation) so existing callers compile unchanged.
 enum SCIPSymbolFormatter {
-  static let scheme = "scip-swift"
+  static let scheme = CanonicalSymbolFormatter.scheme
+
+  /// The D-06 fallback form: raw USR as an opaque Term under the canonical module header.
+  static func fallbackSymbolString(
+    isSystem: Bool,
+    moduleName: String,
+    toolchainVersion: String,
+    usr: String
+  ) -> String {
+    globalSymbolString(
+      packageManager: isSystem
+        ? CanonicalSymbolFormatter.managerSystem : CanonicalSymbolFormatter.managerSwiftPM,
+      moduleName: moduleName,
+      version: isSystem ? toolchainVersion : "",
+      usr: usr
+    )
+  }
 
   static func globalSymbolString(packageManager: String, moduleName: String, version: String = "", usr: String) -> String {
     let manager = escapeSpaceField(packageManager)
@@ -33,28 +43,16 @@ enum SCIPSymbolFormatter {
     "local \(localID)"
   }
 
-  /// Escapes a `<scheme>`/`<manager>`/`<package-name>`/`<version>` field: spaces are doubled, and
-  /// an empty value is represented with the grammar's `.` placeholder.
+  /// Escapes a `<scheme>`/`<manager>`/`<package-name>`/`<version>` field. Delegates to
+  /// `CanonicalSymbolFormatter` — exactly one escaping implementation exists.
   static func escapeSpaceField(_ raw: String) -> String {
-    guard !raw.isEmpty else { return "." }
-    return raw.replacingOccurrences(of: " ", with: "  ")
+    CanonicalSymbolFormatter.escapeSpaceField(raw)
   }
 
-  /// Escapes a descriptor `<name>` per the `<identifier>` production: strings made up entirely of
-  /// `<identifier-character>` (`_ + - $` or ASCII letters/digits) are used as-is; anything else is
-  /// wrapped in backticks with literal backticks doubled.
+  /// Escapes a descriptor `<name>` per the `<identifier>` production. Delegates to
+  /// `CanonicalSymbolFormatter` — exactly one escaping implementation exists.
   static func escapeIdentifierName(_ raw: String) -> String {
-    guard !raw.isEmpty, raw.allSatisfy(isIdentifierCharacter) else {
-      return "`\(raw.replacingOccurrences(of: "`", with: "``"))`"
-    }
-    return raw
-  }
-
-  private static func isIdentifierCharacter(_ character: Character) -> Bool {
-    if character == "_" || character == "+" || character == "-" || character == "$" {
-      return true
-    }
-    return character.isASCII && (character.isLetter || character.isNumber)
+    CanonicalSymbolFormatter.escapeIdentifierName(raw)
   }
 }
 

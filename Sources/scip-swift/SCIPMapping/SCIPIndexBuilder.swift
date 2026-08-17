@@ -13,6 +13,9 @@ struct SCIPIndexBuilder {
   let cacheStore: CacheStore?
   let demangle: Bool
 
+  /// Per-run D-06 fallback accounting, surfaced as a diagnostic at the end of `build()`.
+  let symbolMappingDiagnostics = SymbolMappingDiagnostics()
+
   init(
     repoPath: String,
     indexStorePath: String,
@@ -95,8 +98,16 @@ struct SCIPIndexBuilder {
         if !sym.hasPrefix("local ") && !definedSymbolStrings.contains(sym) && externalSymbols[sym] == nil {
           var info = Scip_SymbolInformation()
           info.symbol = sym
-          if let demangler, let usr = Self.usr(fromCanonicalSymbolString: sym) {
-            info.displayName = demangler.demangledDisplayName(usr: usr) ?? ""
+          if let demangler {
+            // D-06 fallback symbols still embed the raw USR in their trailing descriptor, so
+            // they keep their demangled display names. Canonical descriptor chains no longer
+            // embed a USR: their display name is derived deterministically from the symbol
+            // string itself, so fresh and cache-served documents agree (byte-identical runs).
+            if let usr = Self.usr(fromCanonicalSymbolString: sym), usr.wasFallbackForm {
+              info.displayName = demangler.demangledDisplayName(usr: usr.usr) ?? ""
+            } else {
+              info.displayName = CanonicalSymbolFormatter.displayName(fromCanonicalString: sym)
+            }
           }
           externalSymbols[sym] = info
         }
@@ -104,21 +115,58 @@ struct SCIPIndexBuilder {
     }
     index.externalSymbols = externalSymbols.values.sorted { $0.symbol < $1.symbol }
 
+    if let fallbackSummary = symbolMappingDiagnostics.summary {
+      print("warning: \(fallbackSummary)")
+    }
+
     return index
   }
 
-  /// Inverse of `SCIPSymbolFormatter.globalSymbolString`'s descriptor rendering: the USR rides
-  /// verbatim in the trailing `` `<usr>`. `` descriptor, so it can be recovered even for
-  /// documents served from cache (where no IndexStoreDB symbol is at hand).
-  private static func usr(fromCanonicalSymbolString symbolString: String) -> String? {
+  /// Maps one IndexStoreDB symbol onto its canonical symbol string (SYM-03): parse the USR,
+  /// derive module/containers/name and the module header from the USR itself — never from
+  /// `location.moduleName`, which reports the declaring module for retroactive extension
+  /// members — and assemble via `CanonicalSymbolFormatter`. A USR the parser cannot handle
+  /// takes the D-06 raw-USR fallback under the canonical module header, recorded in the
+  /// per-run diagnostics; indexing never fails or drops a symbol here.
+  private func canonicalSymbolString(
+    for symbol: Symbol, isSystemLocation: Bool, locationModuleName: String
+  ) -> String {
+    if let parsed = USRSymbolParser.parse(symbol.usr),
+      let canonical = USRSymbolMapper.canonicalSymbolString(
+        parsed: parsed,
+        symbol: symbol,
+        isSystemLocation: isSystemLocation,
+        toolchainVersion: ToolchainInfo.pinnedSwiftVersion
+      )
+    {
+      return canonical
+    }
+    symbolMappingDiagnostics.recordFallback(usr: symbol.usr)
+    return SCIPSymbolFormatter.fallbackSymbolString(
+      isSystem: isSystemLocation,
+      moduleName: locationModuleName,
+      toolchainVersion: ToolchainInfo.pinnedSwiftVersion,
+      usr: symbol.usr
+    )
+  }
+
+  /// Inverse of the D-06 fallback rendering: a raw USR rides verbatim in the trailing
+  /// `` `<usr>`. `` descriptor, so it can be recovered even for documents served from cache
+  /// (where no IndexStoreDB symbol is at hand). `wasFallbackForm` distinguishes that shape
+  /// from a canonical Term descriptor, which never embeds a USR.
+  private static func usr(
+    fromCanonicalSymbolString symbolString: String
+  ) -> (usr: String, wasFallbackForm: Bool)? {
     guard let separator = symbolString.lastIndex(of: " ") else { return nil }
     let descriptor = symbolString[separator...].dropFirst()
     guard descriptor.hasSuffix(".") else { return nil }
     let name = descriptor.dropLast()
     if name.hasPrefix("`"), name.hasSuffix("`") {
-      return String(name.dropFirst().dropLast().replacingOccurrences(of: "``", with: "`"))
+      return (
+        String(name.dropFirst().dropLast().replacingOccurrences(of: "``", with: "`")), true
+      )
     }
-    return String(name)
+    return (String(name), false)
   }
 
   private func makeMetadata() -> Scip_Metadata {
@@ -159,11 +207,10 @@ struct SCIPIndexBuilder {
       let symbolString =
         isLocal
         ? SCIPSymbolFormatter.localSymbolString(localID: localNumberer.id(forUSR: symbol.usr))
-        : SCIPSymbolFormatter.globalSymbolString(
-          packageManager: buildToolName,
-          moduleName: occurrence.location.moduleName,
-          version: symbolVersion,
-          usr: symbol.usr
+        : canonicalSymbolString(
+          for: symbol,
+          isSystemLocation: occurrence.location.isSystem,
+          locationModuleName: occurrence.location.moduleName
         )
 
       var scipOccurrence = Scip_Occurrence()
@@ -199,11 +246,10 @@ struct SCIPIndexBuilder {
       }
 
       if isLocal, let childOfRelation = occurrence.relations.first(where: { $0.roles.contains(.childOf) }) {
-        symbolInformation.enclosingSymbol = SCIPSymbolFormatter.globalSymbolString(
-          packageManager: buildToolName,
-          moduleName: occurrence.location.moduleName,
-          version: symbolVersion,
-          usr: childOfRelation.symbol.usr
+        symbolInformation.enclosingSymbol = canonicalSymbolString(
+          for: childOfRelation.symbol,
+          isSystemLocation: occurrence.location.isSystem,
+          locationModuleName: occurrence.location.moduleName
         )
       }
 
@@ -212,11 +258,10 @@ struct SCIPIndexBuilder {
           symbolInformation.relationships = RelationshipMapping.scipRelationships(
             for: occurrence.relations,
             symbolFormatter: { relSymbol in
-              SCIPSymbolFormatter.globalSymbolString(
-                packageManager: buildToolName,
-                moduleName: occurrence.location.moduleName,
-                version: symbolVersion,
-                usr: relSymbol.usr
+              canonicalSymbolString(
+                for: relSymbol,
+                isSystemLocation: occurrence.location.isSystem,
+                locationModuleName: occurrence.location.moduleName
               )
             }
           )
