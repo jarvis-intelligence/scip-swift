@@ -348,6 +348,52 @@ struct IntegrationTests {
     )
   }
 
+  @Test("documented symbol carries its doc comment as Markdown in a real .scip")
+  func documentedSymbolCarriesDocComment() throws {
+    let fixtureRepoPath = Self.documentationFixtureRepoPath()
+    let fixtureBuildPath = (fixtureRepoPath as NSString).appendingPathComponent(".build")
+    defer { try? FileManager.default.removeItem(atPath: fixtureBuildPath) }
+
+    let workDirectory = try Self.makeTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(atPath: workDirectory) }
+
+    let runner = SwiftPMBuildRunner(
+      repoPath: fixtureRepoPath,
+      configuration: .debug,
+      scratchPath: (workDirectory as NSString).appendingPathComponent("scratch")
+    )
+    let buildResult = try runner.produceIndexStore()
+
+    let builder = SCIPIndexBuilder(
+      repoPath: fixtureRepoPath,
+      indexStorePath: buildResult.indexStorePath,
+      databasePath: (workDirectory as NSString).appendingPathComponent("index-db"),
+      buildToolName: BuildTool.swiftpm.rawValue,
+      converterVersion: "test"
+    )
+    let index = try builder.build()
+
+    let document = try #require(
+      index.documents.first { $0.relativePath == "Sources/DocumentationFixture/Documented.swift" }
+    )
+
+    let addSymbol = try #require(
+      document.symbols.first { $0.displayName == "DocumentationFixture.add(Swift.Int, Swift.Int) -> Swift.Int" }
+    )
+    #expect(
+      addSymbol.documentation == ["Adds two integers."],
+      "documented func must carry its normalized doc as a single-element array"
+    )
+
+    let subtractSymbol = try #require(
+      document.symbols.first { $0.displayName == "DocumentationFixture.subtract(Swift.Int, Swift.Int) -> Swift.Int" }
+    )
+    #expect(
+      subtractSymbol.documentation.isEmpty,
+      "undocumented func must keep documentation empty"
+    )
+  }
+
   @Test("index --help advertises --no-demangle")
   func helpListsNoDemangleFlag() throws {
     let result = try SubprocessRunner.run(
@@ -381,6 +427,14 @@ struct IntegrationTests {
       .deletingLastPathComponent()
       .deletingLastPathComponent()
     return repoRoot.appendingPathComponent("Fixtures/BrokenSourceFixture").path
+  }
+
+  static func documentationFixtureRepoPath() -> String {
+    let repoRoot = URL(fileURLWithPath: #filePath)
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+    return repoRoot.appendingPathComponent("Fixtures/DocumentationFixture").path
   }
 
   private static let corruptedSource = """
