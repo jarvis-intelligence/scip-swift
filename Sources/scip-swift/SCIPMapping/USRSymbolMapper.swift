@@ -50,8 +50,26 @@ enum USRSymbolMapper {
     toolchainVersion: String,
     overloadIndex: Int = 0
   ) -> String? {
-    guard let kind = declKind(for: symbol), let name = sourceName(parsed: parsed, symbol: symbol)
+    guard var kind = declKind(for: symbol), var name = sourceName(parsed: parsed, symbol: symbol)
     else { return nil }
+
+    // Operators (assumption A4): the mangling stores the operator's mangled letters, not its
+    // source spelling. Operator-ness is the `oi` mangling marker on the parsed USR plus the
+    // store name's shape (a non-simple-identifier spelling); "+" — inside the identifier
+    // charset — is caught by the marker alone. The spelling is the store name up to its
+    // argument list; escaping stays the formatter's job. A marker without a usable spelling
+    // falls back rather than emitting the mangled letters as a name.
+    if kind == .func || kind == .method, parsed.isOperator {
+      guard let spelling = operatorSpelling(fromStoreName: symbol.name) else { return nil }
+      kind = .operator
+      name = spelling
+    } else if kind == .func || kind == .method,
+      let spelling = operatorSpelling(fromStoreName: symbol.name),
+      spelling.contains { !CanonicalSymbolFormatter.isIdentifierCharacter($0) }
+    {
+      kind = .operator
+      name = spelling
+    }
 
     let input = CanonicalSymbolFormatter.SymbolInput(
       module: parsed.module,
@@ -63,6 +81,15 @@ enum USRSymbolMapper {
       overloadIndex: overloadIndex
     )
     return CanonicalSymbolFormatter.symbol(input)
+  }
+
+  /// The operator spelling from an IndexStoreDB short name ("==(_:_:)" -> "==", "+(A:B:)" ->
+  /// "+"), or nil when there is nothing before the argument list. Note "+" is itself inside
+  /// the simple-identifier set — the `oi` mangling marker on the parsed USR is what marks the
+  /// entity as an operator; the shape check only supplements it.
+  static func operatorSpelling(fromStoreName storeName: String) -> String? {
+    let spelling = storeName.firstIndex(of: "(").map { String(storeName[..<$0]) } ?? storeName
+    return spelling.isEmpty ? nil : spelling
   }
 
   /// The frozen kind families for store kinds the scheme defines; store kinds with no family

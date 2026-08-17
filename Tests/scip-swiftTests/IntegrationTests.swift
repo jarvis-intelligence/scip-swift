@@ -311,11 +311,9 @@ struct IntegrationTests {
     expectRow("scip-swift swiftpm UnicodeRange . emoji.", 0, 4, 9, "emoji definition")
     expectRow("scip-swift swiftpm UnicodeRange . emoji().", 0, 4, 9, "getter:emoji")
     expectRow(
-      "scip-swift swiftpm UnicodeRange . `s:12UnicodeRange006ldrIFbSSvp`.", 1, 4, 10,
-      "名前 definition (punycode USR takes the D-06 fallback until the punycode pass lands)")
+      "scip-swift swiftpm UnicodeRange . `名前`.", 1, 4, 10, "名前 definition (punycode-resolved identifier)")
     expectRow(
-      "scip-swift swiftpm UnicodeRange . `s:12UnicodeRange006ldrIFbSSvg`.", 1, 4, 10,
-      "getter:名前 (D-06 fallback)")
+      "scip-swift swiftpm UnicodeRange . `名前`().", 1, 4, 10, "getter:名前 (punycode-resolved identifier)")
     expectRow("scip-swift swiftpm UnicodeRange . greet().", 1, 13, 18, "greet reference")
     expectRow("scip-swift swiftpm UnicodeRange . greet().", 3, 5, 10, "greet definition")
     expectRow(
@@ -340,7 +338,7 @@ struct IntegrationTests {
       "getter:emoji must not carry the approximate end 16 — the exact token end is 9"
     )
     let getterMeiEnds = document.occurrences
-      .filter { $0.symbol == "scip-swift swiftpm UnicodeRange . `s:12UnicodeRange006ldrIFbSSvg`." }
+      .filter { $0.symbol == "scip-swift swiftpm UnicodeRange . `名前`()." }
       .map(\.singleLineRange)
     #expect(
       !getterMeiEnds.contains { $0.line == 1 && $0.startCharacter == 4 && $0.endCharacter == 17 },

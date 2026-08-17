@@ -230,7 +230,7 @@ struct IncrementalIntegrationTests {
       index2.documents.first { $0.relativePath == "Sources/UnicodeRange/main.swift" }
     )
     let getterMeiEnds = document2.occurrences
-      .filter { $0.symbol.contains("006ldrIFbSSvg") }
+      .filter { $0.symbol == "scip-swift swiftpm UnicodeRange . `名前`()." }
       .map(\.singleLineRange)
     #expect(!getterMeiEnds.isEmpty, "cached run must serve getter:名前 occurrences")
     #expect(

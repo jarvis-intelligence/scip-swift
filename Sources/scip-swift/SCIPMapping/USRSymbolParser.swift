@@ -1,6 +1,6 @@
 /// Requirement: SYM-03 / D-05 — total Swift USR grammar parser (USR string -> ParsedUSR).
 ///
-/// Parses the common shapes of compiler-emitted USRs directly (never via the demangler —
+/// Parses compiler-emitted USRs directly (never via the demangler —
 /// D-05 keeps `libswiftDemangle` display-only): the `s:` scheme prefix, the leading
 /// module (length-prefixed) or stdlib substitution, the identifier+kind-letter container
 /// chain (V struct, C class, O enum, P protocol, a typealias, F/f func), retroactive
@@ -32,11 +32,15 @@ enum USRSymbolParser {
     /// extension marker. Informational only — the canonical header always uses `module`
     /// (the extended type's owner), never this value.
     let extendingModule: String?
+    /// True when the entity's mangling carries the operator encoding marker (`<word>oi…`):
+    /// the parsed word is the operator's mangled letters, not its source spelling.
+    let isOperator: Bool
   }
 
-  /// Parses a USR. Returns nil on any miss — unparseable shapes, non-`s:` schemes, punycode
-  /// (`00`-prefixed) identifiers, local/argument `A...` contexts, and truncated or adversarial
-  /// input all take the D-06 fallback path.
+  /// Parses a USR. Returns nil on any miss — unparseable shapes, non-`s:` schemes, and
+  /// truncated or adversarial input take the D-06 fallback path. Parameters (whose own names
+  /// ride inside local-context `A...L_` manglings the grammar pass does not decode) also
+  /// fall back in this phase.
   static func parse(_ usr: String) -> ParsedUSR? {
     var cursor = Cursor(usr)
     guard cursor.consume(prefix: "s:") else { return nil }
@@ -61,7 +65,8 @@ enum USRSymbolParser {
           isSystemModule: isSystem,
           containers: [],
           name: resolved.container.name,
-          extendingModule: nil
+          extendingModule: nil,
+          isOperator: false
         )
       }
       guard let entity = parseEntity(afterHead: &cursor, containers: &containers) else {
@@ -77,7 +82,8 @@ enum USRSymbolParser {
     // is a miss (D-06 fallback) — never mis-attribute the entity to the module symbol.
     if cursor.isAtEnd {
       return ParsedUSR(
-        module: module, isSystemModule: false, containers: [], name: module, extendingModule: nil)
+        module: module, isSystemModule: false, containers: [], name: module, extendingModule: nil,
+        isOperator: false)
     }
     guard let entity = parseEntity(afterHead: &cursor, containers: &containers) else {
       return nil
@@ -87,9 +93,24 @@ enum USRSymbolParser {
 
   private struct Entity {
     let name: String
-    /// True when the opaque tail carries a shape (local context, operator encoding) whose
-    /// source name is not the parsed word — the caller falls back instead of mis-naming.
+    /// True when the opaque tail carries a shape whose source name is not the parsed word —
+    /// the caller falls back instead of mis-naming.
     let uninterpretedReaderTail: Bool
+    /// The declaring module of a retroactive extension context, when the USR carries an `E`
+    /// marker. Informational only — the canonical header always uses the extended type's
+    /// owner module (SYM-02).
+    let extendingModule: String?
+    let isOperator: Bool
+
+    init(
+      name: String, uninterpretedReaderTail: Bool, extendingModule: String? = nil,
+      isOperator: Bool = false
+    ) {
+      self.name = name
+      self.uninterpretedReaderTail = uninterpretedReaderTail
+      self.extendingModule = extendingModule
+      self.isOperator = isOperator
+    }
   }
 
   /// Reads the container chain and the final entity word after the head context. Returns nil
@@ -107,10 +128,10 @@ enum USRSymbolParser {
       // rejects it for everything else).
       let remaining = cursor.remaining()
       if remaining.hasPrefix("A"), remaining.contains("cfc"), !containers.isEmpty {
-        return Entity(name: "", uninterpretedReaderTail: false)
+        return Entity(name: "", uninterpretedReaderTail: false, extendingModule: extendingModule)
       }
       if remaining == "fd", !containers.isEmpty {
-        return Entity(name: "", uninterpretedReaderTail: false)
+        return Entity(name: "", uninterpretedReaderTail: false, extendingModule: extendingModule)
       }
 
       if let substitution = cursor.peekSubstitution() {
@@ -126,7 +147,7 @@ enum USRSymbolParser {
       if cursor.isAtEnd {
         // The signature region is absent only for context-ish USRs; treat the word as the
         // entity name with no tail.
-        return Entity(name: word, uninterpretedReaderTail: false)
+        return Entity(name: word, uninterpretedReaderTail: false, extendingModule: extendingModule)
       }
 
       guard let next = cursor.peek() else { return nil }
@@ -139,6 +160,7 @@ enum USRSymbolParser {
         extendingModule = word
         continue
       }
+      _ = extendingModule
 
       if let kind = containerKind(for: next) {
         cursor.advance()
@@ -150,19 +172,19 @@ enum USRSymbolParser {
       // signature region (argument/local `A...` contexts included — the store kind corrects
       // the name for those: constructors/destructors use their Swift-native spelling,
       // parameters take the D-06 fallback via the kind map). An "oi" tail marks an operator
-      // encoding whose source spelling is not the parsed word — fall back until the full
-      // grammar pass covers operators.
-      let tail = cursor.remaining()
-      if tail.hasPrefix("oi") {
-        return Entity(name: word, uninterpretedReaderTail: true)
-      }
-      return Entity(name: word, uninterpretedReaderTail: false)
+      // encoding: the parsed word is the operator's mangled letters, not its source spelling
+      // — the mapper re-derives the name from the store name (assumption A4), so the parse
+      // stays valid with `isOperator` set.
+      let isOperator = cursor.remaining().hasPrefix("oi")
+      return Entity(
+        name: word, uninterpretedReaderTail: false, extendingModule: extendingModule,
+        isOperator: isOperator)
     }
 
     // The chain ended on a container: the innermost container is the entity itself.
     guard let innermost = containers.popLast() else { return nil }
-    _ = extendingModule
-    return Entity(name: innermost.name, uninterpretedReaderTail: false)
+    return Entity(
+      name: innermost.name, uninterpretedReaderTail: false, extendingModule: extendingModule)
   }
 
   private static func finish(
@@ -174,7 +196,7 @@ enum USRSymbolParser {
     guard !entity.uninterpretedReaderTail else { return nil }
     return ParsedUSR(
       module: module, isSystemModule: isSystem, containers: containers, name: entity.name,
-      extendingModule: nil)
+      extendingModule: entity.extendingModule, isOperator: entity.isOperator)
   }
 
   /// Kind letters that may follow a word in container position.
@@ -210,6 +232,110 @@ enum USRSymbolParser {
     case "Su": return SubstitutedType(
       container: CanonicalSymbolFormatter.Container(name: "UInt", kind: .struct))
     default: return nil
+    }
+  }
+
+  // MARK: - Punycode (docs/ABI Mangling.rst identifiers: `00<length><punycode>`)
+
+  /// Swift mangles identifiers containing non-word characters (emoji, CJK, π) as punycode
+  /// (RFC 3492) with one deviation: digits 26-35 render as `A`-`J` instead of `0`-`9`, so
+  /// the encoded form never contains a decimal digit and the length prefix stays
+  /// self-delimiting. Corpus: `004BFIh` -> 🚀, `003Bxa` -> π, `006ldrIFb` -> 名前.
+  ///
+  /// Total by construction (T-02-01): every arithmetic step is overflow-checked and every
+  /// produced code point is range-checked; any miss returns nil into the D-06 fallback.
+  private static func decodePunycodeWord(_ encoded: [Character]) -> String? {
+    // A trailing-hyphen delimiter splits basic (literal ASCII) code points from the encoded
+    // delta digits; without one the whole region is the encoded part.
+    var basic: [UnicodeScalar] = []
+    var digitScalars = encoded
+    if let delimiter = encoded.lastIndex(of: "-") {
+      for character in encoded[..<delimiter] {
+        guard let ascii = character.asciiValue, isWordCharacterUnicode(ascii) else {
+          return nil
+        }
+        basic.append(UnicodeScalar(ascii))
+      }
+      digitScalars = Array(encoded[(delimiter + 1)...])
+    }
+
+    var output = basic
+    var n = 0x80
+    var i = 0
+    var bias = 72
+    var index = 0
+    while index < digitScalars.count {
+      let oldi = i
+      var w = 1
+      var k = 36
+      while true {
+        guard index < digitScalars.count else { return nil }
+        guard let digit = punycodeDigitValue(digitScalars[index]) else { return nil }
+        index += 1
+
+        let (product, overflow1) = digit.multipliedReportingOverflow(by: w)
+        if overflow1 { return nil }
+        let (sum, overflow2) = i.addingReportingOverflow(product)
+        if overflow2 { return nil }
+        i = sum
+
+        let t = k <= bias ? 1 : (k >= bias + 26 ? 26 : k - bias)
+        if digit < t { break }
+        let (nextW, overflow3) = w.multipliedReportingOverflow(by: 36 - t)
+        if overflow3 { return nil }
+        w = nextW
+        k += 36
+        if k > 1_000_000 { return nil }
+      }
+
+      let outLength = output.count + 1
+      let (delta, overflow4) = i.subtractingReportingOverflow(oldi)
+      if overflow4 { return nil }
+      bias = adaptPunycodeBias(delta: delta, numpoints: outLength, firstTime: oldi == 0)
+
+      n += i / outLength
+      guard n <= 0x10FFFF else { return nil }
+      i %= outLength
+      guard let scalar = UnicodeScalar(n) else { return nil }
+      output.insert(scalar, at: i)
+      i += 1
+    }
+
+    guard !output.isEmpty else { return nil }
+    return String(String.UnicodeScalarView(output))
+  }
+
+  private static func punycodeDigitValue(_ character: Character) -> Int? {
+    guard let ascii = character.asciiValue else { return nil }
+    switch ascii {
+    case UInt8(ascii: "a")...UInt8(ascii: "z"):
+      return Int(ascii - UInt8(ascii: "a"))
+    case UInt8(ascii: "A")...UInt8(ascii: "J"):
+      return Int(ascii - UInt8(ascii: "A")) + 26
+    default:
+      return nil
+    }
+  }
+
+  private static func adaptPunycodeBias(delta: Int, numpoints: Int, firstTime: Bool) -> Int {
+    var delta = delta
+    delta = firstTime ? delta / 700 : delta / 2
+    delta += delta / numpoints
+    var k = 0
+    while delta > ((36 - 1) * 26) / 2 {
+      delta /= 36 - 1
+      k += 36
+    }
+    return k + ((36 - 1 + 1) * delta) / (delta + 38)
+  }
+
+  private static func isWordCharacterUnicode(_ ascii: UInt8) -> Bool {
+    switch ascii {
+    case UInt8(ascii: "a")...UInt8(ascii: "z"), UInt8(ascii: "A")...UInt8(ascii: "Z"),
+      UInt8(ascii: "0")...UInt8(ascii: "9"), UInt8(ascii: "_"):
+      return true
+    default:
+      return false
     }
   }
 
@@ -260,18 +386,30 @@ enum USRSymbolParser {
     }
 
     /// Reads one length-prefixed word (`<decimal-length><word>`), validating the claimed
-    /// length against the remaining input. Punycode (`00`-prefixed) words return nil — they
-    /// are resolved by the full grammar pass, not this fast path.
+    /// length against the remaining input. `00`-prefixed lengths introduce a punycode word
+    /// (`00<length><punycode>`), decoded in place.
     mutating func readWord() -> String? {
       var digits = ""
       while let next = peek(), next.isNumber, next.isASCII {
         digits.append(next)
         advance()
       }
-      guard !digits.isEmpty, digits.count <= 4, let length = Int(digits) else { return nil }
-      // Punycode words are introduced by a `00`-prefixed length; ordinary decimal lengths
-      // never carry a leading zero.
-      guard !digits.hasPrefix("0") else { return nil }
+      guard !digits.isEmpty, digits.count <= 4 else { return nil }
+      guard scalars.count - index > 0 else { return nil }
+
+      if digits.hasPrefix("00") {
+        // Punycode word: the digits after `00` give the encoded length. The punycode output
+        // alphabet (`a`-`z`, `A`-`J`) contains no digits, so the decimal length is
+        // self-delimiting; ordinary word lengths never carry a leading zero.
+        guard digits.count >= 3, let length = Int(digits.dropFirst(2)), length > 0,
+          scalars.count - index >= length
+        else { return nil }
+        let encoded = Array(scalars[index..<(index + length)])
+        index += length
+        return USRSymbolParser.decodePunycodeWord(encoded)
+      }
+
+      guard let length = Int(digits) else { return nil }
       guard scalars.count - index >= length, length > 0 else { return nil }
       let word = String(scalars[index..<(index + length)])
       guard word.allSatisfy(isWordCharacter) else { return nil }
