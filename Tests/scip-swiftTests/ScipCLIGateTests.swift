@@ -133,6 +133,80 @@ struct ScipCLIGateTests {
     )
   }
 
+  @Test("toolchain drift guard fires on a mismatched swift --version (CI 6.3.3 shape)")
+  func driftGuardFiresOnVersionMismatch() throws {
+    // T-02-10 (02-04): the exact drift observed in engine CI run 32067964049 — goldens
+    // generated under the 6.2.4 pin, runner building with 6.3.3. The guard input is an
+    // injectable string so the mismatch case needs no foreign toolchain installed.
+    let mismatchedOutput =
+      "swift-driver version: 1.145.2 Apple Swift version 6.3.3 (swiftlang-6.3.3.1.11 clang-1700.6.54)\n"
+      + "Target: arm64-apple-macosx26.0"
+    do {
+      try ToolchainDriftGuard.enforcePin(versionOutput: mismatchedOutput)
+      Issue.record("the guard must throw on a mismatched toolchain version")
+    } catch let error as ToolchainDriftError {
+      let message = String(describing: error)
+      // The message must be immediately actionable: name both versions and every remedy —
+      // the pin file, toolchain switching, intentional regeneration, the README boundary.
+      #expect(message.contains("6.3.3"), "must name the running version: \(message)")
+      #expect(
+        message.contains(ToolchainInfo.pinnedSwiftVersion),
+        "must name the pinned version: \(message)")
+      #expect(message.contains(".swift-version"), "must name the pin file: \(message)")
+      #expect(message.contains("xcode-select"), "must name toolchain switching: \(message)")
+      #expect(message.contains("DEVELOPER_DIR"), "must name DEVELOPER_DIR switching: \(message)")
+      #expect(message.contains("UPDATE_GOLDENS=1"), "must name the regeneration path: \(message)")
+      #expect(message.contains("Known limitations"), "must name the README section: \(message)")
+    }
+
+    // Unparsable output fails closed — never a lenient parse that could accept the wrong
+    // toolchain (T-02-12) — and the message shows the raw first line.
+    let unparsableOutput = "some future swift --version shape without the marker"
+    do {
+      try ToolchainDriftGuard.enforcePin(versionOutput: unparsableOutput)
+      Issue.record("the guard must fail closed on unparsable swift --version output")
+    } catch let error as ToolchainDriftError {
+      #expect(
+        String(describing: error).contains("some future swift --version shape"),
+        "must show the raw first line: \(error)")
+    }
+  }
+
+  @Test("running toolchain matches the pinned Swift version")
+  func runningToolchainMatchesPinnedSwiftVersion() throws {
+    // The live half of the drift guard (T-02-10): CI enforces the pin via the workflow's
+    // select-and-verify step, and this re-asserts it inside the suite so a red golden diff
+    // is immediately diagnosable as environment drift vs real regression. enforcePin
+    // extracts the "Apple Swift version X.Y.Z (" shape, asserts equality with the pin, and
+    // fails closed (raw first line shown) on unparsable output.
+    let swift = try SubprocessRunner.resolveExecutable(named: "swift")
+    let result = try SubprocessRunner.run(
+      executable: swift,
+      arguments: ["--version"],
+      currentDirectory: "/"
+    )
+    #expect(result.exitCode == 0, "swift --version must exit 0")
+    try ToolchainDriftGuard.enforcePin(versionOutput: result.combinedOutput)
+  }
+
+  @Test("ToolchainInfo.pinnedSwiftVersion matches the .swift-version file")
+  func pinnedSwiftVersionConstantMatchesSwiftVersionFile() throws {
+    // Same cross-check posture as D-14's scipCliVersion pin (scipBinaryVersionMatches-
+    // EnginePin above): the engine constant and the repo pin file must agree — drift fails
+    // the suite here rather than surprising CI.
+    let repoRoot = URL(fileURLWithPath: #filePath)
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+    let pinFile = repoRoot.appendingPathComponent(".swift-version")
+    let contents = try String(contentsOf: pinFile, encoding: .utf8)
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    #expect(
+      contents == ToolchainInfo.pinnedSwiftVersion,
+      "ToolchainInfo.pinnedSwiftVersion (\(ToolchainInfo.pinnedSwiftVersion)) != .swift-version (\(contents))"
+    )
+  }
+
   @Test("ToolInfo carries the stable scip-cli version entry")
   func toolInfoCarriesStableScipCliVersionEntry() throws {
     // D-14: the pin is visible in ToolInfo as a constant synthetic entry — never argv, so
