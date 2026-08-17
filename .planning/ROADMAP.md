@@ -78,7 +78,10 @@ Full details: `.planning/milestones/v0.2.0-ROADMAP.md`
   2. Occurrences on lines containing multi-byte content (Unicode/CJK/emoji) earlier on the same line report correct columns, normalized to UTF-8 byte offsets end-to-end (fixture test)
   3. Files SwiftSyntax cannot fully parse (error nodes, macro-expanded code) still index successfully, falling back to name-length end columns for affected occurrences
 
-**Plans**: TBD
+**Plans**: 2/2 plans:
+
+- [ ] 08-01-PLAN.md — swift-syntax 602.0.0 exact pin + SwiftSyntaxRefiner pure module (line-start byte table, token-extent map, nil-on-miss fallback) wired as a tracer: one fixture file's occurrences emit exact ends end-to-end with the getter drift case, plus the Unicode/error-node unit corpus and PositionMapping exact-or-approximate contract (RANGE-01, RANGE-02, RANGE-03)
+- [ ] 08-02-PLAN.md — UnicodeRangeFixture integration asserting the hand-computed F4 byte-column table and getter-drift elimination end-to-end, broken-source pipeline fallback, and the cache-hit byte-identity path serving exact ranges without re-parse (RANGE-01, RANGE-02, RANGE-03)
 
 ### Phase 9: Symbol Documentation
 
@@ -102,5 +105,5 @@ Phases execute in numeric order: 6 → 7 → 8 → 9 (Phases 7 and 8 are indepen
 |-------|-----------|----------------|--------|-----------|
 | 6. Xcode Backend Repair & Destination Selection | v0.3.0 | 1/2 | In Progress|  |
 | 7. Demangled Symbol Names | v0.3.0 | 2/2 | In Progress|  |
-| 8. Exact Occurrence Ranges | v0.3.0 | 0/TBD | Not started | - |
+| 8. Exact Occurrence Ranges | v0.3.0 | 0/2 | Not started | - |
 | 9. Symbol Documentation | v0.3.0 | 0/TBD | Not started | - |
