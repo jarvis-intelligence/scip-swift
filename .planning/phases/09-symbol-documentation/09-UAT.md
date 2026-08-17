@@ -84,7 +84,9 @@ skipped: 0
 
 - gap_id: G-v030-1
   truth: "--cache-dir accepts relative paths uniformly across invocation directories"
-  status: failed
+  status: resolved
+  resolved_by: "1f59991 (quick task 20260817-cache-dir-absolute)"
+  resolved_at: 2026-08-17
   reason: "Invoking with a relative --cache-dir while CWD differs from the repo root resolves the cache under $TMPDIR semantics ('/var/folders/.../T/rel-cache' from inside the repo), producing indexstoredb_index_create failure 'No such file or directory'. Also, run from the PARENT of the repo with a bare relative dir, the build-scratch path interpolation fails to produce an index store ('<triple>' placeholder in error path suggests unresolved scratch dir). Absolute --cache-dir works perfectly (all cache tests green)."
   severity: minor
   test: 7
