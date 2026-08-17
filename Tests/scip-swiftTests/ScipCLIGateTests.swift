@@ -105,6 +105,128 @@ struct ScipCLIGateTests {
     }
   }
 
+  @Test("scip binary version matches the engine's scip-cli pin")
+  func scipBinaryVersionMatchesEnginePin() throws {
+    // D-14: the CI workflow pins one SCIP_CLI_VERSION and downloads that exact release; the
+    // engine records the same version in ScipSwiftVersion.scipCliVersion. Drift between the
+    // binary actually gating and the engine constant fails here. Local dev binaries carry a
+    // `-dev` suffix (v0.9.0-dev), so the BASE version is compared — CI's checksum-verified
+    // release binary reports the bare pinned version.
+    let scip = try ScipCLIGate.locateScipBinary()
+    let result = try SubprocessRunner.run(
+      executable: scip,
+      arguments: ["--version"],
+      currentDirectory: "/"
+    )
+    #expect(result.exitCode == 0, "scip --version must exit 0 (it is not the 'version' subcommand)")
+    let firstLine = result.combinedOutput.split(separator: "\n").first.map(String.init) ?? ""
+    #expect(
+      firstLine.hasPrefix("scip version v"),
+      "expected a leading 'scip version vX.Y.Z' line, got: \(firstLine)"
+    )
+    let reported = firstLine
+      .dropFirst("scip version v".count)
+      .split(separator: "-").first.map(String.init) ?? ""
+    #expect(
+      reported == ScipSwiftVersion.scipCliVersion,
+      "gating scip binary base version \(reported) != engine pin \(ScipSwiftVersion.scipCliVersion)"
+    )
+  }
+
+  @Test("ToolInfo carries the stable scip-cli version entry")
+  func toolInfoCarriesStableScipCliVersionEntry() throws {
+    // D-14: the pin is visible in ToolInfo as a constant synthetic entry — never argv, so
+    // 02-02's argv-insensitive metadata determinism holds (byte-stable across runs).
+    let builder = SCIPIndexBuilder(
+      repoPath: "/tmp/scip-gate-fixture-repo",
+      indexStorePath: "/tmp/nonexistent-index-store",
+      databasePath: "/tmp/nonexistent-index-db",
+      buildToolName: BuildTool.swiftpm.rawValue,
+      converterVersion: "test"
+    )
+    let entry = "scip-cli-version=\(ScipSwiftVersion.scipCliVersion)"
+    let metadata1 = builder.makeMetadata()
+    #expect(metadata1.toolInfo.arguments.contains(entry), "ToolInfo must carry \(entry)")
+
+    let index = try Self.buildIndex(fixtureName: "SchemeFixture")
+    #expect(
+      index.metadata.toolInfo.arguments.contains(entry),
+      "a real emitted index must carry the stable scip-cli version entry in ToolInfo"
+    )
+    #expect(
+      index.metadata.toolInfo.arguments == builder.makeMetadata().toolInfo.arguments,
+      "the ToolInfo arguments must be the same constant set on every run"
+    )
+  }
+
+  @Test("SchemeFixture snapshot goldens match scip snapshot output")
+  func schemeFixtureSnapshotGoldensMatch() throws {
+    // D-13 / A6: `scip snapshot` has no verify mode — the CLI writes caret-annotated files,
+    // and this harness owns the directory diff against the committed goldens. Set
+    // UPDATE_GOLDENS=1 to regenerate the committed goldens after an intentional emission
+    // change (documented in the README).
+    let index = try Self.buildIndex(fixtureName: "SchemeFixture")
+    let scip = try ScipCLIGate.locateScipBinary()
+    let fixtureRepoPath = Self.fixtureRepoPath(fixtureName: "SchemeFixture")
+
+    let workDirectory = try Self.makeTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(atPath: workDirectory) }
+    let indexPath = (workDirectory as NSString).appendingPathComponent("SchemeFixture.scip")
+    try index.serializedData().write(to: URL(fileURLWithPath: indexPath))
+    let outputDirectory = (workDirectory as NSString).appendingPathComponent("snapshot")
+
+    let result = try SubprocessRunner.run(
+      executable: scip,
+      arguments: [
+        "snapshot", "--from", indexPath, "--to", outputDirectory,
+        "--project-root", fixtureRepoPath,
+      ],
+      currentDirectory: "/"
+    )
+    #expect(result.exitCode == 0, "scip snapshot must exit 0: \(result.combinedOutput)")
+
+    let goldensDirectory = Self.schemeFixtureGoldensPath()
+    if ProcessInfo.processInfo.environment["UPDATE_GOLDENS"] == "1" {
+      try FileManager.default.removeItem(atPath: goldensDirectory)
+      try FileManager.default.copyItem(atPath: outputDirectory, toPath: goldensDirectory)
+      return
+    }
+
+    let produced = try Self.filesRecursively(under: outputDirectory)
+    let committed = try Self.filesRecursively(under: goldensDirectory)
+    #expect(
+      !committed.isEmpty,
+      "no committed goldens under \(goldensDirectory) — run UPDATE_GOLDENS=1 swift test to create them"
+    )
+
+    let producedSet = Set(produced)
+    let committedSet = Set(committed)
+    if producedSet != committedSet {
+      let missing = committedSet.subtracting(producedSet).sorted()
+      let extra = producedSet.subtracting(committedSet).sorted()
+      Issue.record(
+        "golden file sets differ — missing from output: \(missing), unexpected: \(extra). "
+          + "Intentional change? Regenerate with UPDATE_GOLDENS=1."
+      )
+      return
+    }
+
+    for relativePath in committedSet.sorted() {
+      let producedText = try String(
+        contentsOfFile: (outputDirectory as NSString).appendingPathComponent(relativePath),
+        encoding: .utf8)
+      let committedText = try String(
+        contentsOfFile: (goldensDirectory as NSString).appendingPathComponent(relativePath),
+        encoding: .utf8)
+      if producedText != committedText {
+        let diff = Self.firstDiffLines(between: committedText, and: producedText)
+        Issue.record(
+          "golden drift in \(relativePath) — regenerate with UPDATE_GOLDENS=1 if intentional:\n\(diff)"
+        )
+      }
+    }
+  }
+
   // MARK: - Shared gate plumbing
 
   /// Errors when the `scip` binary cannot be located. The message names both resolution
@@ -222,6 +344,50 @@ struct ScipCLIGateTests {
       .deletingLastPathComponent()
       .deletingLastPathComponent()
     return repoRoot.appendingPathComponent("Fixtures/\(fixtureName)").path
+  }
+
+  private static func schemeFixtureGoldensPath() -> String {
+    let repoRoot = URL(fileURLWithPath: #filePath)
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+    return repoRoot.appendingPathComponent("scip-swiftTests/SchemeFixtureGoldens").path
+  }
+
+  /// Relative paths of every regular file under `directory`, recursively, using "/" separators.
+  private static func filesRecursively(under directory: String) throws -> [String] {
+    let base = URL(fileURLWithPath: directory)
+    guard let enumerator = FileManager.default.enumerator(
+      at: base, includingPropertiesForKeys: [.isRegularFileKey]
+    ) else {
+      return []
+    }
+    var relativePaths: [String] = []
+    for case let url as URL in enumerator {
+      let values = try url.resourceValues(forKeys: [.isRegularFileKey])
+      guard values.isRegularFile == true else { continue }
+      relativePaths.append(url.path.replacingOccurrences(of: base.path + "/", with: ""))
+    }
+    return relativePaths
+  }
+
+  /// A short excerpt of the first differing lines between two texts, for failure messages.
+  private static func firstDiffLines(between committed: String, and produced: String) -> String {
+    let committedLines = committed.split(separator: "\n", omittingEmptySubsequences: false)
+    let producedLines = produced.split(separator: "\n", omittingEmptySubsequences: false)
+    var excerpts: [String] = []
+    var shown = 0
+    for (offset, pair) in zip(committedLines, producedLines).enumerated() {
+      if pair.0 != pair.1 {
+        excerpts.append("line \(offset + 1): golden  ⟶ \(pair.0)")
+        excerpts.append("line \(offset + 1): output ⟶ \(pair.1)")
+        shown += 1
+        if shown == 5 { break }
+      }
+    }
+    if committedLines.count != producedLines.count {
+      excerpts.append("line counts differ: golden \(committedLines.count) vs output \(producedLines.count)")
+    }
+    return excerpts.isEmpty ? "(contents equal)" : excerpts.joined(separator: "\n")
   }
 
   private static func makeTemporaryDirectory() throws -> String {
