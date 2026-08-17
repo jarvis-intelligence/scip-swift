@@ -133,6 +133,40 @@ struct CacheStoreTests {
     #expect(loaded?.language == "Swift")
   }
 
+  // MARK: USR side map (D-09 / research Pitfall 3, 02-02)
+
+  @Test("USR side map round-trips under the document's hash at docs/<hash>.usrmap")
+  func usrSideMapRoundTrip() throws {
+    let dir = makeTempDir()
+    let cache = CacheStore(cacheDir: dir)
+
+    let sideMap = [
+      "scip-swift swiftpm M . `s:1M4test3fooSSvp`.": "s:1M4test3fooSSvp"
+    ]
+    try cache.saveUSRMap(sideMap, hash: "sidemap")
+
+    let usrmapPath = ((dir as NSString).appendingPathComponent("docs") as NSString)
+      .appendingPathComponent("sidemap.usrmap")
+    #expect(
+      FileManager.default.fileExists(atPath: usrmapPath),
+      "the side map must live beside its .scipdoc under the same hash"
+    )
+    #expect(cache.loadUSRMap(hash: "sidemap") == sideMap)
+    #expect(
+      cache.loadUSRMap(hash: "missing") == nil,
+      "load failure returns nil and the caller rebuilds (T-02-05)"
+    )
+  }
+
+  @Test("invalidateAll removes the USR side map with its document (same hash, atomic)")
+  func invalidateAllRemovesUSRMap() throws {
+    let dir = makeTempDir()
+    let cache = CacheStore(cacheDir: dir)
+    try cache.saveUSRMap(["k": "v"], hash: "doomed")
+    try cache.invalidateAll()
+    #expect(cache.loadUSRMap(hash: "doomed") == nil, "side map invalidates with its document")
+  }
+
   private func makeTempDir() -> String {
     let dir = NSTemporaryDirectory() + "cache-test-\(UUID().uuidString)"
     try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)

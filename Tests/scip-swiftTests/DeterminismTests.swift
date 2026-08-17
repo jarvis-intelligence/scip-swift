@@ -134,6 +134,56 @@ struct DeterminismTests {
 
   // MARK: - Metadata normalization (Pitfall 2)
 
+  @Test("cached run persists a per-document USR side map beside the .scipdoc (D-09)")
+  func cachedRunPersistsUSRSideMap() throws {
+    let fixtureRepoPath = Self.fixturePath("MiniSwiftPackage")
+    let fixtureBuildPath = (fixtureRepoPath as NSString).appendingPathComponent(".build")
+    defer { try? FileManager.default.removeItem(atPath: fixtureBuildPath) }
+
+    let workDirectory = try Self.makeTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(atPath: workDirectory) }
+
+    let runner = SwiftPMBuildRunner(
+      repoPath: fixtureRepoPath,
+      configuration: .debug,
+      scratchPath: (workDirectory as NSString).appendingPathComponent("scratch")
+    )
+    let buildResult = try runner.produceIndexStore()
+
+    let cacheDir = (workDirectory as NSString).appendingPathComponent("cache")
+    let store = CacheStore(cacheDir: cacheDir)
+    let index = try SCIPIndexBuilder(
+      repoPath: fixtureRepoPath,
+      indexStorePath: buildResult.indexStorePath,
+      databasePath: (workDirectory as NSString).appendingPathComponent("index-db"),
+      buildToolName: BuildTool.swiftpm.rawValue,
+      converterVersion: "test",
+      cacheStore: store
+    ).build()
+    #expect(!index.documents.isEmpty)
+
+    let greeterPath = (fixtureRepoPath as NSString)
+      .appendingPathComponent("Sources/MiniSwiftPackage/Greeter.swift")
+    let hash = try ContentHasher.sha256Hex(of: greeterPath)
+    let docsDir = (cacheDir as NSString).appendingPathComponent("docs")
+    #expect(
+      FileManager.default.fileExists(atPath: (docsDir as NSString).appendingPathComponent("\(hash).scipdoc")),
+      "the Greeter document must be cached"
+    )
+    #expect(
+      FileManager.default.fileExists(atPath: (docsDir as NSString).appendingPathComponent("\(hash).usrmap")),
+      "docs/<hash>.usrmap must exist beside the cached .scipdoc"
+    )
+
+    let sideMap = try #require(store.loadUSRMap(hash: hash))
+    #expect(!sideMap.isEmpty, "the D-06 parameter fallback must be recorded in the side map")
+    for (symbolString, usr) in sideMap {
+      #expect(symbolString.hasPrefix("scip-swift"), "keys are canonical symbol strings")
+      #expect(symbolString.contains("`s:"), "only raw-USR fallback symbols ride the side map")
+      #expect(usr.hasPrefix("s:"), "values are USRs — canonicalSymbol -> USR round-trips")
+    }
+  }
+
   @Test("ToolInfo metadata is argv-insensitive (normalized arguments)")
   func metadataIsArgvInsensitive() throws {
     // CLI double-runs invoke the engine with different `--output` paths; embedding raw
