@@ -77,6 +77,40 @@ struct USRSymbolParserTests {
     #expect(symbol == "scip-swift swiftpm CapabilityFixture . Shape#area2().")
   }
 
+  @Test("word-substituted extending module decodes (retroactive on a user-module type)")
+  func wordSubstitutedExtendingModule() throws {
+    // Real USR shape from SchemeFixtureExt: the extending module shares words with the
+    // extended type's module, so the mangler encodes it as `0<word-refs><literal>` —
+    // `0aB3Ext` = Scheme(word 0) + Fixture(word 1, final ref) + literal "Ext". Verified
+    // against `swift-demangle`: (extension in SchemeFixtureExt):SchemeFixture.Box.describe().
+    let parsed = try #require(
+      USRSymbolParser.parse("s:13SchemeFixture3BoxV0aB3ExtE8describeSSyF"))
+    #expect(parsed.module == "SchemeFixture")
+    #expect(!parsed.isSystemModule)
+    #expect(parsed.containers.map(\.name) == ["Box"])
+    #expect(parsed.containers.first?.kind == .struct)
+    #expect(parsed.name == "describe")
+    #expect(parsed.extendingModule == "SchemeFixtureExt")
+
+    let symbol = try #require(
+      canonical(
+        "s:13SchemeFixture3BoxV0aB3ExtE8describeSSyF", name: "describe()", kind: .instanceMethod)
+    )
+    #expect(symbol == "scip-swift swiftpm SchemeFixture . Box#describe().")
+  }
+
+  @Test("fully substituted extending module uses the trailing-0 terminator form")
+  func substitutedWordTerminatorForm() throws {
+    // `0aB0`: My(word 0) + Mod(word 1, final ref) + the grammar's literal-`0` terminator
+    // (no literal segment follows the final reference). Verified against `swift-demangle`:
+    // (extension in MyMod):MyMod.Box.draw().
+    let parsed = try #require(USRSymbolParser.parse("s:5MyMod3BoxV0aB0E4drawSSyF"))
+    #expect(parsed.module == "MyMod")
+    #expect(parsed.containers.map(\.name) == ["Box"])
+    #expect(parsed.name == "draw")
+    #expect(parsed.extendingModule == "MyMod")
+  }
+
   @Test("punycode identifiers resolve to their real names")
   func punycodeIdentifiersResolve() throws {
     // 🚀 (U+1F680) mangles as 004BFIh; π (U+03C0) as 003Bxa (spike row 8).

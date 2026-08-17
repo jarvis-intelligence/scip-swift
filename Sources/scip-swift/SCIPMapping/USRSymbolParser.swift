@@ -4,8 +4,11 @@
 /// D-05 keeps `libswiftDemangle` display-only): the `s:` scheme prefix, the leading
 /// module (length-prefixed) or stdlib substitution, the identifier+kind-letter container
 /// chain (V struct, C class, O enum, P protocol, a typealias, F/f func), retroactive
-/// extension `E` contexts (extended type + extending module marker), and the final entity
-/// name. The trailing signature region is treated as opaque — skipped, never interpreted.
+/// extension `E` contexts (extended type + extending module marker), the final entity
+/// name, and `0`-prefixed word-substituted identifiers (docs/ABI Mangling.rst: references
+/// to words of previously mangled identifiers — this is how a retroactive extending module
+/// that shares words with the extended type's module is encoded). The trailing signature
+/// region is treated as opaque — skipped, never interpreted.
 ///
 /// Security posture (T-02-01): the parser is TOTAL over adversarial input. Every claimed
 /// length is checked against the remaining input, there are no force-unwraps and no
@@ -343,6 +346,9 @@ enum USRSymbolParser {
   private struct Cursor {
     let scalars: [Character]
     var index = 0
+    /// The words of every identifier read so far in this USR, first-appearance order — the
+    /// substitution table `0`-prefixed identifiers reference (docs/ABI Mangling.rst).
+    var wordTable = WordTable()
 
     init(_ string: String) {
       self.scalars = Array(string)
@@ -387,7 +393,8 @@ enum USRSymbolParser {
 
     /// Reads one length-prefixed word (`<decimal-length><word>`), validating the claimed
     /// length against the remaining input. `00`-prefixed lengths introduce a punycode word
-    /// (`00<length><punycode>`), decoded in place.
+    /// (`00<length><punycode>`), decoded in place; a bare leading `0` introduces a
+    /// word-substituted identifier (`0<parts>`), decoded from the word table.
     mutating func readWord() -> String? {
       var digits = ""
       while let next = peek(), next.isNumber, next.isASCII {
@@ -397,6 +404,74 @@ enum USRSymbolParser {
       guard !digits.isEmpty, digits.count <= 4 else { return nil }
       guard scalars.count - index > 0 else { return nil }
 
+      if digits == "0" {
+        let word = readSubstitutedWord()
+        if let word { wordTable.addWords(of: word) }
+        return word
+      }
+
+      guard let word = readLengthPrefixedSegment(digits: digits) else { return nil }
+      wordTable.addWords(of: word)
+      return word
+    }
+
+    /// Reads one `0`-prefixed word-substituted identifier (docs/ABI Mangling.rst): a
+    /// sequence of word references — lowercase `a`-`z` for all but the final reference,
+    /// uppercase for the final one — interleaved with length-prefixed literal segments,
+    /// over the words of every identifier mangled so far in this USR. A final word
+    /// reference with no literal after it is terminated by a literal `0`.
+    ///
+    /// An uppercase letter whose index names no mangled word is NOT part of the identifier
+    /// (the retroactive `E` marker directly after the last segment is exactly such a
+    /// letter), so the identifier ends there without consuming it. Known residual ambiguity
+    /// (T-02-01 fail-soft): with five or more mangled words a marker letter can alias a
+    /// valid reference index; such a USR mis-parses or misses into the D-06 fallback, never
+    /// into a crash.
+    private mutating func readSubstitutedWord() -> String? {
+      var parts = ""
+      while let next = peek() {
+        if let ascii = next.asciiValue {
+          if ascii >= UInt8(ascii: "a"), ascii <= UInt8(ascii: "z") {
+            let index = Int(ascii - UInt8(ascii: "a"))
+            guard index < wordTable.count else { return nil }
+            parts += wordTable[index]
+            advance()
+            continue
+          }
+          if ascii >= UInt8(ascii: "A"), ascii <= UInt8(ascii: "Z") {
+            let index = Int(ascii - UInt8(ascii: "A"))
+            guard index < wordTable.count else { break }
+            parts += wordTable[index]
+            advance()
+            continue
+          }
+        }
+        if next.isNumber, next.isASCII {
+          var digits = ""
+          while let digit = peek(), digit.isNumber, digit.isASCII {
+            digits.append(digit)
+            advance()
+          }
+          if digits == "0" {
+            // The grammar's terminator: a final word reference with no literal after it
+            // (literal run-lengths never carry a leading zero, so a bare `0` cannot be one).
+            break
+          }
+          guard digits.count <= 4, let literal = readLengthPrefixedSegment(digits: digits)
+          else { return nil }
+          parts += literal
+          continue
+        }
+        break
+      }
+      guard !parts.isEmpty else { return nil }
+      return parts
+    }
+
+    /// Reads the payload after a digit prefix: a plain length-prefixed word, or a punycode
+    /// word when the prefix starts with `00`. Does not touch the word table — callers
+    /// register the assembled identifier once.
+    private mutating func readLengthPrefixedSegment(digits: String) -> String? {
       if digits.hasPrefix("00") {
         // Punycode word: the digits after `00` give the encoded length. The punycode output
         // alphabet (`a`-`z`, `A`-`J`) contains no digits, so the decimal length is
@@ -419,6 +494,46 @@ enum USRSymbolParser {
 
     func isWordCharacter(_ character: Character) -> Bool {
       character.isASCII && (character.isLetter || character.isNumber) || character == "_"
+    }
+  }
+
+  /// The word-substitution table for one USR (docs/ABI Mangling.rst): identifiers split at
+  /// underscores and at an uppercase letter following a non-uppercase character; new words
+  /// append in first-appearance order (the grammar caps substitution references at 26).
+  private struct WordTable {
+    private(set) var words: [String] = []
+
+    var count: Int { words.count }
+
+    subscript(index: Int) -> String {
+      words[index]
+    }
+
+    mutating func addWords(of identifier: String) {
+      var current = ""
+      var previousWasUppercase = false
+
+      func flush() {
+        if !current.isEmpty, !words.contains(current) {
+          words.append(current)
+        }
+        current = ""
+      }
+
+      for character in identifier {
+        if character == "_" {
+          flush()
+          previousWasUppercase = false
+          continue
+        }
+        let isUppercaseLetter = character.isASCII && character.isLetter && character.isUppercase
+        if isUppercaseLetter, !previousWasUppercase, !current.isEmpty {
+          flush()
+        }
+        current.append(character)
+        previousWasUppercase = isUppercaseLetter
+      }
+      flush()
     }
   }
 }
