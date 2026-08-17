@@ -160,7 +160,7 @@ Markdown is consumer-rendered (out of scope per REQUIREMENTS.md) — no sanitiza
 | A2 | Params get no docs (Swift convention: `- parameter` lines) is acceptable for v0.3.0 | D3 | Param hover gap vs peers |
 | A3 | swift-syntax 602.0.0 has no public `docComment` convenience API (grep of checkout found none in SwiftSyntax module sources) | D1 | If it exists, prefer it over the hand walk |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **`////` exclusion vs ecosystem parity** — SwiftFormat/SwiftSyntax's own `docByteRange` semantics unknown; we drop `////` (section-divider intent). Recommendation: drop it; revisit only if peer-indexer parity testing flags it.
 2. **Accessor doc inheritance** — shipped by design (D3); if a consumer dislikes docs on getter/setter USRs, gate by `symbol.kind`. Recommendation: ship inheritance, assert it in the integration test.
@@ -176,3 +176,5 @@ Markdown is consumer-rendered (out of scope per REQUIREMENTS.md) — no sanitiza
 
 **Confidence breakdown:** trivia/anchor mechanics HIGH (empirical, toolchain-pinned); normalization spec HIGH (raw text dumps); architecture HIGH (source-read + Phase 8 precedent); peer hover parity MEDIUM (A1/A2).
 **Research date:** 2026-08-17. **Valid until:** 2026-09-16 (toolchain-pinned, stable).
+
+> Decisions adopted: `////` dropped as noise (Task 2 text-drop rule); accessor doc inheritance ships by design and is asserted (Task 3).
