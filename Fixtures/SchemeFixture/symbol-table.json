@@ -1,0 +1,902 @@
+[
+  {
+    "containers" : [
+      {
+        "kind" : "struct",
+        "name" : "String"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swift Swift 6.2.4 String#schemeShout().",
+    "isSystem" : true,
+    "kind" : "method",
+    "module" : "Swift",
+    "name" : "schemeShout",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : "6.2.4"
+  },
+  {
+    "containers" : [
+
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Box#",
+    "isSystem" : false,
+    "kind" : "struct",
+    "module" : "SchemeFixture",
+    "name" : "Box",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "struct",
+        "name" : "Box"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Box#T#",
+    "isSystem" : false,
+    "kind" : "typeAlias",
+    "module" : "SchemeFixture",
+    "name" : "T",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "struct",
+        "name" : "Box"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Box#`content=`().",
+    "isSystem" : false,
+    "kind" : "setter",
+    "module" : "SchemeFixture",
+    "name" : "content=",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "struct",
+        "name" : "Box"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Box#content().",
+    "isSystem" : false,
+    "kind" : "getter",
+    "module" : "SchemeFixture",
+    "name" : "content",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "struct",
+        "name" : "Box"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Box#content.",
+    "isSystem" : false,
+    "kind" : "property",
+    "module" : "SchemeFixture",
+    "name" : "content",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "struct",
+        "name" : "Box"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Box#describe().",
+    "isSystem" : false,
+    "kind" : "method",
+    "module" : "SchemeFixture",
+    "name" : "describe",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "struct",
+        "name" : "Box"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Box#init().",
+    "isSystem" : false,
+    "kind" : "constructor",
+    "module" : "SchemeFixture",
+    "name" : "init",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "struct",
+        "name" : "Box"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Box#unwrap().",
+    "isSystem" : false,
+    "kind" : "method",
+    "module" : "SchemeFixture",
+    "name" : "unwrap",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Drawable#",
+    "isSystem" : false,
+    "kind" : "protocol",
+    "module" : "SchemeFixture",
+    "name" : "Drawable",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "protocol",
+        "name" : "Drawable"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Drawable#draw().",
+    "isSystem" : false,
+    "kind" : "method",
+    "module" : "SchemeFixture",
+    "name" : "draw",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Observed#",
+    "isSystem" : false,
+    "kind" : "class",
+    "module" : "SchemeFixture",
+    "name" : "Observed",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "class",
+        "name" : "Observed"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Observed#`backing=`().",
+    "isSystem" : false,
+    "kind" : "setter",
+    "module" : "SchemeFixture",
+    "name" : "backing=",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "class",
+        "name" : "Observed"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Observed#`computed=`().",
+    "isSystem" : false,
+    "kind" : "setter",
+    "module" : "SchemeFixture",
+    "name" : "computed=",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "class",
+        "name" : "Observed"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Observed#`prepared=`().",
+    "isSystem" : false,
+    "kind" : "setter",
+    "module" : "SchemeFixture",
+    "name" : "prepared=",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "class",
+        "name" : "Observed"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Observed#`watched=`().",
+    "isSystem" : false,
+    "kind" : "setter",
+    "module" : "SchemeFixture",
+    "name" : "watched=",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "class",
+        "name" : "Observed"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Observed#`watched=`(+1).",
+    "isSystem" : false,
+    "kind" : "setter",
+    "module" : "SchemeFixture",
+    "name" : "watched=",
+    "overloadIndex" : 1,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "class",
+        "name" : "Observed"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Observed#backing().",
+    "isSystem" : false,
+    "kind" : "getter",
+    "module" : "SchemeFixture",
+    "name" : "backing",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "class",
+        "name" : "Observed"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Observed#backing.",
+    "isSystem" : false,
+    "kind" : "property",
+    "module" : "SchemeFixture",
+    "name" : "backing",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "class",
+        "name" : "Observed"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Observed#computed().",
+    "isSystem" : false,
+    "kind" : "getter",
+    "module" : "SchemeFixture",
+    "name" : "computed",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "class",
+        "name" : "Observed"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Observed#computed.",
+    "isSystem" : false,
+    "kind" : "property",
+    "module" : "SchemeFixture",
+    "name" : "computed",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "class",
+        "name" : "Observed"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Observed#init().",
+    "isSystem" : false,
+    "kind" : "constructor",
+    "module" : "SchemeFixture",
+    "name" : "init",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "class",
+        "name" : "Observed"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Observed#prepared().",
+    "isSystem" : false,
+    "kind" : "getter",
+    "module" : "SchemeFixture",
+    "name" : "prepared",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "class",
+        "name" : "Observed"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Observed#prepared.",
+    "isSystem" : false,
+    "kind" : "property",
+    "module" : "SchemeFixture",
+    "name" : "prepared",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "class",
+        "name" : "Observed"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Observed#watched().",
+    "isSystem" : false,
+    "kind" : "getter",
+    "module" : "SchemeFixture",
+    "name" : "watched",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "class",
+        "name" : "Observed"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Observed#watched.",
+    "isSystem" : false,
+    "kind" : "property",
+    "module" : "SchemeFixture",
+    "name" : "watched",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Point#",
+    "isSystem" : false,
+    "kind" : "typeAlias",
+    "module" : "SchemeFixture",
+    "name" : "Point",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Poster#",
+    "isSystem" : false,
+    "kind" : "class",
+    "module" : "SchemeFixture",
+    "name" : "Poster",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "class",
+        "name" : "Poster"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Poster#`label=`().",
+    "isSystem" : false,
+    "kind" : "setter",
+    "module" : "SchemeFixture",
+    "name" : "label=",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "class",
+        "name" : "Poster"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Poster#draw().",
+    "isSystem" : false,
+    "kind" : "method",
+    "module" : "SchemeFixture",
+    "name" : "draw",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "class",
+        "name" : "Poster"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Poster#init().",
+    "isSystem" : false,
+    "kind" : "constructor",
+    "module" : "SchemeFixture",
+    "name" : "init",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "class",
+        "name" : "Poster"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Poster#label().",
+    "isSystem" : false,
+    "kind" : "getter",
+    "module" : "SchemeFixture",
+    "name" : "label",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "class",
+        "name" : "Poster"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Poster#label.",
+    "isSystem" : false,
+    "kind" : "property",
+    "module" : "SchemeFixture",
+    "name" : "label",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Spectrum#",
+    "isSystem" : false,
+    "kind" : "enum",
+    "module" : "SchemeFixture",
+    "name" : "Spectrum",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "enum",
+        "name" : "Spectrum"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Spectrum#blue.",
+    "isSystem" : false,
+    "kind" : "enumCase",
+    "module" : "SchemeFixture",
+    "name" : "blue",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "enum",
+        "name" : "Spectrum"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Spectrum#green.",
+    "isSystem" : false,
+    "kind" : "enumCase",
+    "module" : "SchemeFixture",
+    "name" : "green",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "enum",
+        "name" : "Spectrum"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Spectrum#red.",
+    "isSystem" : false,
+    "kind" : "enumCase",
+    "module" : "SchemeFixture",
+    "name" : "red",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Vec#",
+    "isSystem" : false,
+    "kind" : "struct",
+    "module" : "SchemeFixture",
+    "name" : "Vec",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "struct",
+        "name" : "Vec"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Vec#+().",
+    "isSystem" : false,
+    "kind" : "operator",
+    "module" : "SchemeFixture",
+    "name" : "+",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "struct",
+        "name" : "Vec"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Vec#`==`().",
+    "isSystem" : false,
+    "kind" : "operator",
+    "module" : "SchemeFixture",
+    "name" : "==",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "struct",
+        "name" : "Vec"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Vec#`x=`().",
+    "isSystem" : false,
+    "kind" : "setter",
+    "module" : "SchemeFixture",
+    "name" : "x=",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "struct",
+        "name" : "Vec"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Vec#`y=`().",
+    "isSystem" : false,
+    "kind" : "setter",
+    "module" : "SchemeFixture",
+    "name" : "y=",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "struct",
+        "name" : "Vec"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Vec#init().",
+    "isSystem" : false,
+    "kind" : "constructor",
+    "module" : "SchemeFixture",
+    "name" : "init",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "struct",
+        "name" : "Vec"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Vec#init(+1).",
+    "isSystem" : false,
+    "kind" : "constructor",
+    "module" : "SchemeFixture",
+    "name" : "init",
+    "overloadIndex" : 1,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "struct",
+        "name" : "Vec"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Vec#length().",
+    "isSystem" : false,
+    "kind" : "method",
+    "module" : "SchemeFixture",
+    "name" : "length",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "struct",
+        "name" : "Vec"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Vec#manhattanLength().",
+    "isSystem" : false,
+    "kind" : "getter",
+    "module" : "SchemeFixture",
+    "name" : "manhattanLength",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "struct",
+        "name" : "Vec"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Vec#manhattanLength.",
+    "isSystem" : false,
+    "kind" : "property",
+    "module" : "SchemeFixture",
+    "name" : "manhattanLength",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "struct",
+        "name" : "Vec"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Vec#x().",
+    "isSystem" : false,
+    "kind" : "getter",
+    "module" : "SchemeFixture",
+    "name" : "x",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "struct",
+        "name" : "Vec"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Vec#x.",
+    "isSystem" : false,
+    "kind" : "property",
+    "module" : "SchemeFixture",
+    "name" : "x",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "struct",
+        "name" : "Vec"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Vec#y().",
+    "isSystem" : false,
+    "kind" : "getter",
+    "module" : "SchemeFixture",
+    "name" : "y",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "struct",
+        "name" : "Vec"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Vec#y.",
+    "isSystem" : false,
+    "kind" : "property",
+    "module" : "SchemeFixture",
+    "name" : "y",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . `flagSequence=`().",
+    "isSystem" : false,
+    "kind" : "setter",
+    "module" : "SchemeFixture",
+    "name" : "flagSequence=",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . `π=`().",
+    "isSystem" : false,
+    "kind" : "setter",
+    "module" : "SchemeFixture",
+    "name" : "π=",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . `π`().",
+    "isSystem" : false,
+    "kind" : "getter",
+    "module" : "SchemeFixture",
+    "name" : "π",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . `π`.",
+    "isSystem" : false,
+    "kind" : "variable",
+    "module" : "SchemeFixture",
+    "name" : "π",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . `名前を付ける`().",
+    "isSystem" : false,
+    "kind" : "operator",
+    "module" : "SchemeFixture",
+    "name" : "名前を付ける",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . `🚀=`().",
+    "isSystem" : false,
+    "kind" : "setter",
+    "module" : "SchemeFixture",
+    "name" : "🚀=",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . `🚀`().",
+    "isSystem" : false,
+    "kind" : "getter",
+    "module" : "SchemeFixture",
+    "name" : "🚀",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . `🚀`.",
+    "isSystem" : false,
+    "kind" : "variable",
+    "module" : "SchemeFixture",
+    "name" : "🚀",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . conditionallyCompiled().",
+    "isSystem" : false,
+    "kind" : "func",
+    "module" : "SchemeFixture",
+    "name" : "conditionallyCompiled",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . flagSequence().",
+    "isSystem" : false,
+    "kind" : "getter",
+    "module" : "SchemeFixture",
+    "name" : "flagSequence",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . flagSequence.",
+    "isSystem" : false,
+    "kind" : "variable",
+    "module" : "SchemeFixture",
+    "name" : "flagSequence",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . parse().",
+    "isSystem" : false,
+    "kind" : "func",
+    "module" : "SchemeFixture",
+    "name" : "parse",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . parse(+1).",
+    "isSystem" : false,
+    "kind" : "func",
+    "module" : "SchemeFixture",
+    "name" : "parse",
+    "overloadIndex" : 1,
+    "swiftToolchainVersion" : ""
+  }
+]
