@@ -20,9 +20,9 @@
 
 ### Exact Occurrence Ranges (RANGE)
 
-- [ ] **RANGE-01**: Occurrence end columns are computed from the exact identifier token extent (via SwiftSyntax) instead of approximated from display-name length; definitions and references both emit exact ranges.
-- [ ] **RANGE-02**: Occurrence ranges are correct on files containing multi-byte (Unicode/CJK/emoji) content earlier on the same line — columns are normalized to UTF-8 byte offsets end-to-end (fixture test).
-- [ ] **RANGE-03**: Files that SwiftSyntax cannot fully parse (error nodes, macro-expanded code) still index successfully, falling back to name-length end columns for affected occurrences.
+- [x] **RANGE-01**: Occurrence end columns are computed from the exact identifier token extent (via SwiftSyntax) instead of approximated from display-name length; definitions and references both emit exact ranges.
+- [x] **RANGE-02**: Occurrence ranges are correct on files containing multi-byte (Unicode/CJK/emoji) content earlier on the same line — columns are normalized to UTF-8 byte offsets end-to-end (fixture test).
+- [x] **RANGE-03**: Files that SwiftSyntax cannot fully parse (error nodes, macro-expanded code) still index successfully, falling back to name-length end columns for affected occurrences.
 
 ### Symbol Documentation (DOCS)
 
@@ -54,9 +54,9 @@
 | SYMBOL-02 | Phase 7 | Complete |
 | SYMBOL-03 | Phase 7 | Complete |
 | SYMBOL-04 | Phase 7 | Complete |
-| RANGE-01 | Phase 8 | pending |
-| RANGE-02 | Phase 8 | pending |
-| RANGE-03 | Phase 8 | pending |
+| RANGE-01 | Phase 8 | Complete |
+| RANGE-02 | Phase 8 | Complete |
+| RANGE-03 | Phase 8 | Complete |
 | DOCS-01 | Phase 9 | pending |
 | DOCS-02 | Phase 9 | pending |
 | DOCS-03 | Phase 9 | pending |

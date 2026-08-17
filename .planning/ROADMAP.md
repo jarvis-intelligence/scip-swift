@@ -29,7 +29,7 @@ Full details: `.planning/milestones/v0.2.0-ROADMAP.md`
 
 - [x] **Phase 6: Xcode Backend Repair & Destination Selection** - Restore the xcodebuild dispatch branch and add opt-in `--destination`
 - [x] **Phase 7: Demangled Symbol Names** - Human-readable Swift symbol names with opaque fallback and stable identity
-- [ ] **Phase 8: Exact Occurrence Ranges** - SwiftSyntax identifier extents replace display-name-length approximation
+- [x] **Phase 8: Exact Occurrence Ranges** - SwiftSyntax identifier extents replace display-name-length approximation
 - [ ] **Phase 9: Symbol Documentation** - Doc comments as Markdown `documentation` riding the same parse pass
 
 ## Phase Details
@@ -80,8 +80,8 @@ Full details: `.planning/milestones/v0.2.0-ROADMAP.md`
 
 **Plans**: 2/2 plans:
 
-- [ ] 08-01-PLAN.md — swift-syntax 602.0.0 exact pin + SwiftSyntaxRefiner pure module (line-start byte table, token-extent map, nil-on-miss fallback) wired as a tracer: one fixture file's occurrences emit exact ends end-to-end with the getter drift case, plus the Unicode/error-node unit corpus and PositionMapping exact-or-approximate contract (RANGE-01, RANGE-02, RANGE-03)
-- [ ] 08-02-PLAN.md — UnicodeRangeFixture integration asserting the hand-computed F4 byte-column table and getter-drift elimination end-to-end, broken-source pipeline fallback, and the cache-hit byte-identity path serving exact ranges without re-parse (RANGE-01, RANGE-02, RANGE-03)
+- [x] 08-01-PLAN.md — swift-syntax 602.0.0 exact pin + SwiftSyntaxRefiner pure module (line-start byte table, token-extent map, nil-on-miss fallback) wired as a tracer: one fixture file's occurrences emit exact ends end-to-end with the getter drift case, plus the Unicode/error-node unit corpus and PositionMapping exact-or-approximate contract (RANGE-01, RANGE-02, RANGE-03)
+- [x] 08-02-PLAN.md — UnicodeRangeFixture integration asserting the hand-computed F4 byte-column table and getter-drift elimination end-to-end, broken-source pipeline fallback, and the cache-hit byte-identity path serving exact ranges without re-parse (RANGE-01, RANGE-02, RANGE-03)
 
 ### Phase 9: Symbol Documentation
 
