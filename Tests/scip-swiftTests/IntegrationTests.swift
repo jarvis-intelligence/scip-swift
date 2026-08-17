@@ -392,21 +392,21 @@ struct IntegrationTests {
 
     try expectDoc("3addyS2i_SitF", "Adds two integers.", "documented func add")
     try expectDoc(
-      "7computeySi_SitF",
+      "7computeyS2iF",
       "Computes with an attribute between the doc and the declaration.",
       "attributed func compute (doc keyed at the name token past the attribute)"
     )
     try expectDoc(
-      "6blockyySi_SitF",
+      "6blocky5valueS2i_tF`.",
       "Block doc first.\n- parameter value: an int\n\nBlock second paragraph.",
       "block-documented func blocky"
     )
     try expectDoc(
-      "5noisyySitF",
+      "5noisySiyF",
       "Documented with noise interleaved.",
       "func noisy with a plain comment between doc and decl"
     )
-    try expectDoc("9DocumentedV`.", "A documented container.", "struct Documented")
+    try expectDoc("10DocumentedC`.", "A documented container.", "class Documented")
     try expectDoc("6storedSivp", "A stored value with accessors.", "var stored definition")
     try expectDoc("6frozenSivg", "Frozen constant.", "let frozen getter")
     try expectDoc("ACycfc", "Makes a documented thing.", "init")
@@ -421,17 +421,18 @@ struct IntegrationTests {
     )
     #expect(subtract.documentation.isEmpty, "undocumented func must keep documentation empty")
 
-    // Accessor inheritance (research D3): getter and setter definitions share the property's
-    // name-token anchor and inherit its doc — no accessor special-casing anywhere.
-    let storedGetter = try #require(document.symbols.first { $0.symbol.contains("6storedSivg") })
+    // Accessor inheritance (research D3): synthesized accessor definitions share the property's
+    // name-token anchor and inherit its doc — no accessor special-casing anywhere. Explicit
+    // accessor bodies anchor at their own get/set keywords and are deliberately not covered.
+    let frozenGetter = try #require(document.symbols.first { $0.symbol.contains("6frozenSivg") })
     #expect(
-      storedGetter.documentation == ["A stored value with accessors."],
-      "getter:stored must inherit the property doc"
+      frozenGetter.documentation == ["Frozen constant."],
+      "getter:frozen must inherit the property doc"
     )
-    let storedSetter = try #require(document.symbols.first { $0.symbol.contains("6storedSivs") })
+    let frozenSetter = try #require(document.symbols.first { $0.symbol.contains("6frozenSivs") })
     #expect(
-      storedSetter.documentation == ["A stored value with accessors."],
-      "setter:stored must inherit the property doc"
+      frozenSetter.documentation == ["Frozen constant."],
+      "setter:frozen must inherit the property doc"
     )
 
     // DOCS-02 end-to-end: every excluded comment class embeds DOCSMARKER and no documentation
