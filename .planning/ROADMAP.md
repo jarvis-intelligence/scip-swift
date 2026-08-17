@@ -94,7 +94,9 @@ Full details: `.planning/milestones/v0.2.0-ROADMAP.md`
   2. Non-doc comments (`//`), license headers, and comments on non-declaration tokens do not appear in any documentation field
   3. A file gets exactly one SwiftSyntax parse per indexing run — documentation extraction shares the Phase 8 refiner pass, not a second parse
 
-**Plans**: TBD
+**Plans**: 1/1 plan:
+
+- [ ] 09-01-PLAN.md — Name-token-keyed doc map inside the Phase 8 SwiftSyntaxRefiner parse (D1), builder wiring of `documentation` on definition hits with getter/setter inheritance (D3), full normalization/exclusion corpus (D4), per-file parse-count proof (D5), DocumentationFixture end-to-end with cache round-trip and zero-re-baseline protected-file gates (DOCS-01, DOCS-02, DOCS-03)
 
 ## Progress
 
@@ -106,4 +108,4 @@ Phases execute in numeric order: 6 → 7 → 8 → 9 (Phases 7 and 8 are indepen
 | 6. Xcode Backend Repair & Destination Selection | v0.3.0 | 1/2 | In Progress|  |
 | 7. Demangled Symbol Names | v0.3.0 | 2/2 | In Progress|  |
 | 8. Exact Occurrence Ranges | v0.3.0 | 0/2 | Not started | - |
-| 9. Symbol Documentation | v0.3.0 | 0/TBD | Not started | - |
+| 9. Symbol Documentation | v0.3.0 | 0/1 | Not started | - |
