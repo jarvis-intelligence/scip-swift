@@ -279,6 +279,40 @@ struct SymbolSchemeGoldenTests {
     #expect(table.index(forUSR: "usr-late-col") == 1)
   }
 
+  @Test("overload-table fingerprint tracks group membership and is insertion-order stable (02-02)")
+  func overloadFingerprintTracksGroupMembership() {
+    func definition(_ usr: String, path: String, line: Int) -> OverloadTable.Definition {
+      OverloadTable.Definition(
+        usr: usr, module: "MyMod", containerNames: ["Shape"],
+        name: "resize", kind: .method, relativePath: path, line: line, utf8Column: 2)
+    }
+
+    let twoMembers = [
+      definition("usr-a", path: "Sources/B.swift", line: 1),
+      definition("usr-b", path: "Sources/A.swift", line: 1),
+    ]
+    let threeMembers = twoMembers + [
+      definition("usr-c", path: "Sources/AA.swift", line: 1)
+    ]
+    let reordered = [twoMembers[1], twoMembers[0]]
+    let singleMember = [twoMembers[1]]
+
+    let base = OverloadTable(definitions: twoMembers).cacheValidationFingerprint()
+    #expect(base.count == 64, "SHA-256 hex digest")
+    #expect(
+      OverloadTable(definitions: reordered).cacheValidationFingerprint() == base,
+      "insertion order must not change the fingerprint — only group membership and source order"
+    )
+    #expect(
+      OverloadTable(definitions: threeMembers).cacheValidationFingerprint() != base,
+      "a new group member — even one sorting EARLIER, shifting every index — must change the fingerprint"
+    )
+    #expect(
+      OverloadTable(definitions: singleMember).cacheValidationFingerprint() != base,
+      "a lone member's group must be fingerprinted too: growing 1 to 2 members shifts its (+0) to (+1) — the cross-file staleness root cause"
+    )
+  }
+
   @Test("a getter and a zero-arg method of the same name collapse to one SymbolInformation whose Kind is last-in-source-order (Pitfall 6)")
   func getterMethodMergeIsDeterministic() {
     var getter = Scip_SymbolInformation()

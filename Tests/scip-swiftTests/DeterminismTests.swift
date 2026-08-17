@@ -134,6 +134,134 @@ struct DeterminismTests {
 
   // MARK: - Metadata normalization (Pitfall 2)
 
+  @Test("fresh run and cache-hit run over the same store are byte-identical")
+  func freshVsCachedByteIdentity() throws {
+    let fixtureRepoPath = Self.fixturePath("MiniSwiftPackage")
+    let fixtureBuildPath = (fixtureRepoPath as NSString).appendingPathComponent(".build")
+    defer { try? FileManager.default.removeItem(atPath: fixtureBuildPath) }
+
+    let workDirectory = try Self.makeTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(atPath: workDirectory) }
+
+    let runner = SwiftPMBuildRunner(
+      repoPath: fixtureRepoPath,
+      configuration: .debug,
+      scratchPath: (workDirectory as NSString).appendingPathComponent("scratch")
+    )
+    let buildResult = try runner.produceIndexStore()
+    let databasePath = (workDirectory as NSString).appendingPathComponent("index-db")
+    let store = CacheStore(cacheDir: (workDirectory as NSString).appendingPathComponent("cache"))
+
+    func makeBuilder() -> SCIPIndexBuilder {
+      SCIPIndexBuilder(
+        repoPath: fixtureRepoPath,
+        indexStorePath: buildResult.indexStorePath,
+        databasePath: databasePath,
+        buildToolName: BuildTool.swiftpm.rawValue,
+        converterVersion: "test",
+        cacheStore: store
+      )
+    }
+
+    // Run 1 is fresh (populates the cache); run 2 is a cache-hit pass. Both must be
+    // byte-identical — external display names included, which the USR side map carries.
+    let freshData = try makeBuilder().build().serializedData()
+    let cachedData = try makeBuilder().build().serializedData()
+    #expect(freshData == cachedData, "cache-hit run must be byte-identical to the fresh run")
+  }
+
+  @Test("cross-file overload staleness: an added earlier-sorting overload rebuilds the cached document (D-10/T-02-04)")
+  func crossFileOverloadStalenessGuard() throws {
+    let workDirectory = try Self.makeTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(atPath: workDirectory) }
+
+    // A private copy of the fixture so the test can mutate it freely.
+    let fixtureRepoPath = (workDirectory as NSString).appendingPathComponent("StaleFixture")
+    try FileManager.default.copyItem(
+      atPath: Self.fixturePath("MiniSwiftPackage"), toPath: fixtureRepoPath)
+
+    // AAAOverloads.swift sorts BEFORE Greeter.swift, so its members take the earlier overload
+    // indices; Greeter.swift's content never changes across the two states below — its cached
+    // document is the staleness bait.
+    let overloadsPath = (fixtureRepoPath as NSString)
+      .appendingPathComponent("Sources/MiniSwiftPackage/AAAOverloads.swift")
+    let scratchPath = (workDirectory as NSString).appendingPathComponent("scratch")
+    let cacheDir = (workDirectory as NSString).appendingPathComponent("cache")
+    let store = CacheStore(cacheDir: cacheDir)
+
+    func rebuildIndexStore() throws -> String {
+      let runner = SwiftPMBuildRunner(
+        repoPath: fixtureRepoPath, configuration: .debug, scratchPath: scratchPath)
+      return try runner.produceIndexStore().indexStorePath
+    }
+    func buildCached(indexStorePath: String, databasePath: String) throws -> Data {
+      try SCIPIndexBuilder(
+        repoPath: fixtureRepoPath,
+        indexStorePath: indexStorePath,
+        databasePath: databasePath,
+        buildToolName: BuildTool.swiftpm.rawValue,
+        converterVersion: "test",
+        cacheStore: store
+      ).build().serializedData()
+    }
+    func buildFresh(indexStorePath: String, databasePath: String) throws -> Data {
+      try SCIPIndexBuilder(
+        repoPath: fixtureRepoPath,
+        indexStorePath: indexStorePath,
+        databasePath: databasePath,
+        buildToolName: BuildTool.swiftpm.rawValue,
+        converterVersion: "test"
+      ).build().serializedData()
+    }
+
+    // State 1: one extension overload in the earlier-sorting file. The group
+    // (Greeter, greet) has two members, so Greeter.swift's greet renders (+1).
+    try """
+      extension Greeter {
+        public func greet(loud: Bool) -> String { loud ? "HELLO" : greet() }
+      }
+      """.write(toFile: overloadsPath, atomically: true, encoding: .utf8)
+    let storePath1 = try rebuildIndexStore()
+    let databasePath1 = (workDirectory as NSString).appendingPathComponent("index-db-1")
+    _ = try buildCached(indexStorePath: storePath1, databasePath: databasePath1)
+    // The state-1 cache now holds a Greeter.swift document whose greet is (+1).
+
+    // State 2: a new overload sorted even earlier (above the existing one) shifts every group
+    // member's index: greet(quiet:) = 0, greet(loud:) = 1, Greeter.swift greet = 2.
+    try """
+      extension Greeter {
+        public func greet(quiet: Bool) -> String { quiet ? "..." : greet(loud: false) }
+        public func greet(loud: Bool) -> String { loud ? "HELLO" : greet() }
+      }
+      """.write(toFile: overloadsPath, atomically: true, encoding: .utf8)
+    let storePath2 = try rebuildIndexStore()
+    let databasePath2 = (workDirectory as NSString).appendingPathComponent("index-db-2")
+
+    let cachedData = try buildCached(indexStorePath: storePath2, databasePath: databasePath2)
+    let freshData = try buildFresh(indexStorePath: storePath2, databasePath: databasePath2)
+
+    #expect(
+      cachedData == freshData,
+      "the cache-hit run must match a fresh build of the same state — a cached document must not survive an overload-table change in another file"
+    )
+
+    // Pin the exact regression: the served-for-Greeter document must carry (+2), never the
+    // stale (+1) strings from the state-1 cache.
+    let cachedIndex = try Scip_Index(serializedData: cachedData)
+    let greeterDocument = try #require(
+      cachedIndex.documents.first { $0.relativePath == "Sources/MiniSwiftPackage/Greeter.swift" }
+    )
+    let greetSymbols = greeterDocument.occurrences.map(\.symbol)
+    #expect(
+      greetSymbols.contains("scip-swift swiftpm MiniSwiftPackage . Greeter#greet(+2)."),
+      "after the earlier-sorting overload is added, Greeter.greet must render (+2)"
+    )
+    #expect(
+      !greetSymbols.contains("scip-swift swiftpm MiniSwiftPackage . Greeter#greet(+1)."),
+      "the stale (+1) string from the cached state-1 document must not survive"
+    )
+  }
+
   @Test("cached run persists a per-document USR side map beside the .scipdoc (D-09)")
   func cachedRunPersistsUSRSideMap() throws {
     let fixtureRepoPath = Self.fixturePath("MiniSwiftPackage")

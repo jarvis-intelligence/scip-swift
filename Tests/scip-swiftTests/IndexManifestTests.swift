@@ -165,4 +165,42 @@ struct IndexManifestTests {
       "undecodable manifest must read as no-manifest so the caller falls into the fresh-save wholesale-invalidation path"
     )
   }
+
+  // MARK: overload-table fingerprint (D-09 / T-02-04, 02-02 Task 3)
+
+  @Test("manifest round-trips overloadTableFingerprint")
+  func overloadFingerprintRoundTrip() throws {
+    let manifest = IndexManifest(
+      toolchainVersion: "A", converterVersion: "B",
+      indexstoreDbRevision: "C", buildToolName: "D",
+      overloadTableFingerprint: "deadbeef"
+    )
+    let encoded = try JSONEncoder().encode(manifest)
+    let decoded = try JSONDecoder().decode(IndexManifest.self, from: encoded)
+    #expect(decoded.overloadTableFingerprint == "deadbeef")
+  }
+
+  @Test("isCompatibleWith deliberately ignores the overload fingerprint — the index builder owns that dynamic key")
+  func compatibilityIgnoresOverloadFingerprint() {
+    // The fingerprint depends on the opened store, which IndexCommand cannot know before the
+    // build; SCIPIndexBuilder validates it right after its definitions pre-pass.
+    let manifest = IndexManifest(
+      toolchainVersion: "A", converterVersion: "B",
+      indexstoreDbRevision: "C", buildToolName: "D",
+      overloadTableFingerprint: "old-fingerprint"
+    )
+    #expect(manifest.isCompatibleWith(
+      toolchainVersion: "A", converterVersion: "B",
+      indexstoreDbRevision: "C", buildToolName: "D",
+      symbolFormatVersion: SymbolFormatVersion.current))
+  }
+
+  @Test("old manifest without overloadTableFingerprint fails decode (strict schema, D-09)")
+  func legacyManifestWithoutFingerprintFailsDecode() throws {
+    let legacyJSON =
+      #"{"toolchainVersion":"6.2.4","converterVersion":"0.2.1","indexstoreDbRevision":"c993f4fb","buildToolName":"swiftpm","symbolFormatVersion":2}"#
+    #expect(throws: DecodingError.self) {
+      try JSONDecoder().decode(IndexManifest.self, from: Data(legacyJSON.utf8))
+    }
+  }
 }
