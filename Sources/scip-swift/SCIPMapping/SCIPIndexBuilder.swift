@@ -189,6 +189,14 @@ struct SCIPIndexBuilder {
       if let signature = SignatureMapping.signature(for: symbol) {
         symbolInformation.signatureDocumentation = signature
       }
+      if occurrence.roles.contains(.definition),
+        let doc = refiner?.documentation(
+          line: occurrence.location.line,
+          utf8Column: occurrence.location.utf8Column
+        )
+      {
+        symbolInformation.documentation = [doc]
+      }
 
       if isLocal, let childOfRelation = occurrence.relations.first(where: { $0.roles.contains(.childOf) }) {
         symbolInformation.enclosingSymbol = SCIPSymbolFormatter.globalSymbolString(
