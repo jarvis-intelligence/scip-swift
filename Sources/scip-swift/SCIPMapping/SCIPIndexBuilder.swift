@@ -293,10 +293,15 @@ struct SCIPIndexBuilder {
   /// `--output` paths must stay byte-identical, and argv also leaks local paths into shared
   /// artifacts. `projectRoot` stays — the same repo yields the same value. Internal (not
   /// private) as the determinism suite's test seam.
+  ///
+  /// D-14 (02-03): the pinned scip CLI version rides as ONE constant synthetic entry — a
+  /// fixed string, never argv — so the pin is visible in ToolInfo output while the
+  /// argv-insensitivity guarantee holds byte-for-byte.
   func makeMetadata() -> Scip_Metadata {
     var toolInfo = Scip_ToolInfo()
     toolInfo.name = "scip-swift"
     toolInfo.version = converterVersion
+    toolInfo.arguments = ["scip-cli-version=\(ScipSwiftVersion.scipCliVersion)"]
 
     var metadata = Scip_Metadata()
     metadata.toolInfo = toolInfo

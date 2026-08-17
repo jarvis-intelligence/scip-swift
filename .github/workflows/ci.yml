@@ -5,6 +5,13 @@ on:
     branches: [main]
   pull_request:
 
+env:
+  # Requirement D-12/D-14 (02-03): the single scip CLI pin. CI downloads this exact
+  # release from scip-code/scip (checksum-verified) and gates the suite via SCIP_BIN;
+  # ScipSwiftVersion.scipCliVersion must match — the ScipCLIGate suite cross-checks
+  # the running binary's version against it. Bumps are explicit.
+  SCIP_CLI_VERSION: "0.9.0"
+
 jobs:
   build-and-test:
     # Requirement: macOS host — building/indexing Apple-platform code needs Xcode + the iOS SDK,
@@ -22,8 +29,44 @@ jobs:
           xcodebuild -version
           echo "Pinned Swift version (.swift-version): $(cat .swift-version)"
 
+      - name: Detect CPU architecture
+        id: arch
+        run: echo "arch=$(uname -m | sed -e 's/x86_64/amd64/')" >> "$GITHUB_OUTPUT"
+
+      # Requirement D-12 (02-03): the pinned CLI tarball is cached by version+arch, so an
+      # unchanged pin skips the download entirely; the cache restores the already
+      # checksum-verified artifact.
+      - name: Restore pinned scip CLI cache
+        id: scip-cli-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/scip-cli
+          key: scip-cli-v${{ env.SCIP_CLI_VERSION }}-${{ steps.arch.outputs.arch }}
+
+      - name: Download and verify the pinned scip CLI
+        if: steps.scip-cli-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          ARCH="${{ steps.arch.outputs.arch }}"
+          BASE="https://github.com/scip-code/scip/releases/download/v${SCIP_CLI_VERSION}"
+          mkdir -p "$HOME/scip-cli"
+          cd "$HOME/scip-cli"
+          curl -fsSL -o "scip-darwin-${ARCH}.tar.gz" "${BASE}/scip-darwin-${ARCH}.tar.gz"
+          curl -fsSL -o "scip-darwin-${ARCH}.tar.gz.sha256" "${BASE}/scip-darwin-${ARCH}.tar.gz.sha256"
+          # Checksum verification against the release-published .sha256 sidecar —
+          # any mismatch fails the job (T-02-07).
+          shasum -a 256 -c "scip-darwin-${ARCH}.tar.gz.sha256"
+          tar xzf "scip-darwin-${ARCH}.tar.gz"
+
+      - name: Export SCIP_BIN for the gate tests
+        run: |
+          echo "SCIP_BIN=$HOME/scip-cli/scip" >> "$GITHUB_ENV"
+          "$HOME/scip-cli/scip" --version
+
       - name: Build
         run: swift build --configuration debug
 
+      # Requirement D-13 (02-03): the full gate — golden table, fixture lint, snapshot
+      # goldens, version cross-check, determinism — runs on every push/PR.
       - name: Test
         run: swift test --configuration debug

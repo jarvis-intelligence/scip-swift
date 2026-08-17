@@ -123,6 +123,35 @@ Indexing the same store twice is byte-identical, regardless of cache state:
   relative path and document symbols by symbol string.
 - `ToolInfo` metadata never embeds raw command-line arguments (they would differ between two
   CLI runs with different `--output` paths, and they leak local paths into shared artifacts).
+  The one synthetic entry it does carry is the constant `scip-cli-version=<pin>` (the scip CLI
+  version the output is gated against).
+
+### The `scip` CLI gate
+
+Every emitted fixture index is validated by the real `scip` CLI from
+[scip-code/scip](https://github.com/scip-code/scip) — the same tool consumers run — via the
+`ScipCLIGate` suite (`Tests/scip-swiftTests/ScipCLIGateTests.swift`):
+
+- `scip lint` on the MiniSwiftPackage and SchemeFixture indexes must exit 0 with zero
+  `error:` findings.
+- `scip snapshot --strict=false` output for the SchemeFixture index is diffed against the
+  committed goldens in `Tests/scip-swiftTests/SchemeFixtureGoldens/` (the CLI has no verify
+  mode; the test harness owns the directory diff).
+- The gating binary's version is cross-checked against `ScipSwiftVersion.scipCliVersion` —
+  drift between the CI pin and the engine constant fails the suite.
+
+Environment variables the gate understands:
+
+| Variable | Effect |
+| --- | --- |
+| `SCIP_BIN` | Path to the `scip` binary (CI sets this to the checksum-verified pinned download; without it the binary must be on `PATH`). When neither resolves, the gate tests FAIL with install guidance — they never silently skip. |
+| `UPDATE_GOLDENS=1` | Regenerate the committed snapshot goldens instead of diffing (use after an intentional emission change). |
+| `UPDATE_SYMBOL_TABLE=1` | Regenerate `Fixtures/SchemeFixture/symbol-table.json` (see the cross-repo parity check below). |
+
+CI downloads the pinned CLI tarball from the scip-code/scip GitHub release over HTTPS,
+verifies it against the release-published `.sha256` sidecar (a mismatch fails the job), and
+caches it keyed by `SCIP_CLI_VERSION` so an unchanged pin skips the download. `SCIP_CLI_VERSION`
+(in `.github/workflows/ci.yml`) is the single pin and must match `ScipSwiftVersion.scipCliVersion`.
 
 ## macOS-host requirement
 

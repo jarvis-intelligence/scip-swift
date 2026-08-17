@@ -317,7 +317,8 @@ struct DeterminismTests {
     // CLI double-runs invoke the engine with different `--output` paths; embedding raw
     // `CommandLine.arguments` made those runs differ in metadata bytes. The normalization
     // choice (recorded in code + README) is to drop argv entirely. In-process argv is fixed,
-    // so argv-insensitivity is asserted as "arguments stay empty": reintroducing
+    // so argv-insensitivity is asserted as "arguments are exactly the constant synthetic
+    // set" (D-14's scip-cli-version entry since 02-03): reintroducing
     // `CommandLine.arguments` repopulates them and fails this test.
     func makeBuilder() -> SCIPIndexBuilder {
       SCIPIndexBuilder(
@@ -333,8 +334,8 @@ struct DeterminismTests {
     let metadata2 = makeBuilder().makeMetadata()
 
     #expect(
-      metadata1.toolInfo.arguments.isEmpty,
-      "raw CommandLine.arguments must not be embedded in ToolInfo (breaks CLI double-run byte identity and leaks local paths into shared artifacts)"
+      metadata1.toolInfo.arguments == ["scip-cli-version=\(ScipSwiftVersion.scipCliVersion)"],
+      "ToolInfo arguments must be the constant synthetic set only — raw CommandLine.arguments must not be embedded (breaks CLI double-run byte identity and leaks local paths into shared artifacts)"
     )
     #expect(metadata1.toolInfo.name == "scip-swift")
     #expect(try metadata1.serializedData() == metadata2.serializedData())

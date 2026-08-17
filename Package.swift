@@ -26,7 +26,10 @@ let package = Package(
     ),
     .testTarget(
       name: "scip-swiftTests",
-      dependencies: ["scip-swift"]
+      dependencies: ["scip-swift"],
+      // Committed `scip snapshot` goldens (02-03) are caret-annotated DATA copies of the
+      // SchemeFixture sources — SwiftPM must not compile them as test sources.
+      exclude: ["SchemeFixtureGoldens"]
     ),
   ]
 )

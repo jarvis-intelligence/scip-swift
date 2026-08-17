@@ -165,6 +165,13 @@ struct ScipCLIGateTests {
     // and this harness owns the directory diff against the committed goldens. Set
     // UPDATE_GOLDENS=1 to regenerate the committed goldens after an intentional emission
     // change (documented in the README).
+    //
+    // `--strict=false` is deliberate: the pinned v0.9.0 CLI's strict mode wraps every
+    // document result unconditionally (even nil errors), so `scip snapshot` with its default
+    // --strict=true fails on ANY index — a known upstream bug (scip-code/scip
+    // cmd/scip/snapshot.go strict OnError), logged in the orchestrator repo's
+    // deferred-items. Lenient formatting renders our all-canonical symbols identically;
+    // symbol canonicality itself is already gated by `scip lint`.
     let index = try Self.buildIndex(fixtureName: "SchemeFixture")
     let scip = try ScipCLIGate.locateScipBinary()
     let fixtureRepoPath = Self.fixtureRepoPath(fixtureName: "SchemeFixture")
@@ -178,7 +185,7 @@ struct ScipCLIGateTests {
     let result = try SubprocessRunner.run(
       executable: scip,
       arguments: [
-        "snapshot", "--from", indexPath, "--to", outputDirectory,
+        "snapshot", "--strict=false", "--from", indexPath, "--to", outputDirectory,
         "--project-root", fixtureRepoPath,
       ],
       currentDirectory: "/"
@@ -187,7 +194,10 @@ struct ScipCLIGateTests {
 
     let goldensDirectory = Self.schemeFixtureGoldensPath()
     if ProcessInfo.processInfo.environment["UPDATE_GOLDENS"] == "1" {
-      try FileManager.default.removeItem(atPath: goldensDirectory)
+      try? FileManager.default.removeItem(atPath: goldensDirectory)
+      try FileManager.default.createDirectory(
+        atPath: (goldensDirectory as NSString).deletingLastPathComponent,
+        withIntermediateDirectories: true)
       try FileManager.default.copyItem(atPath: outputDirectory, toPath: goldensDirectory)
       return
     }
@@ -205,8 +215,7 @@ struct ScipCLIGateTests {
       let missing = committedSet.subtracting(producedSet).sorted()
       let extra = producedSet.subtracting(committedSet).sorted()
       Issue.record(
-        "golden file sets differ — missing from output: \(missing), unexpected: \(extra). "
-          + "Intentional change? Regenerate with UPDATE_GOLDENS=1."
+        "golden file sets differ — missing from output: \(missing), unexpected: \(extra). Intentional change? Regenerate with UPDATE_GOLDENS=1."
       )
       return
     }
@@ -355,7 +364,9 @@ struct ScipCLIGateTests {
 
   /// Relative paths of every regular file under `directory`, recursively, using "/" separators.
   private static func filesRecursively(under directory: String) throws -> [String] {
-    let base = URL(fileURLWithPath: directory)
+    // Resolve symlinks on both sides: NSTemporaryDirectory() lives behind macOS's /private
+    // symlink, and a raw enumerator would otherwise yield non-prefixable paths.
+    let base = URL(fileURLWithPath: directory).resolvingSymlinksInPath()
     guard let enumerator = FileManager.default.enumerator(
       at: base, includingPropertiesForKeys: [.isRegularFileKey]
     ) else {
@@ -365,7 +376,9 @@ struct ScipCLIGateTests {
     for case let url as URL in enumerator {
       let values = try url.resourceValues(forKeys: [.isRegularFileKey])
       guard values.isRegularFile == true else { continue }
-      relativePaths.append(url.path.replacingOccurrences(of: base.path + "/", with: ""))
+      let path = url.resolvingSymlinksInPath().path
+      guard path.hasPrefix(base.path + "/") else { continue }
+      relativePaths.append(String(path.dropFirst(base.path.count + 1)))
     }
     return relativePaths
   }
