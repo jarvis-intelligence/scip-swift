@@ -103,4 +103,236 @@ struct SwiftSyntaxRefinerTests {
       .appendingPathComponent("scip-swift-refiner-tests-missing-\(UUID().uuidString)")
     #expect(SwiftSyntaxRefiner(filePath: nonexistent) == nil)
   }
+
+  @Test("single doc piece yields its text with the marker stripped")
+  func singlePieceDoc() throws {
+    let source = """
+      /// Single piece.
+      public func singlePiece() {}
+      """
+    let refiner = try makeRefiner(source: source)
+    #expect(refiner.documentation(line: 2, utf8Column: 13) == "Single piece.")
+  }
+
+  @Test("consecutive doc pieces join with newlines in reading order")
+  func multiPieceDocJoinsWithNewlines() throws {
+    let source = """
+      /// First line.
+      /// Second line.
+      public func dualDoc() {}
+      """
+    let refiner = try makeRefiner(source: source)
+    #expect(refiner.documentation(line: 3, utf8Column: 13) == "First line.\nSecond line.")
+  }
+
+  @Test("bare doc marker yields an empty line preserving the paragraph break")
+  func bareMarkerPreservesParagraphBreak() throws {
+    let source = """
+      /// Paragraph one.
+      ///
+      /// Paragraph two.
+      public func twoParagraphs() {}
+      """
+    let refiner = try makeRefiner(source: source)
+    #expect(refiner.documentation(line: 4, utf8Column: 13) == "Paragraph one.\n\nParagraph two.")
+  }
+
+  @Test("asterisk block doc strips wrappers, per-line asterisks, and artifact lines")
+  func asteriskBlockDoc() throws {
+    let source = """
+      /**
+       * Block line one.
+       * - parameter x: an int
+       *
+       * Block line two.
+       */
+      public func blocky(x: Int) {}
+      """
+    let refiner = try makeRefiner(source: source)
+    #expect(
+      refiner.documentation(line: 8, utf8Column: 13)
+        == "Block line one.\n- parameter x: an int\n\nBlock line two."
+    )
+  }
+
+  @Test("plain block doc keeps the blank interior line as a paragraph break")
+  func plainBlockDoc() throws {
+    let source = """
+      /**
+       Block doc first.
+       - parameter x: an int
+
+       Second paragraph.
+       */
+      public func plainBlock(x: Int) {}
+      """
+    let refiner = try makeRefiner(source: source)
+    #expect(
+      refiner.documentation(line: 8, utf8Column: 13)
+        == "Block doc first.\n- parameter x: an int\n\nSecond paragraph."
+    )
+  }
+
+  @Test("four-slash divider line is dropped entirely")
+  func fourSlashDividerDropped() throws {
+    let source = """
+      //// SECTIONMARKER divider
+
+      /// Real doc.
+      public func realDoc() {}
+      """
+    let refiner = try makeRefiner(source: source)
+    #expect(refiner.documentation(line: 4, utf8Column: 13) == "Real doc.")
+  }
+
+  @Test("plain comment between doc pieces contributes nothing")
+  func interleavedPlainCommentExcluded() throws {
+    let source = """
+      /// First line.
+      // interleaved MARKER noise
+      /// Second line.
+      public func dual() {}
+      """
+    let refiner = try makeRefiner(source: source)
+    #expect(refiner.documentation(line: 4, utf8Column: 13) == "First line.\nSecond line.")
+  }
+
+  @Test("license header above an import produces no map entries")
+  func licenseHeaderExcluded() throws {
+    let source = """
+      // License line one with MARKER.
+      // License line two.
+
+      import Foundation
+
+      /// Documented after the header.
+      public func afterHeader() {}
+      """
+    let refiner = try makeRefiner(source: source)
+    #expect(refiner.documentation(line: 4, utf8Column: 1) == nil, "import anchor must not hit")
+    #expect(refiner.documentation(line: 7, utf8Column: 13) == "Documented after the header.")
+  }
+
+  @Test("trailing comment after a statement never appears")
+  func trailingCommentExcluded() throws {
+    let source = """
+      /// Documented value.
+      public var trailed = 1 // trailing MARKER noise
+
+      public func untouched() {}
+      """
+    let refiner = try makeRefiner(source: source)
+    #expect(refiner.documentation(line: 2, utf8Column: 12) == "Documented value.")
+  }
+
+  @Test("plain comment between doc and decl keeps the doc")
+  func plainCommentBetweenDocAndDecl() throws {
+    let source = """
+      /// Kept doc.
+      // plain between
+      public func keptDoc() {}
+      """
+    let refiner = try makeRefiner(source: source)
+    #expect(refiner.documentation(line: 3, utf8Column: 13) == "Kept doc.")
+  }
+
+  @Test("attribute between doc and decl still documents via the name token")
+  func attributedDeclKeysAtNameToken() throws {
+    let source = """
+      /// Documented compute.
+      @inline(__always)
+      public func compute(_ x: Int) -> Int { x }
+      """
+    let refiner = try makeRefiner(source: source)
+    #expect(refiner.documentation(line: 3, utf8Column: 13) == "Documented compute.")
+    #expect(
+      refiner.documentation(line: 2, utf8Column: 1) == nil,
+      "first-token keying would have landed the doc on the attribute's @"
+    )
+  }
+
+  @Test("var and let key at the binding identifier")
+  func varAndLetKeyAtBindingIdentifier() throws {
+    let source = """
+      /// Stored value.
+      public var stored: Int = 0
+
+      /// Frozen constant.
+      public let frozen = 41
+      """
+    let refiner = try makeRefiner(source: source)
+    #expect(refiner.documentation(line: 2, utf8Column: 12) == "Stored value.")
+    #expect(refiner.documentation(line: 5, utf8Column: 12) == "Frozen constant.")
+  }
+
+  @Test("struct, init, and deinit key at their verified anchors")
+  func structInitDeinitAnchors() throws {
+    let source = """
+      /// A thing.
+      public struct Thing {
+        /// Makes a thing.
+        public init() {}
+
+        /// Tears down.
+        deinit {}
+      }
+      """
+    let refiner = try makeRefiner(source: source)
+    #expect(refiner.documentation(line: 2, utf8Column: 15) == "A thing.")
+    #expect(refiner.documentation(line: 4, utf8Column: 10) == "Makes a thing.")
+    #expect(refiner.documentation(line: 7, utf8Column: 3) == "Tears down.")
+  }
+
+  @Test("extension keys at the extended type's first token")
+  func extensionKeysAtExtendedType() throws {
+    let source = """
+      /// Extends Thing.
+      extension Thing {
+        public func helper() {}
+      }
+      """
+    let refiner = try makeRefiner(source: source)
+    #expect(refiner.documentation(line: 2, utf8Column: 11) == "Extends Thing.")
+  }
+
+  @Test("multi-element enum cases share one doc")
+  func multiElementEnumCasesShareDoc() throws {
+    let source = """
+      /// Color cases.
+      public enum Color {
+        /// Primary hues.
+        case red, blue
+      }
+      """
+    let refiner = try makeRefiner(source: source)
+    #expect(refiner.documentation(line: 2, utf8Column: 13) == "Color cases.")
+    #expect(refiner.documentation(line: 4, utf8Column: 8) == "Primary hues.")
+    #expect(refiner.documentation(line: 4, utf8Column: 13) == "Primary hues.")
+  }
+
+  @Test("undocumented decl anchor returns nil; invalid coordinates return nil")
+  func lookupContractNilOnMiss() throws {
+    let source = """
+      public func noDoc() {}
+      """
+    let refiner = try makeRefiner(source: source)
+    #expect(refiner.documentation(line: 1, utf8Column: 13) == nil)
+    #expect(refiner.documentation(line: 0, utf8Column: 1) == nil)
+    #expect(refiner.documentation(line: 1, utf8Column: 0) == nil)
+    #expect(refiner.documentation(line: 99, utf8Column: 1) == nil)
+  }
+
+  @Test("constructing one refiner records exactly one parse for its file")
+  func parseCountRecordsExactlyOneParse() throws {
+    let directory = (NSTemporaryDirectory() as NSString)
+      .appendingPathComponent("scip-swift-refiner-parse-count-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(atPath: directory) }
+    let path = (directory as NSString).appendingPathComponent("Parsed.swift")
+    try "public func hookTarget() {}\n".write(toFile: path, atomically: true, encoding: .utf8)
+
+    _ = try #require(SwiftSyntaxRefiner(filePath: path))
+
+    #expect(SwiftSyntaxRefiner.parseCount(forFilePath: path) == 1)
+  }
 }
