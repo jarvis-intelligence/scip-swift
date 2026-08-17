@@ -236,7 +236,196 @@ struct ScipCLIGateTests {
     }
   }
 
+  @Test("symbol-table.json matches the engine's mapper output (parity contract)")
+  func symbolTableMatchesMapperOutput() throws {
+    // D-08 half 2: Fixtures/SchemeFixture/symbol-table.json is a cross-repo data contract —
+    // the orchestrator repo's Go namer oracle (swift/internal/symbol) replays these records
+    // through Symbol(SymbolInput) and asserts byte-equal output. Field names align 1:1 with
+    // the Go SymbolInput so neither side needs translation logic. Overload indices come from
+    // the REAL OverloadTable (source order), never hand-invented. Regenerate intentionally
+    // with UPDATE_SYMBOL_TABLE=1 (documented in the README).
+    let fixtureRepoPath = Self.fixtureRepoPath(fixtureName: "SchemeFixture")
+    let fixtureBuildPath = (fixtureRepoPath as NSString).appendingPathComponent(".build")
+    defer { try? FileManager.default.removeItem(atPath: fixtureBuildPath) }
+
+    let workDirectory = try Self.makeTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(atPath: workDirectory) }
+    let scratchPath = (workDirectory as NSString).appendingPathComponent("scratch")
+
+    let runner = SwiftPMBuildRunner(
+      repoPath: fixtureRepoPath, configuration: .debug, scratchPath: scratchPath)
+    let buildResult = try runner.produceIndexStore()
+    let swift = try SubprocessRunner.resolveExecutable(named: "swift")
+    let buildTests = try SubprocessRunner.run(
+      executable: swift,
+      arguments: ["build", "--configuration", "debug", "--scratch-path", scratchPath,
+                  "--enable-index-store", "--build-tests"],
+      currentDirectory: fixtureRepoPath
+    )
+    guard buildTests.exitCode == 0 else {
+      throw BuildError.buildFailed(
+        tool: "swift build --build-tests", exitCode: buildTests.exitCode,
+        output: buildTests.combinedOutput)
+    }
+
+    let indexStoreDB = try IndexStoreLoader.open(
+      storePath: buildResult.indexStorePath,
+      databasePath: (workDirectory as NSString).appendingPathComponent("index-db"))
+    indexStoreDB.pollForUnitChangesAndWait()
+
+    // The definitions pre-pass, mirroring SCIPIndexBuilder's Phase A (D-07): one Definition
+    // per non-local definition occurrence, grouped and ordered by source position.
+    var definitions: [OverloadTable.Definition] = []
+    for filePath in SwiftFileDiscovery.swiftFiles(underRepoPath: fixtureRepoPath) {
+      for occurrence in indexStoreDB.symbolOccurrences(inFilePath: filePath)
+      where occurrence.roles.contains(.definition)
+        && !occurrence.symbol.properties.contains(.local)
+      {
+        guard let parsed = USRSymbolParser.parse(occurrence.symbol.usr),
+          let kind = USRSymbolMapper.declKind(for: occurrence.symbol),
+          let name = USRSymbolMapper.sourceName(parsed: parsed, symbol: occurrence.symbol)
+        else { continue }
+        definitions.append(
+          OverloadTable.Definition(
+            usr: occurrence.symbol.usr,
+            module: parsed.module,
+            containerNames: parsed.containers.map(\.name),
+            name: name,
+            kind: kind,
+            relativePath: String(filePath.dropFirst(fixtureRepoPath.count + 1)),
+            line: occurrence.location.line,
+            utf8Column: occurrence.location.utf8Column
+          ))
+      }
+    }
+    let overloadTable = OverloadTable(definitions: definitions)
+
+    // One record per distinct definition symbol that maps canonically (D-06 fallback
+    // symbols have no SymbolInput and are not part of the parity contract).
+    var records: [Self.SymbolTableRecord] = []
+    var seenUSRs = Set<String>()
+    for filePath in SwiftFileDiscovery.swiftFiles(underRepoPath: fixtureRepoPath) {
+      for occurrence in indexStoreDB.symbolOccurrences(inFilePath: filePath)
+      where occurrence.roles.contains(.definition)
+        && !occurrence.symbol.properties.contains(.local)
+      {
+        guard seenUSRs.insert(occurrence.symbol.usr).inserted,
+          let parsed = USRSymbolParser.parse(occurrence.symbol.usr),
+          let identity = USRSymbolMapper.resolvedIdentity(parsed: parsed, symbol: occurrence.symbol),
+          let expected = USRSymbolMapper.canonicalSymbolString(
+            parsed: parsed,
+            symbol: occurrence.symbol,
+            isSystemLocation: occurrence.location.isSystem,
+            toolchainVersion: ToolchainInfo.pinnedSwiftVersion,
+            overloadIndex: overloadTable.index(forUSR: occurrence.symbol.usr)
+          )
+        else { continue }
+
+        let isSystem = parsed.isSystemModule || occurrence.location.isSystem
+        records.append(
+          Self.SymbolTableRecord(
+            module: parsed.module,
+            isSystem: isSystem,
+            swiftToolchainVersion: isSystem ? ToolchainInfo.pinnedSwiftVersion : "",
+            containers: parsed.containers.map {
+              .init(name: $0.name, kind: Self.kindName($0.kind))
+            },
+            name: identity.name,
+            kind: Self.kindName(identity.kind),
+            overloadIndex: overloadTable.index(forUSR: occurrence.symbol.usr),
+            expectedSymbol: expected
+          ))
+      }
+    }
+    records.sort {
+      $0.expectedSymbol != $1.expectedSymbol
+        ? $0.expectedSymbol < $1.expectedSymbol : $0.overloadIndex < $1.overloadIndex
+    }
+    #expect(!records.isEmpty, "the fixture must produce canonical definition records")
+    #expect(
+      records.contains { $0.overloadIndex > 0 },
+      "the table must include real (+N) overload indices from the OverloadTable"
+    )
+    #expect(
+      records.contains { $0.isSystem },
+      "the table must include the retroactive system-module record"
+    )
+
+    let tablePath = (fixtureRepoPath as NSString).appendingPathComponent("symbol-table.json")
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+    let encoded = try encoder.encode(records)
+
+    if ProcessInfo.processInfo.environment["UPDATE_SYMBOL_TABLE"] == "1" {
+      try encoded.write(to: URL(fileURLWithPath: tablePath))
+      return
+    }
+
+    guard let committed = try? Data(contentsOf: URL(fileURLWithPath: tablePath)) else {
+      Issue.record(
+        "missing \(tablePath) — run UPDATE_SYMBOL_TABLE=1 swift test to generate it")
+      return
+    }
+    let committedRecords = try JSONDecoder().decode([Self.SymbolTableRecord].self, from: committed)
+    if committedRecords != records {
+      let committedSet = Set(committedRecords)
+      let recordSet = Set(records)
+      let missing = records.filter { !committedSet.contains($0) }
+      let stale = committedRecords.filter { !recordSet.contains($0) }
+      Issue.record(
+        "symbol-table.json is stale — regenerate with UPDATE_SYMBOL_TABLE=1 if the change is intentional. New/changed: \(missing.prefix(3)); removed: \(stale.prefix(3))"
+      )
+    }
+  }
+
   // MARK: - Shared gate plumbing
+
+  /// One record of the cross-repo parity symbol table (D-08): field names align 1:1 with the
+  /// Go namer's `SymbolInput` (swift/internal/symbol/namer.go) so the Go parity test needs no
+  /// translation logic.
+  struct SymbolTableRecord: Codable, Equatable, Hashable {
+    struct Container: Codable, Equatable, Hashable {
+      let name: String
+      let kind: String
+    }
+
+    let module: String
+    let isSystem: Bool
+    let swiftToolchainVersion: String
+    let containers: [Container]
+    let name: String
+    let kind: String
+    let overloadIndex: Int
+    let expectedSymbol: String
+  }
+
+  /// The wire names of the 22 DeclKind families — mirrored by the Go parity test's kind map.
+  private static func kindName(_ kind: DeclKind) -> String {
+    switch kind {
+    case .module: return "module"
+    case .struct: return "struct"
+    case .class: return "class"
+    case .enum: return "enum"
+    case .protocol: return "protocol"
+    case .typeAlias: return "typeAlias"
+    case .func: return "func"
+    case .method: return "method"
+    case .operator: return "operator"
+    case .constructor: return "constructor"
+    case .destructor: return "destructor"
+    case .getter: return "getter"
+    case .setter: return "setter"
+    case .property: return "property"
+    case .constant: return "constant"
+    case .variable: return "variable"
+    case .subscript: return "subscript"
+    case .enumCase: return "enumCase"
+    case .protocolMethod: return "protocolMethod"
+    case .typeParameter: return "typeParameter"
+    case .parameter: return "parameter"
+    case .macro: return "macro"
+    }
+  }
 
   /// Errors when the `scip` binary cannot be located. The message names both resolution
   /// options so a human can fix the environment; the gate tests fail on this, never skip.
