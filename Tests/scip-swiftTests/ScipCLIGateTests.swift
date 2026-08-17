@@ -510,6 +510,73 @@ struct ScipCLIGateTests {
     }
   }
 
+  /// Requirement: T-02-10/T-02-11/T-02-12 (02-04) — thrown when the running Swift toolchain
+  /// does not match the engine's `.swift-version` pin. The committed snapshot goldens embed
+  /// toolchain-dependent content (Swift Testing synthesized accessor USRs carry
+  /// toolchain-dependent hash suffixes; newer toolchains emit extra stdlib interpolation
+  /// occurrences such as `DefaultStringInterpolation.appendLiteral/appendPart`), so a
+  /// mismatch means a golden diff is environment drift, not a regression. The message names
+  /// every remedy so the failure is immediately actionable.
+  struct ToolchainDriftError: Error, CustomStringConvertible {
+    /// The version extracted from `swift --version`, or nil when the output was unparsable
+    /// (the guard then fails closed, showing the raw first line).
+    let runningVersion: String?
+    let pinnedVersion: String
+    let rawFirstLine: String
+
+    var description: String {
+      let running = runningVersion.map { "Apple Swift version \($0)" }
+        ?? "(unparsed `swift --version` output — first line: \(rawFirstLine))"
+      return "Swift toolchain drift: running \(running), but the engine pin (.swift-version) "
+        + "is \(pinnedVersion). The committed snapshot goldens are reproducible ONLY under "
+        + "the pinned toolchain — a red golden diff on a different toolchain is environment "
+        + "drift, not a regression. Switch to the pinned toolchain (xcode-select -s <the "
+        + "Xcode shipping Swift \(pinnedVersion)>, or export DEVELOPER_DIR=<that "
+        + "Xcode>/Contents/Developer), or, after an intentional pin bump, regenerate the "
+        + "goldens with UPDATE_GOLDENS=1 under the new toolchain. See the \"Known "
+        + "limitations\" section of README.md (golden reproducibility boundary)."
+    }
+  }
+
+  enum ToolchainDriftGuard {
+    /// Extracts the running Swift version from `swift --version` output. The parse is
+    /// anchored on the exact `Apple Swift version X.Y.Z (` shape (T-02-12): the version is
+    /// the digit/dot run between the marker and the literal ` (` anchor — so `6.2.4` can
+    /// never match a `6.2.40`-style suffix, and anything unparsable returns nil so the
+    /// caller fails closed rather than accepting the wrong toolchain leniently.
+    static func runningSwiftVersion(in versionOutput: String) -> String? {
+      let marker = "Apple Swift version "
+      guard let markerRange = versionOutput.range(of: marker) else { return nil }
+      let remainder = versionOutput[markerRange.upperBound...]
+      guard let anchorRange = remainder.range(of: " (") else { return nil }
+      let version = remainder[..<anchorRange.lowerBound]
+      guard !version.isEmpty, version.allSatisfy({ $0.isNumber || $0 == "." }) else {
+        return nil
+      }
+      return String(version)
+    }
+
+    /// Compares the running toolchain against the pin (T-02-10/T-02-11). Throws
+    /// `ToolchainDriftError` on mismatch or unparsable output — never a silent pass. The
+    /// version output is an injectable string so the mismatch case is testable without a
+    /// foreign toolchain installed.
+    static func enforcePin(
+      versionOutput: String,
+      pinnedVersion: String = ToolchainInfo.pinnedSwiftVersion
+    ) throws {
+      let firstLine = versionOutput.split(separator: "\n").first.map(String.init)
+        ?? versionOutput
+      let running = runningSwiftVersion(in: versionOutput)
+      guard running == pinnedVersion else {
+        throw ToolchainDriftError(
+          runningVersion: running,
+          pinnedVersion: pinnedVersion,
+          rawFirstLine: firstLine
+        )
+      }
+    }
+  }
+
   enum ScipCLIGate {
     /// Resolves the `scip` binary path: `SCIP_BIN` (must point at an executable file) wins,
     /// else a PATH lookup. Throws `ScipBinaryMissingError` naming both options when neither

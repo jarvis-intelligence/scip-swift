@@ -152,6 +152,8 @@ CI downloads the pinned CLI tarball from the scip-code/scip GitHub release over 
 verifies it against the release-published `.sha256` sidecar (a mismatch fails the job), and
 caches it keyed by `SCIP_CLI_VERSION` so an unchanged pin skips the download. `SCIP_CLI_VERSION`
 (in `.github/workflows/ci.yml`) is the single pin and must match `ScipSwiftVersion.scipCliVersion`.
+CI also builds and tests under the pinned Swift toolchain — selected via `XCODE_PIN` and verified
+fail-loud by the workflow's select step plus the in-suite `ToolchainDriftGuard` test.
 
 ## macOS-host requirement
 
@@ -191,9 +193,22 @@ the common case for a real iOS app repo. If the underlying build command fails f
   return types — IndexStoreDB's symbol data doesn't expose them.
 - **Relationships limited to overrides**: only override relationships are mapped; IndexStoreDB's
   relation data doesn't cover the full SCIP relationship set.
-- **USR stability across toolchain versions is not guaranteed by Apple.** This project pins the
-  Swift toolchain version it's built and tested against (see `.swift-version`); indexing with a
-  different toolchain version may be fine in practice but isn't a supported/tested configuration.
+- **USR stability across toolchain versions is not guaranteed by Apple — golden
+  reproducibility is toolchain-pinned.** This project pins the Swift toolchain version it's
+  built and tested against (see `.swift-version`); indexing with a different toolchain
+  version may be fine in practice but isn't a supported/tested configuration. Concretely:
+  Swift Testing synthesized accessor USRs carry toolchain-dependent hash suffixes, and newer
+  toolchains emit extra stdlib interpolation occurrences
+  (`DefaultStringInterpolation.appendLiteral`/`appendPart`) — both observed when a Swift 6.3.3
+  runner built indexes against 6.2.4-generated goldens. The committed snapshot goldens under
+  `Tests/scip-swiftTests/SchemeFixtureGoldens/` are therefore reproducible ONLY under the
+  `.swift-version` pin; CI enforces it (selecting the pinned Xcode via `XCODE_PIN` and failing
+  loudly on drift, plus an in-suite toolchain drift guard), so a red golden diff on a
+  different toolchain is environment drift, not a regression. To change the pin: switch to
+  the new toolchain (`xcode-select` or `DEVELOPER_DIR`), update `.swift-version` +
+  `ToolchainInfo.pinnedSwiftVersion` + the workflow pin pair (`SWIFT_TOOLCHAIN_PIN`/
+  `XCODE_PIN` in `.github/workflows/ci.yml`), and regenerate the goldens intentionally with
+  `UPDATE_GOLDENS=1` under the new toolchain.
 
 ## Development
 

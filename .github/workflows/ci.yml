@@ -11,17 +11,55 @@ env:
   # ScipSwiftVersion.scipCliVersion must match — the ScipCLIGate suite cross-checks
   # the running binary's version against it. Bumps are explicit.
   SCIP_CLI_VERSION: "0.9.0"
+  # Requirement (02-04, gap closure): the pinned Swift toolchain pair. Swift 6.2.4 ships
+  # in Xcode 26.3 (per swift.org release metadata), and the committed snapshot goldens
+  # are generated under exactly this toolchain — CI must build with it, never the runner
+  # default (macos-26 defaults to Xcode 26.6 / Swift 6.3.3). The select-and-verify step
+  # below enforces the pair fail-loud (T-02-10/T-02-11); the in-suite ToolchainDriftGuard
+  # re-asserts it inside swift test.
+  SWIFT_TOOLCHAIN_PIN: "6.2.4"
+  XCODE_PIN: "26.3"
 
 jobs:
   build-and-test:
     # Requirement: macOS host — building/indexing Apple-platform code needs Xcode + the iOS SDK,
     # which Apple does not ship for Linux (design.md Risks).
-    # macos-26 ships Xcode 26, providing the Swift 6.2 toolchain required by
-    # Package.swift (swift-tools-version 6.2) and the .swift-version pin (6.2.4).
+    # macos-26's DEFAULT toolchain (Xcode 26.6 / Swift 6.3.3) is NOT trusted: the image also
+    # ships Xcode 26.3 (Swift 6.2.4), and the "Select and verify the pinned Swift toolchain"
+    # step below selects it via DEVELOPER_DIR and fails loudly on any drift — Package.swift
+    # requires swift-tools-version 6.2 and the goldens require the .swift-version pin.
     runs-on: macos-26
 
     steps:
       - uses: actions/checkout@v5
+
+      # Requirement (02-04, T-02-10/T-02-11): enforce the pinned toolchain — never a silent
+      # fallback to the runner default. Three fail-loud ::error:: paths: .swift-version vs
+      # SWIFT_TOOLCHAIN_PIN mismatch, pinned Xcode missing from the image, and selected
+      # toolchain version mismatch. DEVELOPER_DIR is exported to GITHUB_ENV so every later
+      # swift build / swift test step inherits the pinned toolchain.
+      - name: Select and verify the pinned Swift toolchain
+        run: |
+          set -euo pipefail
+          PIN_FILE_VERSION="$(tr -d '[:space:]' < .swift-version)"
+          if [ "$PIN_FILE_VERSION" != "$SWIFT_TOOLCHAIN_PIN" ]; then
+            echo "::error::.swift-version ($PIN_FILE_VERSION) != SWIFT_TOOLCHAIN_PIN ($SWIFT_TOOLCHAIN_PIN) — update the workflow pin pair together with .swift-version, ToolchainInfo.pinnedSwiftVersion, and regenerate the goldens via UPDATE_GOLDENS=1 under the new toolchain (see README Known limitations)"
+            exit 1
+          fi
+          PINNED_DEVELOPER_DIR="/Applications/Xcode_${XCODE_PIN}.app/Contents/Developer"
+          if [ ! -d "$PINNED_DEVELOPER_DIR" ]; then
+            echo "::error::Pinned Xcode not found at $PINNED_DEVELOPER_DIR — the runner image no longer ships it. Bump the pin pair (SWIFT_TOOLCHAIN_PIN + XCODE_PIN in ci.yml, .swift-version, ToolchainInfo.pinnedSwiftVersion) and regenerate the goldens via UPDATE_GOLDENS=1 under the new toolchain (see README Known limitations)"
+            exit 1
+          fi
+          echo "DEVELOPER_DIR=$PINNED_DEVELOPER_DIR" >> "$GITHUB_ENV"
+          export DEVELOPER_DIR="$PINNED_DEVELOPER_DIR"
+          SWIFT_VERSION_OUTPUT="$(swift --version)"
+          echo "$SWIFT_VERSION_OUTPUT"
+          # The trailing " (" anchor makes 6.2.4 unable to match 6.2.40-style suffixes.
+          if ! grep -qF "Apple Swift version ${SWIFT_TOOLCHAIN_PIN} (" <<< "$SWIFT_VERSION_OUTPUT"; then
+            echo "::error::Selected toolchain is not Swift $SWIFT_TOOLCHAIN_PIN — got: $SWIFT_VERSION_OUTPUT. A red golden diff on a different toolchain is environment drift, not a regression (see README Known limitations)"
+            exit 1
+          fi
 
       - name: Show toolchain versions
         run: |
