@@ -348,8 +348,8 @@ struct IntegrationTests {
     )
   }
 
-  @Test("documented symbol carries its doc comment as Markdown in a real .scip")
-  func documentedSymbolCarriesDocComment() throws {
+  @Test("DocumentationFixture end-to-end: docs, exclusions, accessor inheritance, one parse per file, cache pair")
+  func documentationFixtureEndToEnd() throws {
     let fixtureRepoPath = Self.documentationFixtureRepoPath()
     let fixtureBuildPath = (fixtureRepoPath as NSString).appendingPathComponent(".build")
     defer { try? FileManager.default.removeItem(atPath: fixtureBuildPath) }
@@ -363,34 +363,157 @@ struct IntegrationTests {
       scratchPath: (workDirectory as NSString).appendingPathComponent("scratch")
     )
     let buildResult = try runner.produceIndexStore()
+    let databasePath = (workDirectory as NSString).appendingPathComponent("index-db")
 
     let builder = SCIPIndexBuilder(
       repoPath: fixtureRepoPath,
       indexStorePath: buildResult.indexStorePath,
-      databasePath: (workDirectory as NSString).appendingPathComponent("index-db"),
+      databasePath: databasePath,
       buildToolName: BuildTool.swiftpm.rawValue,
       converterVersion: "test"
     )
     let index = try builder.build()
 
+    #expect(index.documents.count == 1)
     let document = try #require(
       index.documents.first { $0.relativePath == "Sources/DocumentationFixture/Documented.swift" }
     )
 
-    let addSymbol = try #require(
-      document.symbols.first { $0.displayName == "DocumentationFixture.add(Swift.Int, Swift.Int) -> Swift.Int" }
+    func expectDoc(_ fragment: String, _ expected: String, _ what: String) throws {
+      let symbol = try #require(
+        document.symbols.first { $0.symbol.contains(fragment) },
+        "\(what) must appear in the document's symbols"
+      )
+      #expect(
+        symbol.documentation == [expected],
+        "\(what) must carry exactly its normalized doc — got \(symbol.documentation)"
+      )
+    }
+
+    try expectDoc("3addyS2i_SitF", "Adds two integers.", "documented func add")
+    try expectDoc(
+      "7computeySi_SitF",
+      "Computes with an attribute between the doc and the declaration.",
+      "attributed func compute (doc keyed at the name token past the attribute)"
     )
+    try expectDoc(
+      "6blockyySi_SitF",
+      "Block doc first.\n- parameter value: an int\n\nBlock second paragraph.",
+      "block-documented func blocky"
+    )
+    try expectDoc(
+      "5noisyySitF",
+      "Documented with noise interleaved.",
+      "func noisy with a plain comment between doc and decl"
+    )
+    try expectDoc("9DocumentedV`.", "A documented container.", "struct Documented")
+    try expectDoc("6storedSivp", "A stored value with accessors.", "var stored definition")
+    try expectDoc("6frozenSivg", "Frozen constant.", "let frozen getter")
+    try expectDoc("ACycfc", "Makes a documented thing.", "init")
+    try expectDoc("5Wholea", "Documented container alias.", "typealias Whole")
+    try expectDoc("8SpectrumO`.", "Color spectrum.", "enum Spectrum")
+    try expectDoc("8SpectrumO3redy", "Warm hue.", "enum case red")
+    try expectDoc("8SpectrumO4bluey", "Cool hue.", "enum case blue")
+    try expectDoc("6helperSiyF", "Extension helper.", "extension member helper")
+
+    let subtract = try #require(
+      document.symbols.first { $0.symbol.contains("8subtractyS2i_SitF") }
+    )
+    #expect(subtract.documentation.isEmpty, "undocumented func must keep documentation empty")
+
+    // Accessor inheritance (research D3): getter and setter definitions share the property's
+    // name-token anchor and inherit its doc — no accessor special-casing anywhere.
+    let storedGetter = try #require(document.symbols.first { $0.symbol.contains("6storedSivg") })
     #expect(
-      addSymbol.documentation == ["Adds two integers."],
-      "documented func must carry its normalized doc as a single-element array"
+      storedGetter.documentation == ["A stored value with accessors."],
+      "getter:stored must inherit the property doc"
+    )
+    let storedSetter = try #require(document.symbols.first { $0.symbol.contains("6storedSivs") })
+    #expect(
+      storedSetter.documentation == ["A stored value with accessors."],
+      "setter:stored must inherit the property doc"
     )
 
-    let subtractSymbol = try #require(
-      document.symbols.first { $0.displayName == "DocumentationFixture.subtract(Swift.Int, Swift.Int) -> Swift.Int" }
+    // DOCS-02 end-to-end: every excluded comment class embeds DOCSMARKER and no documentation
+    // field anywhere in the index contains it.
+    for doc in index.documents {
+      for symbol in doc.symbols {
+        #expect(
+          !symbol.documentation.contains { $0.contains("DOCSMARKER") },
+          "excluded comment leaked into documentation of \(symbol.symbol)"
+        )
+      }
+    }
+    for external in index.externalSymbols {
+      #expect(
+        !external.documentation.contains { $0.contains("DOCSMARKER") },
+        "excluded comment leaked into external symbol documentation"
+      )
+    }
+
+    // DOCS-03 end-to-end: exactly one parse per document's absolute source path.
+    for doc in index.documents {
+      let absolutePath = (fixtureRepoPath as NSString).appendingPathComponent(doc.relativePath)
+      #expect(
+        SwiftSyntaxRefiner.parseCount(forFilePath: absolutePath) == 1,
+        "\(doc.relativePath) must be parsed exactly once by the fresh run"
+      )
+    }
+
+    // Cache run-pair (research D5b): a second builder over the same build through one
+    // CacheStore serves byte-identical output, identical documentation, and no new parses.
+    let cacheDir = (workDirectory as NSString).appendingPathComponent("cache")
+    let store = CacheStore(cacheDir: cacheDir)
+
+    let cacheBuilder1 = SCIPIndexBuilder(
+      repoPath: fixtureRepoPath,
+      indexStorePath: buildResult.indexStorePath,
+      databasePath: databasePath,
+      buildToolName: BuildTool.swiftpm.rawValue,
+      converterVersion: "test",
+      cacheStore: store
+    )
+    let cacheIndex1 = try cacheBuilder1.build()
+    let cacheData1 = try cacheIndex1.serializedData()
+
+    var countsAfterCacheRun1: [String: Int] = [:]
+    for doc in cacheIndex1.documents {
+      let absolutePath = (fixtureRepoPath as NSString).appendingPathComponent(doc.relativePath)
+      countsAfterCacheRun1[absolutePath] = SwiftSyntaxRefiner.parseCount(forFilePath: absolutePath)
+    }
+
+    let cacheBuilder2 = SCIPIndexBuilder(
+      repoPath: fixtureRepoPath,
+      indexStorePath: buildResult.indexStorePath,
+      databasePath: databasePath,
+      buildToolName: BuildTool.swiftpm.rawValue,
+      converterVersion: "test",
+      cacheStore: store
+    )
+    let cacheIndex2 = try cacheBuilder2.build()
+    let cacheData2 = try cacheIndex2.serializedData()
+
+    #expect(cacheData1 == cacheData2, "cache-hit second run must be byte-identical")
+    for doc in cacheIndex2.documents {
+      let absolutePath = (fixtureRepoPath as NSString).appendingPathComponent(doc.relativePath)
+      #expect(
+        SwiftSyntaxRefiner.parseCount(forFilePath: absolutePath)
+          == countsAfterCacheRun1[absolutePath],
+        "cache hit must add zero parses for \(doc.relativePath)"
+      )
+    }
+
+    let cacheDocument2 = try #require(
+      cacheIndex2.documents.first {
+        $0.relativePath == "Sources/DocumentationFixture/Documented.swift"
+      }
+    )
+    let cachedAdd = try #require(
+      cacheDocument2.symbols.first { $0.symbol.contains("3addyS2i_SitF") }
     )
     #expect(
-      subtractSymbol.documentation.isEmpty,
-      "undocumented func must keep documentation empty"
+      cachedAdd.documentation == ["Adds two integers."],
+      "cached run must serve documentation identical to the fresh run"
     )
   }
 

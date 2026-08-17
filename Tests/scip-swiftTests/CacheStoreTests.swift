@@ -25,6 +25,25 @@ struct CacheStoreTests {
     #expect(loaded?.occurrences.count == 1)
   }
 
+  @Test("documentation field survives the protobuf round-trip intact")
+  func documentationRoundTrip() throws {
+    let cache = CacheStore(cacheDir: makeTempDir())
+
+    var doc = Scip_Document()
+    doc.language = "Swift"
+    doc.relativePath = "docs.swift"
+    var symbol = Scip_SymbolInformation()
+    symbol.symbol = "scip-swift test . docsym."
+    symbol.documentation = ["First doc line.", "", "Second doc line."]
+    doc.symbols = [symbol]
+
+    try cache.saveDocument(doc, hash: "docroundtrip")
+    let loaded = cache.loadDocument(hash: "docroundtrip")
+
+    let loadedSymbol = try #require(loaded?.symbols.first)
+    #expect(loadedSymbol.documentation == ["First doc line.", "", "Second doc line."])
+  }
+
   @Test("loadDocument returns nil for non-existent hash")
   func loadNonExistentReturnsNil() {
     let cache = CacheStore(cacheDir: makeTempDir())
