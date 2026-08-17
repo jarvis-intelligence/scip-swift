@@ -278,6 +278,76 @@ struct IntegrationTests {
     )
   }
 
+  @Test("source with syntax errors still indexes with exact ends on valid regions")
+  func brokenSourceStillIndexesWithExactEnds() throws {
+    let fixtureRepoPath = Self.brokenSourceFixtureRepoPath()
+    let fixtureBuildPath = (fixtureRepoPath as NSString).appendingPathComponent(".build")
+    defer { try? FileManager.default.removeItem(atPath: fixtureBuildPath) }
+
+    let sourcePath = (fixtureRepoPath as NSString)
+      .appendingPathComponent("Sources/BrokenSource/Recoverable.swift")
+    let validSource = try String(contentsOfFile: sourcePath, encoding: .utf8)
+    defer { try? validSource.write(toFile: sourcePath, atomically: true, encoding: .utf8) }
+
+    let workDirectory = try Self.makeTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(atPath: workDirectory) }
+
+    let runner = SwiftPMBuildRunner(
+      repoPath: fixtureRepoPath,
+      configuration: .debug,
+      scratchPath: (workDirectory as NSString).appendingPathComponent("scratch")
+    )
+    let buildResult = try runner.produceIndexStore()
+
+    // Corrupt AFTER the build: the index store keeps the anchors from the valid compile while
+    // the refiner parses the now-unparseable content — the stale-index case RANGE-03 guards.
+    // (swift build fails hard on any syntax error, even inside inactive #if branches, so a
+    // committed broken file can never produce occurrences to refine.)
+    try Self.corruptedSource.write(toFile: sourcePath, atomically: true, encoding: .utf8)
+
+    let builder = SCIPIndexBuilder(
+      repoPath: fixtureRepoPath,
+      indexStorePath: buildResult.indexStorePath,
+      databasePath: (workDirectory as NSString).appendingPathComponent("index-db"),
+      buildToolName: BuildTool.swiftpm.rawValue,
+      converterVersion: "test"
+    )
+    let index = try builder.build()
+
+    let document = try #require(
+      index.documents.first { $0.relativePath == "Sources/BrokenSource/Recoverable.swift" }
+    )
+    #expect(!document.occurrences.isEmpty)
+
+    // Parser.parse never throws: the corrupted file still yields a token map, and line 0 is
+    // byte-identical, so its anchors hit `.present` tokens and keep exact ends.
+    let getterValueEnds = document.occurrences
+      .filter { $0.symbol.contains("5valueSivg") }
+      .map(\.singleLineRange)
+    #expect(!getterValueEnds.isEmpty, "corrupted file must still emit getter:value occurrences")
+    #expect(
+      getterValueEnds.contains { $0.line == 0 && $0.startCharacter == 4 && $0.endCharacter == 9 },
+      "getter:value must keep the exact token extent [4,9) on the untouched valid region"
+    )
+    #expect(
+      !getterValueEnds.contains { $0.line == 0 && $0.startCharacter == 4 && $0.endCharacter == 16 },
+      "getter:value must not fall back to the approximate end 16 (anchor hit the token map)"
+    )
+
+    // tailValue's anchor rides on the stale index (line 6 from the valid compile) but the
+    // corrupted content only has 6 lines and none starts a token at that anchor, so the lookup
+    // misses and the occurrence carries the name-length approximate end:
+    // 4 + "getter:tailValue".utf8.count == 20.
+    let getterTailValueEnds = document.occurrences
+      .filter { $0.symbol.contains("9tailValueSivg") }
+      .map(\.singleLineRange)
+    #expect(!getterTailValueEnds.isEmpty, "corrupted file must still emit getter:tailValue occurrences")
+    #expect(
+      getterTailValueEnds.contains { $0.line == 8 && $0.startCharacter == 4 && $0.endCharacter == 20 },
+      "getter:tailValue must carry the approximate end [8, 4..20) — its anchor missed the token map"
+    )
+  }
+
   @Test("index --help advertises --no-demangle")
   func helpListsNoDemangleFlag() throws {
     let result = try SubprocessRunner.run(
@@ -304,6 +374,23 @@ struct IntegrationTests {
       .deletingLastPathComponent()
     return repoRoot.appendingPathComponent("Fixtures/UnicodeRangeFixture").path
   }
+
+  private static func brokenSourceFixtureRepoPath() -> String {
+    let repoRoot = URL(fileURLWithPath: #filePath)
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+    return repoRoot.appendingPathComponent("Fixtures/BrokenSourceFixture").path
+  }
+
+  private static let corruptedSource = """
+    let value = 21
+    func readValue() -> Int { value }
+    struct Recoverable { let ok = 1 }
+
+    struct { let x: = }
+    let tailValue = 9
+    """
 
   private static func makeTemporaryDirectory() throws -> String {
     let path = (NSTemporaryDirectory() as NSString).appendingPathComponent("scip-swift-tests-\(UUID().uuidString)")

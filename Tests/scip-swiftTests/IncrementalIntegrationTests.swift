@@ -178,12 +178,85 @@ struct IncrementalIntegrationTests {
     #expect(refreshedManifest.converterVersion == ScipSwiftVersion.version)
   }
 
+  @Test("cache-hit second run serves byte-identical exact ranges without re-parsing")
+  func cacheHitServesExactRanges() throws {
+    let fixtureRepoPath = Self.unicodeFixtureRepoPath()
+    let fixtureBuildPath = (fixtureRepoPath as NSString).appendingPathComponent(".build")
+    defer { try? FileManager.default.removeItem(atPath: fixtureBuildPath) }
+
+    let workDir = try Self.makeTempDir()
+    defer { try? FileManager.default.removeItem(atPath: workDir) }
+    let cacheDir = (workDir as NSString).appendingPathComponent("cache")
+
+    let runner = SwiftPMBuildRunner(
+      repoPath: fixtureRepoPath,
+      configuration: .debug,
+      scratchPath: (workDir as NSString).appendingPathComponent("scratch")
+    )
+    let buildResult = try runner.produceIndexStore()
+    let dbPath = (workDir as NSString).appendingPathComponent("index-db")
+
+    let store = CacheStore(cacheDir: cacheDir)
+
+    let builder1 = SCIPIndexBuilder(
+      repoPath: fixtureRepoPath,
+      indexStorePath: buildResult.indexStorePath,
+      databasePath: dbPath,
+      buildToolName: BuildTool.swiftpm.rawValue,
+      converterVersion: "test",
+      cacheStore: store
+    )
+    let index1 = try builder1.build()
+    let data1 = try index1.serializedData()
+
+    let builder2 = SCIPIndexBuilder(
+      repoPath: fixtureRepoPath,
+      indexStorePath: buildResult.indexStorePath,
+      databasePath: dbPath,
+      buildToolName: BuildTool.swiftpm.rawValue,
+      converterVersion: "test",
+      cacheStore: store
+    )
+    let index2 = try builder2.build()
+    let data2 = try index2.serializedData()
+
+    #expect(data1 == data2, "second run should produce byte-identical output")
+    #expect(index1.documents.count == index2.documents.count)
+
+    // Cache hits skip makeDocument (D2), so the served document carries the exact ranges the
+    // refiner computed on run 1 — getter:名前 end must still be the exact 10, not 17 (RANGE-01
+    // through the cache path; USR mangles 名前 as 006ldrIFb).
+    let document2 = try #require(
+      index2.documents.first { $0.relativePath == "Sources/UnicodeRange/main.swift" }
+    )
+    let getterMeiEnds = document2.occurrences
+      .filter { $0.symbol.contains("006ldrIFbSSvg") }
+      .map(\.singleLineRange)
+    #expect(!getterMeiEnds.isEmpty, "cached run must serve getter:名前 occurrences")
+    #expect(
+      getterMeiEnds.contains { $0.line == 1 && $0.startCharacter == 4 && $0.endCharacter == 10 },
+      "cached getter:名前 must carry the exact token end 10"
+    )
+    #expect(
+      !getterMeiEnds.contains { $0.line == 1 && $0.startCharacter == 4 && $0.endCharacter == 17 },
+      "cached getter:名前 must not carry the approximate end 17"
+    )
+  }
+
   private static func fixtureRepoPath() -> String {
     let repoRoot = URL(fileURLWithPath: #filePath)
       .deletingLastPathComponent()
       .deletingLastPathComponent()
       .deletingLastPathComponent()
     return repoRoot.appendingPathComponent("Fixtures/MiniSwiftPackage").path
+  }
+
+  private static func unicodeFixtureRepoPath() -> String {
+    let repoRoot = URL(fileURLWithPath: #filePath)
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+    return repoRoot.appendingPathComponent("Fixtures/UnicodeRangeFixture").path
   }
 
   private static func makeTempDir() throws -> String {
