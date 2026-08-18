@@ -293,17 +293,22 @@ struct DeterminismTests {
     let greeterPath = (fixtureRepoPath as NSString)
       .appendingPathComponent("Sources/MiniSwiftPackage/Greeter.swift")
     let hash = try ContentHasher.sha256Hex(of: greeterPath)
+    let cacheKey = CacheStore.documentCacheKey(
+      relativePath: "Sources/MiniSwiftPackage/Greeter.swift", hash: hash)
     let docsDir = (cacheDir as NSString).appendingPathComponent("docs")
     #expect(
-      FileManager.default.fileExists(atPath: (docsDir as NSString).appendingPathComponent("\(hash).scipdoc")),
+      FileManager.default.fileExists(
+        atPath: (docsDir as NSString).appendingPathComponent("\(cacheKey).scipdoc")),
       "the Greeter document must be cached"
     )
     #expect(
-      FileManager.default.fileExists(atPath: (docsDir as NSString).appendingPathComponent("\(hash).usrmap")),
-      "docs/<hash>.usrmap must exist beside the cached .scipdoc"
+      FileManager.default.fileExists(
+        atPath: (docsDir as NSString).appendingPathComponent("\(cacheKey).usrmap")),
+      "docs/<composite-key>.usrmap must exist beside the cached .scipdoc"
     )
 
-    let sideMap = try #require(store.loadUSRMap(hash: hash))
+    let sideMap = try #require(
+      store.loadUSRMap(relativePath: "Sources/MiniSwiftPackage/Greeter.swift", hash: hash))
     #expect(!sideMap.isEmpty, "the D-06 parameter fallback must be recorded in the side map")
     for (symbolString, usr) in sideMap {
       #expect(symbolString.hasPrefix("scip-swift"), "keys are canonical symbol strings")

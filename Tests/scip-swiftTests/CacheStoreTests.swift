@@ -16,8 +16,8 @@ struct CacheStoreTests {
     occ.symbol = "scip-swift test . foo."
     doc.occurrences.append(occ)
 
-    try cache.saveDocument(doc, hash: "abcdef123456")
-    let loaded = cache.loadDocument(hash: "abcdef123456")
+    try cache.saveDocument(doc, relativePath: "test.swift", hash: "abcdef123456")
+    let loaded = cache.loadDocument(relativePath: "test.swift", hash: "abcdef123456")
 
     #expect(loaded != nil)
     #expect(loaded?.language == "Swift")
@@ -37,8 +37,8 @@ struct CacheStoreTests {
     symbol.documentation = ["First doc line.", "", "Second doc line."]
     doc.symbols = [symbol]
 
-    try cache.saveDocument(doc, hash: "docroundtrip")
-    let loaded = cache.loadDocument(hash: "docroundtrip")
+    try cache.saveDocument(doc, relativePath: "docs.swift", hash: "docroundtrip")
+    let loaded = cache.loadDocument(relativePath: "docs.swift", hash: "docroundtrip")
 
     let loadedSymbol = try #require(loaded?.symbols.first)
     #expect(loadedSymbol.documentation == ["First doc line.", "", "Second doc line."])
@@ -47,7 +47,7 @@ struct CacheStoreTests {
   @Test("loadDocument returns nil for non-existent hash")
   func loadNonExistentReturnsNil() {
     let cache = CacheStore(cacheDir: makeTempDir())
-    #expect(cache.loadDocument(hash: "nonexistent") == nil)
+    #expect(cache.loadDocument(relativePath: "test.swift", hash: "nonexistent") == nil)
   }
 
   @Test("saveManifest then loadManifest round-trips")
@@ -80,7 +80,7 @@ struct CacheStoreTests {
 
     var doc = Scip_Document()
     doc.language = "Swift"
-    try cache.saveDocument(doc, hash: "testhash")
+    try cache.saveDocument(doc, relativePath: "test.swift", hash: "testhash")
     try cache.saveManifest(IndexManifest(
       toolchainVersion: "6.2.4",
       converterVersion: "0.1.2",
@@ -98,7 +98,7 @@ struct CacheStoreTests {
       FileManager.default.fileExists(atPath: dir),
       "cache dir itself must survive — callers park build scratch beside the document cache"
     )
-    #expect(cache.loadDocument(hash: "testhash") == nil)
+    #expect(cache.loadDocument(relativePath: "test.swift", hash: "testhash") == nil)
     #expect(cache.loadManifest() == nil)
   }
 
@@ -109,7 +109,7 @@ struct CacheStoreTests {
 
     var doc = Scip_Document()
     doc.language = "Swift"
-    try cache.saveDocument(doc, hash: "testhash")
+    try cache.saveDocument(doc, relativePath: "test.swift", hash: "testhash")
 
     let docsDir = (dir as NSString).appendingPathComponent("docs")
     #expect(FileManager.default.fileExists(atPath: docsDir))
@@ -124,10 +124,10 @@ struct CacheStoreTests {
     doc.language = "Swift"
     doc.relativePath = "test.swift"
 
-    try cache.saveDocument(doc, hash: "recreate")
+    try cache.saveDocument(doc, relativePath: "test.swift", hash: "recreate")
     try cache.invalidateAll()
-    try cache.saveDocument(doc, hash: "recreate")
-    let loaded = cache.loadDocument(hash: "recreate")
+    try cache.saveDocument(doc, relativePath: "test.swift", hash: "recreate")
+    let loaded = cache.loadDocument(relativePath: "test.swift", hash: "recreate")
 
     #expect(loaded != nil)
     #expect(loaded?.language == "Swift")
@@ -135,7 +135,7 @@ struct CacheStoreTests {
 
   // MARK: USR side map (D-09 / research Pitfall 3, 02-02)
 
-  @Test("USR side map round-trips under the document's hash at docs/<hash>.usrmap")
+  @Test("USR side map round-trips under the document's composite key at docs/<composite-key>.usrmap")
   func usrSideMapRoundTrip() throws {
     let dir = makeTempDir()
     let cache = CacheStore(cacheDir: dir)
@@ -143,28 +143,63 @@ struct CacheStoreTests {
     let sideMap = [
       "scip-swift swiftpm M . `s:1M4test3fooSSvp`.": "s:1M4test3fooSSvp"
     ]
-    try cache.saveUSRMap(sideMap, hash: "sidemap")
+    try cache.saveUSRMap(sideMap, relativePath: "test.swift", hash: "sidemap")
 
     let usrmapPath = ((dir as NSString).appendingPathComponent("docs") as NSString)
-      .appendingPathComponent("sidemap.usrmap")
+      .appendingPathComponent(
+        "\(CacheStore.documentCacheKey(relativePath: "test.swift", hash: "sidemap")).usrmap")
     #expect(
       FileManager.default.fileExists(atPath: usrmapPath),
-      "the side map must live beside its .scipdoc under the same hash"
+      "the side map must live beside its .scipdoc under the same composite key"
     )
-    #expect(cache.loadUSRMap(hash: "sidemap") == sideMap)
+    #expect(cache.loadUSRMap(relativePath: "test.swift", hash: "sidemap") == sideMap)
     #expect(
-      cache.loadUSRMap(hash: "missing") == nil,
+      cache.loadUSRMap(relativePath: "test.swift", hash: "missing") == nil,
       "load failure returns nil and the caller rebuilds (T-02-05)"
     )
   }
 
-  @Test("invalidateAll removes the USR side map with its document (same hash, atomic)")
+  @Test("invalidateAll removes the USR side map with its document (same composite key, atomic)")
   func invalidateAllRemovesUSRMap() throws {
     let dir = makeTempDir()
     let cache = CacheStore(cacheDir: dir)
-    try cache.saveUSRMap(["k": "v"], hash: "doomed")
+    try cache.saveUSRMap(["k": "v"], relativePath: "test.swift", hash: "doomed")
     try cache.invalidateAll()
-    #expect(cache.loadUSRMap(hash: "doomed") == nil, "side map invalidates with its document")
+    #expect(
+      cache.loadUSRMap(relativePath: "test.swift", hash: "doomed") == nil,
+      "side map invalidates with its document"
+    )
+  }
+
+  @Test("same content hash under two relativePaths yields two distinct, independently loadable entries")
+  func sameHashTwoPathsYieldDistinctEntries() throws {
+    let dir = makeTempDir()
+    let cache = CacheStore(cacheDir: dir)
+
+    var docA = Scip_Document()
+    docA.language = "Swift"
+    docA.relativePath = "Sources/Pkg/CopyA.swift"
+    var docB = Scip_Document()
+    docB.language = "Swift"
+    docB.relativePath = "Sources/Pkg/CopyB.swift"
+
+    try cache.saveDocument(docA, relativePath: docA.relativePath, hash: "sharedhash")
+    try cache.saveDocument(docB, relativePath: docB.relativePath, hash: "sharedhash")
+
+    let keyA = CacheStore.documentCacheKey(relativePath: docA.relativePath, hash: "sharedhash")
+    let keyB = CacheStore.documentCacheKey(relativePath: docB.relativePath, hash: "sharedhash")
+    #expect(keyA != keyB, "identical content must never collapse two paths onto one key")
+
+    let docsDir = (dir as NSString).appendingPathComponent("docs")
+    #expect(
+      FileManager.default.fileExists(atPath: (docsDir as NSString).appendingPathComponent("\(keyA).scipdoc")))
+    #expect(
+      FileManager.default.fileExists(atPath: (docsDir as NSString).appendingPathComponent("\(keyB).scipdoc")))
+
+    let loadedA = cache.loadDocument(relativePath: docA.relativePath, hash: "sharedhash")
+    let loadedB = cache.loadDocument(relativePath: docB.relativePath, hash: "sharedhash")
+    #expect(loadedA?.relativePath == "Sources/Pkg/CopyA.swift")
+    #expect(loadedB?.relativePath == "Sources/Pkg/CopyB.swift")
   }
 
   private func makeTempDir() -> String {

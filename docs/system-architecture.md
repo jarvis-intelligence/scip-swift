@@ -267,7 +267,9 @@ per-run temp directory and no caching occurs.
 **Directory layout** (inside the cache dir):
 
 ```
-<cacheDir>/docs/<sha256-hex>.scipdoc   — serialized Scip_Document protobufs, keyed by source content hash
+<cacheDir>/docs/<sha256-hex>.scipdoc   — serialized Scip_Document protobufs, keyed by the composite
+                                       (relativePath, content hash) key — SHA256(relativePath ‖ 0x00 ‖
+                                       content hash) — so byte-identical files never share an entry
 <cacheDir>/manifest.json               — global version manifest for cache invalidation
 <cacheDir>/build-scratch/              — persistent SwiftPM scratch path (reused across runs)
 <cacheDir>/index-db/                   — persistent IndexStoreDB database path
@@ -276,11 +278,15 @@ per-run temp directory and no caching occurs.
 **Components**:
 
 - **`CacheStore`** (`Caching/CacheStore.swift`) — file-based store exposing
-  `loadDocument(hash:)` / `saveDocument(_:hash:)` and `loadManifest()` / `saveManifest(_:)`.
-  `invalidateAll()` deletes the whole cache directory.
+  `documentCacheKey(relativePath:hash:)` (the composite-key derivation) plus
+  `loadDocument(relativePath:hash:)` / `saveDocument(_:relativePath:hash:)` /
+  `loadUSRMap(relativePath:hash:)` / `saveUSRMap(_:relativePath:hash:)` and
+  `loadManifest()` / `saveManifest(_:)`. `invalidateAll()` deletes the whole cache directory.
 - **`ContentHasher`** (`Caching/ContentHasher.swift`) — stateless SHA256 hashing via CryptoKit
-  (`sha256Hex(of:)` for file paths or raw `Data`). A document's cache key is the SHA256 of its
-  source file content, so an unchanged file maps to the same cache entry across runs.
+  (`sha256Hex(of:)` for file paths or raw `Data`). A document's cache key derives from the
+  SHA256 of its source file content combined with the file's repo-relative path
+  (`CacheStore.documentCacheKey`), so an unchanged file maps to the same cache entry across
+  runs while byte-identical files at different paths get distinct entries.
 - **`IndexManifest`** (`Caching/IndexManifest.swift`) — `Codable` record with four fields that
   trigger **global** invalidation on any mismatch:
   - `toolchainVersion` — Swift compiler version (USR format is compiler-version sensitive)
@@ -291,11 +297,12 @@ per-run temp directory and no caching occurs.
 
 **Flow in `SCIPIndexBuilder.build()`** (when a `CacheStore` is attached):
 
-1. For each discovered `.swift` file, compute `ContentHasher.sha256Hex(of: filePath)`.
-2. If a cached `Scip_Document` exists for that hash **and** the IndexStoreDB has at least one unit
-   for the file (`dateOfLatestUnitFor(filePath:) != nil`), reuse it as-is.
+1. For each discovered `.swift` file, compute the content hash
+   (`ContentHasher.sha256Hex(of: filePath)`) and the file's repo-relative path.
+2. If a cached `Scip_Document` exists for that path+hash composite key **and** the IndexStoreDB
+   has at least one unit for the file (`dateOfLatestUnitFor(filePath:) != nil`), reuse it as-is.
 3. Otherwise build a fresh document and, if the hash is available, persist it via
-   `saveDocument(_:hash:)`.
+   `saveDocument(_:relativePath:hash:)`.
 4. Cache writes are best-effort (`try?`) — a read-only cache dir never fails the run.
 
 Manifest handling happens in `IndexCommand.indexOneRepo`: on any version mismatch (or a missing

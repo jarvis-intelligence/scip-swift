@@ -48,7 +48,8 @@ struct SCIPIndexBuilder {
     let overloadTable = buildOverloadTable(indexStoreDB: indexStoreDB)
 
     // D-10 / T-02-04 (02-02 Task 3): the overload-table fingerprint is a GLOBAL cache
-    // validation key. Documents are keyed by their own file's content hash, but overload
+    // validation key. Documents are keyed by their own file's composite (relativePath,
+    // content hash) key, but overload
     // indices depend on every group member repo-wide — an overload added in file B shifts the
     // (+N) suffixes of unchanged file A's symbols. Any fingerprint change — or a cache with no
     // (trustable) manifest — wholesale-invalidates docs/ via the existing invalidateAll()
@@ -88,20 +89,22 @@ struct SCIPIndexBuilder {
     var definedSymbolStrings: Set<String> = []
     // D-09 (02-02): per-document canonicalSymbol -> USR side maps, keyed by relativePath. Fresh
     // documents capture theirs during emission; cache-served documents load theirs from
-    // docs/<hash>.usrmap — either way the external display-name pass never reverse-extracts a
-    // USR from the symbol string.
+    // docs/<composite-key>.usrmap — either way the external display-name pass never
+    // reverse-extracts a USR from the symbol string.
     var usrMapsByPath: [String: [String: String]] = [:]
 
     for filePath in SwiftFileDiscovery.swiftFiles(underRepoPath: repoPath) {
       var document: Scip_Document?
+      let path = relativePath(of: filePath)
 
       if let cacheStore {
         let contentHash = try? ContentHasher.sha256Hex(of: filePath)
         if let hash = contentHash {
-          if let cached = cacheStore.loadDocument(hash: hash),
+          if let cached = cacheStore.loadDocument(relativePath: path, hash: hash),
+             cached.relativePath == path,  // fail-safe: key drift serves a miss, never a wrong document
              indexStoreDB.dateOfLatestUnitFor(filePath: filePath) != nil {
             document = cached
-            usrMapsByPath[cached.relativePath] = cacheStore.loadUSRMap(hash: hash) ?? [:]
+            usrMapsByPath[path] = cacheStore.loadUSRMap(relativePath: path, hash: hash) ?? [:]
           }
         }
 
@@ -115,10 +118,10 @@ struct SCIPIndexBuilder {
             systemReferencedSymbols: &systemReferencedSymbols
           ) {
             if let hash = contentHash {
-              try? cacheStore.saveDocument(fresh, hash: hash)
-              // The side map rides the same content hash and document directory as its
+              try? cacheStore.saveDocument(fresh, relativePath: path, hash: hash)
+              // The side map rides the same composite key and document directory as its
               // .scipdoc — it invalidates atomically with the document (T-02-05).
-              try? cacheStore.saveUSRMap(sideMap, hash: hash)
+              try? cacheStore.saveUSRMap(sideMap, relativePath: path, hash: hash)
             }
             usrMapsByPath[fresh.relativePath] = sideMap
             document = fresh
@@ -159,10 +162,10 @@ struct SCIPIndexBuilder {
           info.symbol = sym
           if let demangler {
             // D-06 fallback symbols ride the canonicalSymbol -> USR side map (captured during
-            // emission on fresh runs, loaded from docs/<hash>.usrmap on cache-hit runs), so
-            // they keep their demangled display names identically in both. Canonical descriptor
-            // chains never enter the side map: their display name derives deterministically
-            // from the symbol string itself.
+            // emission on fresh runs, loaded from docs/<composite-key>.usrmap on cache-hit
+            // runs), so they keep their demangled display names identically in both. Canonical
+            // descriptor chains never enter the side map: their display name derives
+            // deterministically from the symbol string itself.
             if let usr = usrSideMap[sym] {
               info.displayName = demangler.demangledDisplayName(usr: usr) ?? ""
             } else {

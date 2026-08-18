@@ -52,13 +52,17 @@ The persistent cache is enabled only when `--cache-dir` is passed or `--index-on
 <cacheDir>/
   manifest.json          # version manifest for global invalidation (JSON)
   docs/                  # per-document protobuf cache
-    <sha256>.scipdoc     # serialized Scip_Document keyed by source-file content hash
+    <sha256>.scipdoc     # serialized Scip_Document keyed by the composite
+                         # (relativePath, content hash) key
   index-db/              # IndexStoreDB database directory
   build-scratch/         # build working directory; IndexStore lives at
                          # build-scratch/<triple>/<configuration>/index/store
 ```
 
-- `docs/` entries are keyed by SHA256 content hash of the source file (`ContentHasher`), so unchanged files are re-used across runs without re-mapping.
+- `docs/` entries are keyed by the composite (relativePath, content hash) key
+  (`CacheStore.documentCacheKey` — SHA256 over `relativePath || 0x00 || content hash`), so
+  unchanged files are re-used across runs without re-mapping while byte-identical files at
+  different paths never share an entry.
 - `build-scratch/` is the scratch path handed to the build runner; `--index-only` searches it for an existing IndexStore instead of rebuilding.
 
 ## Cache invalidation (`manifest.json`)

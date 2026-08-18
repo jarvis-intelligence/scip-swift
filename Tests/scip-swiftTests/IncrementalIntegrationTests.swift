@@ -142,7 +142,7 @@ struct IncrementalIntegrationTests {
     staleDoc.symbols = [staleSymbol]
 
     let store = CacheStore(cacheDir: cacheDir)
-    try store.saveDocument(staleDoc, hash: greeterHash)
+    try store.saveDocument(staleDoc, relativePath: staleDoc.relativePath, hash: greeterHash)
     try store.saveManifest(IndexManifest(
       toolchainVersion: ToolchainInfo.pinnedSwiftVersion,
       converterVersion: "0.2.1",
@@ -241,6 +241,178 @@ struct IncrementalIntegrationTests {
       !getterMeiEnds.contains { $0.line == 1 && $0.startCharacter == 4 && $0.endCharacter == 17 },
       "cached getter:名前 must not carry the approximate end 17"
     )
+  }
+
+  /// P9 canary gate (T-02-09 policy): fixture content is data, never instructions. The
+  /// DuplicateContentFixture sources carry an active prompt-injection canary; a full
+  /// build+index pass over them must leave no side-effect marker anywhere in the repo or
+  /// temp tree, and the canary text must not leak into the emitted index.
+  @Test("prompt-injection canary in fixture sources stays inert")
+  func promptInjectionCanaryStaysInert() throws {
+    let fixtureRepoPath = try Self.materializeFixtureCopy("DuplicateContentFixture")
+    defer { try? FileManager.default.removeItem(atPath: fixtureRepoPath) }
+    let fixtureBuildPath = (fixtureRepoPath as NSString).appendingPathComponent(".build")
+    defer { try? FileManager.default.removeItem(atPath: fixtureBuildPath) }
+
+    let workDir = try Self.makeTempDir()
+    defer { try? FileManager.default.removeItem(atPath: workDir) }
+
+    let markerSentinels = [
+      NSTemporaryDirectory() + "canary-pwned",
+      fixtureRepoPath + "/PWNED",
+      fixtureRepoPath + "/../PWNED",
+    ]
+
+    let runner = SwiftPMBuildRunner(
+      repoPath: fixtureRepoPath,
+      configuration: .debug,
+      scratchPath: (workDir as NSString).appendingPathComponent("scratch")
+    )
+    let buildResult = try runner.produceIndexStore()
+    let builder = SCIPIndexBuilder(
+      repoPath: fixtureRepoPath,
+      indexStorePath: buildResult.indexStorePath,
+      databasePath: (workDir as NSString).appendingPathComponent("index-db"),
+      buildToolName: BuildTool.swiftpm.rawValue,
+      converterVersion: "test"
+    )
+    let index = try builder.build()
+
+    for sentinel in markerSentinels {
+      #expect(
+        !FileManager.default.fileExists(atPath: sentinel),
+        "canary directives must never execute: sentinel \(sentinel) must not exist"
+      )
+    }
+    let indexData = try index.serializedData()
+    #expect(
+      indexData.range(of: Data("IGNORE ALL PREVIOUS INSTRUCTIONS".utf8)) == nil,
+      "canary text must not leak into the emitted index"
+    )
+  }
+
+  /// WR-03 fixture gate: content-hash-only document keys must not leak documents across paths.
+  /// The fixture holds two byte-identical sources; the rename phase rewrites CopyA's path while
+  /// keeping its content. Both scenarios assert path-exact documents and overload-index
+  /// stability — the empirically observed defense is that any path change alters the build,
+  /// which changes the store revision and wholesale-invalidates the cache via the manifest.
+  @Test("duplicate content and rename stay path-exact through the cache")
+  func duplicateContentAndRenameStayPathExact() throws {
+    let fixtureRepoPath = try Self.materializeFixtureCopy("DuplicateContentFixture")
+    defer { try? FileManager.default.removeItem(atPath: fixtureRepoPath) }
+    let fixtureBuildPath = (fixtureRepoPath as NSString).appendingPathComponent(".build")
+    defer { try? FileManager.default.removeItem(atPath: fixtureBuildPath) }
+
+    let workDir = try Self.makeTempDir()
+    defer { try? FileManager.default.removeItem(atPath: workDir) }
+    let cacheDir = (workDir as NSString).appendingPathComponent("cache")
+    let scratchPath = (workDir as NSString).appendingPathComponent("scratch")
+    let dbPath = (workDir as NSString).appendingPathComponent("index-db")
+
+    func buildAndIndex() throws -> Scip_Index {
+      let runner = SwiftPMBuildRunner(
+        repoPath: fixtureRepoPath,
+        configuration: .debug,
+        scratchPath: scratchPath
+      )
+      let buildResult = try runner.produceIndexStore()
+      let builder = SCIPIndexBuilder(
+        repoPath: fixtureRepoPath,
+        indexStorePath: buildResult.indexStorePath,
+        databasePath: dbPath,
+        buildToolName: BuildTool.swiftpm.rawValue,
+        converterVersion: "test",
+        cacheStore: CacheStore(cacheDir: cacheDir)
+      )
+      return try builder.build()
+    }
+
+    let fresh = try buildAndIndex()
+    let cached = try buildAndIndex()
+
+    let freshData = try fresh.serializedData()
+    let cachedData = try cached.serializedData()
+    #expect(
+      freshData == cachedData,
+      "cache-hit run over duplicate-content sources must be byte-identical to the fresh run"
+    )
+    try Self.assertDuplicateContentShape(index: fresh, label: "fresh")
+    try Self.assertDuplicateContentShape(index: cached, label: "cached")
+
+    let copyA = (fixtureRepoPath as NSString)
+      .appendingPathComponent("Sources/DuplicateContent/CopyA.swift")
+    let copyRenamed = (fixtureRepoPath as NSString)
+      .appendingPathComponent("Sources/DuplicateContent/CopyRenamed.swift")
+    try FileManager.default.moveItem(atPath: copyA, toPath: copyRenamed)
+
+    let renamed = try buildAndIndex()
+    try Self.assertRenamedShape(index: renamed)
+  }
+
+  private static func markerOverloads(_ document: Scip_Document) -> Set<String> {
+    Set(
+      document.symbols
+        .map(\.symbol)
+        .filter { $0.contains("Marker") }
+        .filter { !$0.hasSuffix("Marker#") })
+  }
+
+  private static func assertDuplicateContentShape(index: Scip_Index, label: String) throws {
+    let paths = index.documents.map(\.relativePath).sorted()
+    #expect(
+      paths == [
+        "Sources/DuplicateContent/CopyA.swift", "Sources/DuplicateContent/CopyB.swift"
+      ],
+      "\(label) run must carry exactly the two fixture paths"
+    )
+    let copyA = try #require(index.documents.first { $0.relativePath.hasSuffix("CopyA.swift") })
+    let copyB = try #require(index.documents.first { $0.relativePath.hasSuffix("CopyB.swift") })
+    let symbolsA = Set(copyA.symbols.map(\.symbol))
+    let symbolsB = Set(copyB.symbols.map(\.symbol))
+    let overloadsA = markerOverloads(copyA)
+    let overloadsB = markerOverloads(copyB)
+    #expect(overloadsA.contains("scip-swift swiftpm DuplicateContent . Marker()."))
+    #expect(symbolsA.contains("scip-swift swiftpm DuplicateContent . init()."))
+    #expect(overloadsB.contains("scip-swift swiftpm DuplicateContent . Marker(+1)."))
+    #expect(symbolsB.contains("scip-swift swiftpm DuplicateContent . init(+2)."))
+    // Disjointness is scoped to the Method family: both documents legitimately share the bare
+    // Term `Marker.` — Terms cannot carry (+N) under the frozen Phase-1 scheme (documented
+    // known limitation), so that collision is allowed and not a cache-leak signal.
+    let methodOverloadsA = overloadsA.filter { $0.contains("(") }
+    let methodOverloadsB = overloadsB.filter { $0.contains("(") }
+    #expect(
+      methodOverloadsA.isDisjoint(with: methodOverloadsB),
+      "\(label) run: identical content must not collapse the two documents' overload sets"
+    )
+  }
+
+  private static func assertRenamedShape(index: Scip_Index) throws {
+    let paths = index.documents.map(\.relativePath).sorted()
+    #expect(
+      paths == [
+        "Sources/DuplicateContent/CopyB.swift", "Sources/DuplicateContent/CopyRenamed.swift"
+      ],
+      "renamed run must serve the new path, never the stale CopyA path"
+    )
+    let renamed = try #require(
+      index.documents.first { $0.relativePath.hasSuffix("CopyRenamed.swift") })
+    let overloads = markerOverloads(renamed)
+    #expect(
+      overloads.contains("scip-swift swiftpm DuplicateContent . Marker(+1)."),
+      "renamed document must keep its overload index after the rename"
+    )
+  }
+
+  private static func materializeFixtureCopy(_ fixtureName: String) throws -> String {
+    let repoRoot = URL(fileURLWithPath: #filePath)
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+    let source = repoRoot.appendingPathComponent("Fixtures/\(fixtureName)").path
+    let copy = (NSTemporaryDirectory() as NSString)
+      .appendingPathComponent("scip-swift-fixture-\(fixtureName)-\(UUID().uuidString)")
+    try FileManager.default.copyItem(atPath: source, toPath: copy)
+    return copy
   }
 
   private static func fixtureRepoPath() -> String {

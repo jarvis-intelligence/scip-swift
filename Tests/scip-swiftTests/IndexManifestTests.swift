@@ -145,9 +145,9 @@ struct IndexManifestTests {
       demangle: true))
   }
 
-  @Test("the format constant is 2 — format 1 is the raw-USR era")
-  func formatConstantIsTwo() {
-    #expect(SymbolFormatVersion.current == 2)
+  @Test("the format constant is 3 — composite cache keys supersede format-2 content-hash keys")
+  func formatConstantIsThree() {
+    #expect(SymbolFormatVersion.current == 3)
   }
 
   @Test("old manifest without symbolFormatVersion fails decode — decode failure means invalidation (D-09)")

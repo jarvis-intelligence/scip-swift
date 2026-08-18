@@ -10,8 +10,10 @@ import Foundation
 ///   - indexstoreDbRevision: indexstore-db git revision (store format changes)
 ///   - buildToolName: "swiftpm" or "xcodebuild" (different index data)
 ///   - symbolFormatVersion: emitted symbol-string format (D-09). Format 1 is the raw-USR era;
-///     format 2 is the canonical descriptor-chain scheme. A bump wholesale-invalidates cached
-///     documents so old-format caches never mix with new-format output.
+///     format 2 is the canonical descriptor-chain scheme; format 3 keys cached documents by
+///     the composite (relativePath, content hash) instead of content hash alone (02-05). A
+///     bump wholesale-invalidates cached documents so old-format caches never mix with
+///     new-format output.
 ///   - overloadTableFingerprint: SHA-256 over the overload table's groups and their
 ///     source-ordered member USRs (D-10 / T-02-04, 02-02 Task 3). NOT compared by
 ///     `isCompatibleWith` — it depends on the opened index store, which the caller cannot
@@ -69,6 +71,10 @@ struct IndexManifest: Codable {
 /// safe; this one needs no migration code (the explicit choice of plan 02-02).
 enum SymbolFormatVersion {
   /// Format 1 is the raw-USR era (escaped USR term descriptors); format 2 is the canonical
-  /// descriptor-chain scheme (02-01) with canonical ordering/dedup and the USR side map (02-02).
-  static let current = 2
+  /// descriptor-chain scheme (02-01) with canonical ordering/dedup and the USR side map (02-02);
+  /// format 3 keys cached documents by the composite (relativePath, content hash) —
+  /// `CacheStore.documentCacheKey` — so byte-identical files never share an entry (02-05 /
+  /// G-02-2). Derived keys never match a format-2 flat content-hash file, so the bump reclaims
+  /// those caches wholesale via the existing manifest gate instead of orphaning them.
+  static let current = 3
 }

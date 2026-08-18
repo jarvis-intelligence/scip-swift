@@ -92,12 +92,15 @@ scip-swift index-many /path/to/repoA /path/to/repoB --merge --merged-output comb
 Passing `--cache-dir` (or `--index-only`) switches the pipeline from a throwaway temp directory
 to a persistent cache:
 
-- Unchanged files reuse their previously computed `Scip_Document` (keyed by SHA256 content hash),
-  so re-indexing after small edits only reprocesses what changed.
+- Unchanged files reuse their previously computed `Scip_Document` (keyed by the composite of
+  the file's relative path and its SHA256 content hash), so re-indexing after small edits only
+  reprocesses what changed.
 - The cache is invalidated wholesale when the Swift toolchain version, `scip-swift` version,
   indexstore-db revision, build backend, or the emitted symbol format version
-  (`symbolFormatVersion`, currently 2 — format 1 is the raw-USR era) changes (recorded in
-  `manifest.json`). A manifest that fails to decode — e.g. written by an older engine without
+  (`symbolFormatVersion`, currently 3 — format 1 is the raw-USR era, format 2 the canonical
+  descriptor-chain scheme with content-hash cache keys, format 3 composite
+  path+content-hash cache keys) changes (recorded in `manifest.json`). A manifest that fails
+  to decode — e.g. written by an older engine without
   the current fields — is treated as no manifest: the cache is discarded wholesale, so
   old-format caches never mix with new-format output.
 - The index builder additionally fingerprints the overload table (SHA-256 over each overload
@@ -106,10 +109,14 @@ to a persistent cache:
   anywhere — even in files whose own content did not change — invalidates cached documents.
   This granularity is deliberately conservative (any overload edit invalidates everything);
   a per-group precise refinement is a recorded v2 follow-up.
-- Each cached document is accompanied by `docs/<hash>.usrmap`, a canonicalSymbol → USR side map
+- Each cached document is accompanied by `docs/<key>.usrmap`, a canonicalSymbol → USR side map
   for raw-USR fallback symbols, so external display names demangle identically on fresh and
-  cache-hit runs. It rides the same content hash as its `.scipdoc` and invalidates atomically
-  with it.
+  cache-hit runs. It rides the same composite (relativePath, content hash) key as its
+  `.scipdoc` and invalidates atomically with it. The `.scipdoc`/`.usrmap` keys are composite by
+  design — SHA-256 over `relativePath || 0x00 || contentHash` — so two byte-identical files
+  never share a cache entry and a renamed file misses naturally and rebuilds; a format bump
+  (e.g. to the current `symbolFormatVersion` 3) wholesale-invalidates older caches via the
+  manifest gate.
 - `--index-only` reuses the already-built IndexStore under the cache directory (it does not
   rebuild), so it fails with `indexStoreNotFoundForIndexOnly` if no prior indexed build exists
   there.
