@@ -15,7 +15,7 @@
 
 - [x] **SYMBOL-01**: User sees demangled, human-readable symbol names (e.g. `null.Greeter.greet(name: Swift.String) -> Swift.String`) in place of raw `s:`-prefixed USRs for Swift symbols in the generated `.scip` index.
 - [x] **SYMBOL-02**: Symbols that cannot be demangled (ObjC/C `c:`-prefixed USRs, future mangling constructs) keep the existing opaque wrapped-USR form — indexing never fails because of demangling.
-- [x] **SYMBOL-03**: Symbol identity remains stable — the wrapped USR stays the canonical `symbol` field so incremental cache hits and cross-repo merge dedup behave unchanged when demangling is enabled (verified by existing second-run byte-identity and merge tests, re-baselined).
+- [x] **SYMBOL-03**: Symbol identity remains stable so incremental cache hits and cross-repo merge dedup behave unchanged when demangling is enabled (verified by second-run byte-identity and merge tests). Re-baselined 2026-08-18: canonical `symbol` strings moved from wrapped-USR to the descriptor-chain scheme (symbolFormatVersion 2, v1.0-track) with raw USR as unparseable-USR fallback — identity/dedup/cache-gating verified intact post-rewrite.
 - [x] **SYMBOL-04**: User can disable demangling (`--no-demangle`) to reproduce v0.2.x-style opaque output.
 
 ### Exact Occurrence Ranges (RANGE)
