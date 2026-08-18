@@ -4,7 +4,7 @@
 
 - ✅ **v0.1.0–v0.1.2** — Initial SCIP pipeline (shipped)
 - ✅ **v0.2.0** — Symbol enrichment, incremental indexing, cross-repo, Xcode test fixture (shipped 2026-08-13)
-- 🚧 **v0.3.0 Readable Indexes** — Demangled symbol names, exact occurrence ranges, destination selection, symbol documentation (Phases 6–9)
+- ✅ **v0.3.0 Readable Indexes** — Phases 6–9 (shipped 2026-08-18)
 
 ## Phases
 
