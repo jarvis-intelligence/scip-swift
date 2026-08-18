@@ -24,6 +24,7 @@ struct IndexManifest: Codable {
   var buildToolName: String
   var symbolFormatVersion: Int
   var overloadTableFingerprint: String
+  var demangle: Bool
 
   init(
     toolchainVersion: String,
@@ -31,7 +32,8 @@ struct IndexManifest: Codable {
     indexstoreDbRevision: String,
     buildToolName: String,
     symbolFormatVersion: Int = SymbolFormatVersion.current,
-    overloadTableFingerprint: String = ""
+    overloadTableFingerprint: String = "",
+    demangle: Bool = true
   ) {
     self.toolchainVersion = toolchainVersion
     self.converterVersion = converterVersion
@@ -39,6 +41,7 @@ struct IndexManifest: Codable {
     self.buildToolName = buildToolName
     self.symbolFormatVersion = symbolFormatVersion
     self.overloadTableFingerprint = overloadTableFingerprint
+    self.demangle = demangle
   }
 
   func isCompatibleWith(
@@ -46,13 +49,15 @@ struct IndexManifest: Codable {
     converterVersion: String,
     indexstoreDbRevision: String,
     buildToolName: String,
-    symbolFormatVersion: Int
+    symbolFormatVersion: Int,
+    demangle: Bool
   ) -> Bool {
     self.toolchainVersion == toolchainVersion
       && self.converterVersion == converterVersion
       && self.indexstoreDbRevision == indexstoreDbRevision
       && self.buildToolName == buildToolName
       && self.symbolFormatVersion == symbolFormatVersion
+      && self.demangle == demangle
   }
 }
 

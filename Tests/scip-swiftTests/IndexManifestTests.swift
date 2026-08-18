@@ -33,7 +33,8 @@ struct IndexManifestTests {
     #expect(manifest.isCompatibleWith(
       toolchainVersion: "A", converterVersion: "B",
       indexstoreDbRevision: "C", buildToolName: "D",
-      symbolFormatVersion: 2))
+      symbolFormatVersion: 2,
+      demangle: true))
   }
 
   @Test("isCompatibleWith returns false when toolchainVersion differs")
@@ -46,7 +47,8 @@ struct IndexManifestTests {
     #expect(!manifest.isCompatibleWith(
       toolchainVersion: "X", converterVersion: "B",
       indexstoreDbRevision: "C", buildToolName: "D",
-      symbolFormatVersion: 2))
+      symbolFormatVersion: 2,
+      demangle: true))
   }
 
   @Test("isCompatibleWith returns false when converterVersion differs")
@@ -59,7 +61,8 @@ struct IndexManifestTests {
     #expect(!manifest.isCompatibleWith(
       toolchainVersion: "A", converterVersion: "X",
       indexstoreDbRevision: "C", buildToolName: "D",
-      symbolFormatVersion: 2))
+      symbolFormatVersion: 2,
+      demangle: true))
   }
 
   @Test("manifest written by converter 0.2.1 is incompatible with the current version constant")
@@ -75,7 +78,8 @@ struct IndexManifestTests {
       converterVersion: ScipSwiftVersion.version,
       indexstoreDbRevision: IndexCommand.indexstoreDbRevision,
       buildToolName: BuildTool.swiftpm.rawValue,
-      symbolFormatVersion: SymbolFormatVersion.current))
+      symbolFormatVersion: SymbolFormatVersion.current,
+      demangle: true))
   }
 
   @Test("isCompatibleWith returns false when indexstoreDbRevision differs")
@@ -88,7 +92,8 @@ struct IndexManifestTests {
     #expect(!manifest.isCompatibleWith(
       toolchainVersion: "A", converterVersion: "B",
       indexstoreDbRevision: "X", buildToolName: "D",
-      symbolFormatVersion: 2))
+      symbolFormatVersion: 2,
+      demangle: true))
   }
 
   @Test("isCompatibleWith returns false when buildToolName differs")
@@ -101,7 +106,8 @@ struct IndexManifestTests {
     #expect(!manifest.isCompatibleWith(
       toolchainVersion: "A", converterVersion: "B",
       indexstoreDbRevision: "C", buildToolName: "X",
-      symbolFormatVersion: 2))
+      symbolFormatVersion: 2,
+      demangle: true))
   }
 
   @Test("empty manifest is not compatible with any non-empty version set")
@@ -114,7 +120,8 @@ struct IndexManifestTests {
     #expect(!manifest.isCompatibleWith(
       toolchainVersion: "6.2.4", converterVersion: "0.1.2",
       indexstoreDbRevision: "c993f4fb", buildToolName: "swiftpm",
-      symbolFormatVersion: 2))
+      symbolFormatVersion: 2,
+      demangle: true))
   }
 
   // MARK: symbolFormatVersion gating (D-09, 02-02)
@@ -129,11 +136,13 @@ struct IndexManifestTests {
     #expect(!manifest.isCompatibleWith(
       toolchainVersion: "A", converterVersion: "B",
       indexstoreDbRevision: "C", buildToolName: "D",
-      symbolFormatVersion: 2))
+      symbolFormatVersion: 2,
+      demangle: true))
     #expect(manifest.isCompatibleWith(
       toolchainVersion: "A", converterVersion: "B",
       indexstoreDbRevision: "C", buildToolName: "D",
-      symbolFormatVersion: 1))
+      symbolFormatVersion: 1,
+      demangle: true))
   }
 
   @Test("the format constant is 2 — format 1 is the raw-USR era")
@@ -192,7 +201,8 @@ struct IndexManifestTests {
     #expect(manifest.isCompatibleWith(
       toolchainVersion: "A", converterVersion: "B",
       indexstoreDbRevision: "C", buildToolName: "D",
-      symbolFormatVersion: SymbolFormatVersion.current))
+      symbolFormatVersion: SymbolFormatVersion.current,
+      demangle: true))
   }
 
   @Test("old manifest without overloadTableFingerprint fails decode (strict schema, D-09)")
@@ -202,5 +212,25 @@ struct IndexManifestTests {
     #expect(throws: DecodingError.self) {
       try JSONDecoder().decode(IndexManifest.self, from: Data(legacyJSON.utf8))
     }
+  }
+
+  @Test("demangle mode mismatch invalidates the cache (W2 — display names differ per mode)")
+  func demangleModeIsACompatibilityKey() {
+    let demangledCache = IndexManifest(
+      toolchainVersion: "A", converterVersion: "B",
+      indexstoreDbRevision: "C", buildToolName: "D",
+      symbolFormatVersion: SymbolFormatVersion.current,
+      demangle: true
+    )
+    #expect(!demangledCache.isCompatibleWith(
+      toolchainVersion: "A", converterVersion: "B",
+      indexstoreDbRevision: "C", buildToolName: "D",
+      symbolFormatVersion: SymbolFormatVersion.current,
+      demangle: false))
+    #expect(demangledCache.isCompatibleWith(
+      toolchainVersion: "A", converterVersion: "B",
+      indexstoreDbRevision: "C", buildToolName: "D",
+      symbolFormatVersion: SymbolFormatVersion.current,
+      demangle: true))
   }
 }

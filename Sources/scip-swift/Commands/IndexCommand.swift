@@ -128,7 +128,8 @@ struct IndexCommand: ParsableCommand {
           converterVersion: ScipSwiftVersion.version,
           indexstoreDbRevision: indexstoreDbRevision,
           buildToolName: tool.rawValue,
-          symbolFormatVersion: SymbolFormatVersion.current
+          symbolFormatVersion: SymbolFormatVersion.current,
+          demangle: demangle
         ) {
           try store.invalidateAll()
           try store.saveManifest(IndexManifest(
@@ -136,7 +137,8 @@ struct IndexCommand: ParsableCommand {
             converterVersion: ScipSwiftVersion.version,
             indexstoreDbRevision: indexstoreDbRevision,
             buildToolName: tool.rawValue,
-            symbolFormatVersion: SymbolFormatVersion.current
+            symbolFormatVersion: SymbolFormatVersion.current,
+            demangle: demangle
           ))
         }
       } else {
@@ -149,7 +151,8 @@ struct IndexCommand: ParsableCommand {
           converterVersion: ScipSwiftVersion.version,
           indexstoreDbRevision: indexstoreDbRevision,
           buildToolName: tool.rawValue,
-          symbolFormatVersion: SymbolFormatVersion.current
+          symbolFormatVersion: SymbolFormatVersion.current,
+          demangle: demangle
         ))
       }
       cacheStore = store
