@@ -12,6 +12,10 @@ Produce valid, `scip lint`-passing `.scip` indexes from any Swift repository (Sw
 
 ### Validated
 
+- ✓ Xcode-project indexing via restored xcodebuild dispatch + `--destination` with `-showdestinations` hint — v0.3.0
+- ✓ Demangled human-readable symbol display names (display-only; identity stable; `--no-demangle`) — v0.3.0
+- ✓ Exact occurrence ranges from SwiftSyntax identifier extents (UTF-8/Unicode-correct, parse-failure fallback) — v0.3.0
+- ✓ Symbol documentation: `///`/`/** */` → Markdown `documentation` on one parse — v0.3.0
 - ✓ Full build → IndexStore → SCIP protobuf pipeline — v0.1.0
 - ✓ SwiftPM build backend with `--enable-index-store` — v0.1.0
 - ✓ Xcode build backend with `COMPILER_INDEX_STORE_ENABLE=YES` — v0.1.0
@@ -37,10 +41,7 @@ Produce valid, `scip lint`-passing `.scip` indexes from any Swift repository (Sw
 
 ### Active
 
-- [ ] Demangle USRs into human-readable symbol names (e.g. `MiniSwift.greet(name:)` instead of `s:9MiniSwift5greetyySSF`) — v0.3.0
-- [ ] Emit exact occurrence ranges (replace display-name-length end-column approximation) — v0.3.0
-- [ ] Support `xcodebuild -destination` selection so iOS-only targets fully index — v0.3.0
-- [ ] Emit symbol documentation (doc comments and markdown `documentation` field) — v0.3.0
+(None — v0.3.0 Active requirements all validated. Next milestone not yet scoped; audit W3–W7 minor items deferred to the v1.0 track.)
 
 ### Out of Scope
 
@@ -51,7 +52,7 @@ Produce valid, `scip lint`-passing `.scip` indexes from any Swift repository (Sw
 
 ## Context
 
-**Current state:** v0.2.0 shipped. The tool works end-to-end for both SwiftPM and Xcode projects: it builds a target repo with indexing enabled, reads the resulting IndexStore via IndexStoreDB, maps occurrences/symbols (with relationships, role bits, enclosing symbols, and signatures) to SCIP protobuf messages, and writes a `.scip` file. The emitted index passes `scip lint`. Incremental caching speeds re-indexing. Cross-repo `index-many` with `--merge` handles multi-repo codebases. 95 tests across 16 suites.
+**Current state:** v0.3.0 shipped (Readable Indexes): demangled display names, exact UTF-8 occurrence ranges, Markdown symbol documentation, restored Xcode indexing with --destination. 216 tests. Canonical symbol strings now use the descriptor-chain scheme (symbolFormatVersion 2, v1.0-track) with raw-USR fallback. Previous: v0.2.0 shipped. The tool works end-to-end for both SwiftPM and Xcode projects: it builds a target repo with indexing enabled, reads the resulting IndexStore via IndexStoreDB, maps occurrences/symbols (with relationships, role bits, enclosing symbols, and signatures) to SCIP protobuf messages, and writes a `.scip` file. The emitted index passes `scip lint`. Incremental caching speeds re-indexing. Cross-repo `index-many` with `--merge` handles multi-repo codebases. 95 tests across 16 suites.
 
 **Known gaps:**
 - Symbol names use raw USRs (unreadable to humans, though correct) — demangling deferred to v1.0+
@@ -112,4 +113,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-15 after v0.2.0 milestone; v0.3.0 scoped*
+*Last updated: 2026-08-18 after v0.3.0 milestone*
