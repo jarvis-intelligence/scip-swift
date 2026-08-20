@@ -9,6 +9,18 @@ import IndexStoreDB
 /// See design.md Decision 3's "Correction" note: real `scip.proto`'s `SymbolRole` enum has no
 /// call-specific bit, so `.call` contributes nothing beyond whatever `.reference`/`.write` already
 /// produce.
+///
+/// FROZEN CONTRACT (D-16, 03-01): the access-bit precedence is write > read/reference >
+/// no access bit — `.write` emits WriteAccess; else `.reference` or `.read` emits
+/// ReadAccess; else no access bit (definitions and declarations carry
+/// definition/forward-definition bits only). The store's `.call`, `.dynamic`, and
+/// `.addressOf` contribute nothing to access bits, and there is deliberately no
+/// default-Read for role-less occurrences (it would corrupt findReferences filtering).
+/// `RoleParityTests` — plus the committed `Fixtures/SchemeFixture/role-table.json`
+/// golden, regenerable with `UPDATE_ROLE_TABLE=1` — is this contract's oracle: it
+/// proves every occurrence family over the SchemeFixture corpus in both directions.
+/// Do not change this precedence without updating that oracle and bumping
+/// `SymbolFormatVersion`.
 enum SymbolRoleMapping {
   static func scipRoles(for indexStoreRoles: SymbolRole, symbol: Symbol) -> Int32 {
     var roles: Int32 = 0

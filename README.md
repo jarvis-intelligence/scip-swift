@@ -153,7 +153,9 @@ Environment variables the gate understands:
 | --- | --- |
 | `SCIP_BIN` | Path to the `scip` binary (CI sets this to the checksum-verified pinned download; without it the binary must be on `PATH`). When neither resolves, the gate tests FAIL with install guidance — they never silently skip. |
 | `UPDATE_GOLDENS=1` | Regenerate the committed snapshot goldens instead of diffing (use after an intentional emission change). |
+| `UPDATE_ROLE_TABLE=1` | Regenerate `Fixtures/SchemeFixture/role-table.json`, the committed role-expectation table diffed by the `RoleParity` suite (see below). |
 | `UPDATE_SYMBOL_TABLE=1` | Regenerate `Fixtures/SchemeFixture/symbol-table.json` (see the cross-repo parity check below). |
+
 
 CI downloads the pinned CLI tarball from the scip-code/scip GitHub release over HTTPS,
 verifies it against the release-published `.sha256` sidecar (a mismatch fails the job), and
@@ -161,6 +163,22 @@ caches it keyed by `SCIP_CLI_VERSION` so an unchanged pin skips the download. `S
 (in `.github/workflows/ci.yml`) is the single pin and must match `ScipSwiftVersion.scipCliVersion`.
 CI also builds and tests under the pinned Swift toolchain — selected via `XCODE_PIN` and verified
 fail-loud by the workflow's select step plus the in-suite `ToolchainDriftGuard` test.
+
+### Role-bit oracle (`RoleParity`, NAV-01)
+
+`scip snapshot` caret output renders only four role words — definition,
+forward_definition, synthetic_definition, reference — so it can never show
+ReadAccess/WriteAccess bits. The `RoleParity` suite
+(`Tests/scip-swiftTests/RoleParityTests.swift`) is therefore the programmatic oracle for the
+frozen access-bit contract (write > read/reference > no access bit; call sites contribute
+nothing): it rebuilds the SchemeFixture index in-process and asserts role bits for every
+occurrence family — property writes (both directions over the eight write sites),
+property/param/subscript reads, params on both symbol paths (clean `local n` symbols and
+raw-USR fallback Terms), enum-case/type/function references, accessors including willSet,
+and the definition invariants — against the committed expectation table
+`Fixtures/SchemeFixture/role-table.json`. Regenerate that table with
+`UPDATE_ROLE_TABLE=1 swift test --filter RoleParity`, under the pinned toolchain only (same
+discipline as the snapshot goldens: role rows are toolchain-sensitive data).
 
 ## macOS-host requirement
 
