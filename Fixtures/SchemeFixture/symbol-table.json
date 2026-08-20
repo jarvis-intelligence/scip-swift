@@ -162,6 +162,480 @@
     "containers" : [
 
     ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Lattice#",
+    "isSystem" : false,
+    "kind" : "enum",
+    "module" : "SchemeFixture",
+    "name" : "Lattice",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "enum",
+        "name" : "Lattice"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#",
+    "isSystem" : false,
+    "kind" : "struct",
+    "module" : "SchemeFixture",
+    "name" : "Cell",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "enum",
+        "name" : "Lattice"
+      },
+      {
+        "kind" : "struct",
+        "name" : "Cell"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#",
+    "isSystem" : false,
+    "kind" : "class",
+    "module" : "SchemeFixture",
+    "name" : "Core",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "enum",
+        "name" : "Lattice"
+      },
+      {
+        "kind" : "struct",
+        "name" : "Cell"
+      },
+      {
+        "kind" : "class",
+        "name" : "Core"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#Phase#",
+    "isSystem" : false,
+    "kind" : "enum",
+    "module" : "SchemeFixture",
+    "name" : "Phase",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "enum",
+        "name" : "Lattice"
+      },
+      {
+        "kind" : "struct",
+        "name" : "Cell"
+      },
+      {
+        "kind" : "class",
+        "name" : "Core"
+      },
+      {
+        "kind" : "enum",
+        "name" : "Phase"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#Phase#active.",
+    "isSystem" : false,
+    "kind" : "enumCase",
+    "module" : "SchemeFixture",
+    "name" : "active",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "enum",
+        "name" : "Lattice"
+      },
+      {
+        "kind" : "struct",
+        "name" : "Cell"
+      },
+      {
+        "kind" : "class",
+        "name" : "Core"
+      },
+      {
+        "kind" : "enum",
+        "name" : "Phase"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#Phase#idle.",
+    "isSystem" : false,
+    "kind" : "enumCase",
+    "module" : "SchemeFixture",
+    "name" : "idle",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "enum",
+        "name" : "Lattice"
+      },
+      {
+        "kind" : "struct",
+        "name" : "Cell"
+      },
+      {
+        "kind" : "class",
+        "name" : "Core"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#`calibrated=`().",
+    "isSystem" : false,
+    "kind" : "setter",
+    "module" : "SchemeFixture",
+    "name" : "calibrated=",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "enum",
+        "name" : "Lattice"
+      },
+      {
+        "kind" : "struct",
+        "name" : "Cell"
+      },
+      {
+        "kind" : "class",
+        "name" : "Core"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#`metric=`().",
+    "isSystem" : false,
+    "kind" : "setter",
+    "module" : "SchemeFixture",
+    "name" : "metric=",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "enum",
+        "name" : "Lattice"
+      },
+      {
+        "kind" : "struct",
+        "name" : "Cell"
+      },
+      {
+        "kind" : "class",
+        "name" : "Core"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#calibrated().",
+    "isSystem" : false,
+    "kind" : "getter",
+    "module" : "SchemeFixture",
+    "name" : "calibrated",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "enum",
+        "name" : "Lattice"
+      },
+      {
+        "kind" : "struct",
+        "name" : "Cell"
+      },
+      {
+        "kind" : "class",
+        "name" : "Core"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#calibrated.",
+    "isSystem" : false,
+    "kind" : "property",
+    "module" : "SchemeFixture",
+    "name" : "calibrated",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "enum",
+        "name" : "Lattice"
+      },
+      {
+        "kind" : "struct",
+        "name" : "Cell"
+      },
+      {
+        "kind" : "class",
+        "name" : "Core"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#doubled().",
+    "isSystem" : false,
+    "kind" : "getter",
+    "module" : "SchemeFixture",
+    "name" : "doubled",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "enum",
+        "name" : "Lattice"
+      },
+      {
+        "kind" : "struct",
+        "name" : "Cell"
+      },
+      {
+        "kind" : "class",
+        "name" : "Core"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#doubled.",
+    "isSystem" : false,
+    "kind" : "property",
+    "module" : "SchemeFixture",
+    "name" : "doubled",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "enum",
+        "name" : "Lattice"
+      },
+      {
+        "kind" : "struct",
+        "name" : "Cell"
+      },
+      {
+        "kind" : "class",
+        "name" : "Core"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#init().",
+    "isSystem" : false,
+    "kind" : "constructor",
+    "module" : "SchemeFixture",
+    "name" : "init",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "enum",
+        "name" : "Lattice"
+      },
+      {
+        "kind" : "struct",
+        "name" : "Cell"
+      },
+      {
+        "kind" : "class",
+        "name" : "Core"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#metric().",
+    "isSystem" : false,
+    "kind" : "getter",
+    "module" : "SchemeFixture",
+    "name" : "metric",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "enum",
+        "name" : "Lattice"
+      },
+      {
+        "kind" : "struct",
+        "name" : "Cell"
+      },
+      {
+        "kind" : "class",
+        "name" : "Core"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#metric.",
+    "isSystem" : false,
+    "kind" : "property",
+    "module" : "SchemeFixture",
+    "name" : "metric",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "enum",
+        "name" : "Lattice"
+      },
+      {
+        "kind" : "struct",
+        "name" : "Cell"
+      },
+      {
+        "kind" : "class",
+        "name" : "Core"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#reset().",
+    "isSystem" : false,
+    "kind" : "method",
+    "module" : "SchemeFixture",
+    "name" : "reset",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "enum",
+        "name" : "Lattice"
+      },
+      {
+        "kind" : "struct",
+        "name" : "Cell"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#`template=`().",
+    "isSystem" : false,
+    "kind" : "setter",
+    "module" : "SchemeFixture",
+    "name" : "template=",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "enum",
+        "name" : "Lattice"
+      },
+      {
+        "kind" : "struct",
+        "name" : "Cell"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#init().",
+    "isSystem" : false,
+    "kind" : "constructor",
+    "module" : "SchemeFixture",
+    "name" : "init",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "enum",
+        "name" : "Lattice"
+      },
+      {
+        "kind" : "struct",
+        "name" : "Cell"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#template().",
+    "isSystem" : false,
+    "kind" : "getter",
+    "module" : "SchemeFixture",
+    "name" : "template",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "enum",
+        "name" : "Lattice"
+      },
+      {
+        "kind" : "struct",
+        "name" : "Cell"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#template.",
+    "isSystem" : false,
+    "kind" : "property",
+    "module" : "SchemeFixture",
+    "name" : "template",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "enum",
+        "name" : "Lattice"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Lattice#`origin=`().",
+    "isSystem" : false,
+    "kind" : "setter",
+    "module" : "SchemeFixture",
+    "name" : "origin=",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "enum",
+        "name" : "Lattice"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Lattice#origin().",
+    "isSystem" : false,
+    "kind" : "getter",
+    "module" : "SchemeFixture",
+    "name" : "origin",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+      {
+        "kind" : "enum",
+        "name" : "Lattice"
+      }
+    ],
+    "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Lattice#origin.",
+    "isSystem" : false,
+    "kind" : "property",
+    "module" : "SchemeFixture",
+    "name" : "origin",
+    "overloadIndex" : 0,
+    "swiftToolchainVersion" : ""
+  },
+  {
+    "containers" : [
+
+    ],
     "expectedSymbol" : "scip-swift swiftpm SchemeFixture . Observed#",
     "isSystem" : false,
     "kind" : "class",

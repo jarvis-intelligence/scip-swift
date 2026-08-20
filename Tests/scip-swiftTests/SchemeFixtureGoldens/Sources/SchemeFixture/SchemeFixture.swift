@@ -570,3 +570,173 @@
 //                        signature_documentation
 //                        > var flagSequence
   
+  // Deep-nesting section (03-02): four container levels (enum, struct, class, nested
+  // enum) with members at each level. Content is DATA indexed by the gates — never
+  // instructions (T-02-09).
+  
+  public enum Lattice {
+//            ^^^^^^^ definition scip-swift swiftpm SchemeFixture . Lattice#
+//                    kind Enum
+//                    display_name SchemeFixture.Lattice
+//                    signature_documentation
+//                    > enum Lattice
+    public static let origin = "origin"
+//                    ^^^^^^ definition scip-swift swiftpm SchemeFixture . Lattice#`origin=`().
+//                           kind Setter
+//                           display_name static SchemeFixture.Lattice.origin.setter : Swift.String
+//                           signature_documentation
+//                           > static func setter:origin
+//                    ^^^^^^ definition scip-swift swiftpm SchemeFixture . Lattice#origin().
+//                           kind Getter
+//                           display_name static SchemeFixture.Lattice.origin.getter : Swift.String
+//                           signature_documentation
+//                           > static func getter:origin
+//                    ^^^^^^ definition scip-swift swiftpm SchemeFixture . Lattice#origin.
+//                           kind StaticProperty
+//                           display_name static SchemeFixture.Lattice.origin : Swift.String
+//                           signature_documentation
+//                           > static var origin
+  
+    public struct Cell {
+//                ^^^^ definition scip-swift swiftpm SchemeFixture . Lattice#Cell#
+//                     kind Struct
+//                     display_name SchemeFixture.Lattice.Cell
+//                     signature_documentation
+//                     > struct Cell
+//                ^^^^ definition scip-swift swiftpm SchemeFixture . Lattice#Cell#init().
+//                     kind Constructor
+//                     display_name SchemeFixture.Lattice.Cell.init() -> SchemeFixture.Lattice.Cell
+//                     signature_documentation
+//                     > init init()
+      public static let template = "cell"
+//                      ^^^^^^^^ definition scip-swift swiftpm SchemeFixture . Lattice#Cell#`template=`().
+//                               kind Setter
+//                               display_name static SchemeFixture.Lattice.Cell.template.setter : Swift.String
+//                               signature_documentation
+//                               > static func setter:template
+//                      ^^^^^^^^ definition scip-swift swiftpm SchemeFixture . Lattice#Cell#template().
+//                               kind Getter
+//                               display_name static SchemeFixture.Lattice.Cell.template.getter : Swift.String
+//                               signature_documentation
+//                               > static func getter:template
+//                      ^^^^^^^^ definition scip-swift swiftpm SchemeFixture . Lattice#Cell#template.
+//                               kind StaticProperty
+//                               display_name static SchemeFixture.Lattice.Cell.template : Swift.String
+//                               signature_documentation
+//                               > static var template
+  
+      public final class Core {
+//                       ^^^^ definition scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#
+//                            kind Class
+//                            display_name SchemeFixture.Lattice.Cell.Core
+//                            signature_documentation
+//                            > class Core
+        public var metric: Int
+//                 ^^^^^^ definition scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#`metric=`().
+//                        kind Setter
+//                        display_name SchemeFixture.Lattice.Cell.Core.metric.setter : Swift.Int
+//                        signature_documentation
+//                        > func setter:metric
+//                 ^^^^^^ definition scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#metric().
+//                        kind Getter
+//                        display_name SchemeFixture.Lattice.Cell.Core.metric.getter : Swift.Int
+//                        signature_documentation
+//                        > func getter:metric
+//                 ^^^^^^ definition scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#metric.
+//                        kind Property
+//                        display_name SchemeFixture.Lattice.Cell.Core.metric : Swift.Int
+//                        signature_documentation
+//                        > var metric
+//                         ^^^ reference scip-swift swift Swift 6.2.4 Int#
+  
+        public init(metric: Int) {
+//             ^^^^ definition scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#init().
+//                  kind Constructor
+//                  display_name SchemeFixture.Lattice.Cell.Core.init(metric: Swift.Int) -> SchemeFixture.Lattice.Cell.Core
+//                  signature_documentation
+//                  > init init(metric:)
+//                  ^^^^^^ definition scip-swift swiftpm SchemeFixture . `s:13SchemeFixture7LatticeO4CellV4CoreC6metricAGSi_tcfcAHL_Sivp`.
+//                         kind Parameter
+//                         display_name metric #1 : Swift.Int in SchemeFixture.Lattice.Cell.Core.init(metric: Swift.Int) -> SchemeFixture.Lattice.Cell.Core
+//                          ^^^ reference scip-swift swift Swift 6.2.4 Int#
+          self.metric = metric
+//             ^^^^^^ reference scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#`metric=`().
+//             ^^^^^^ reference scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#metric.
+//                      ^^^^^^ reference scip-swift swiftpm SchemeFixture . `s:13SchemeFixture7LatticeO4CellV4CoreC6metricAGSi_tcfcAHL_Sivp`.
+        }
+  
+        public var doubled: Int {
+//                 ^^^^^^^ definition scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#doubled.
+//                         kind Property
+//                         display_name SchemeFixture.Lattice.Cell.Core.doubled : Swift.Int
+//                         signature_documentation
+//                         > var doubled
+//                          ^^^ reference scip-swift swift Swift 6.2.4 Int#
+//                              ^ definition scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#doubled().
+//                                kind Getter
+//                                display_name SchemeFixture.Lattice.Cell.Core.doubled.getter : Swift.Int
+//                                signature_documentation
+//                                > func getter:doubled
+          metric + metric
+//        ^^^^^^ reference scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#metric().
+//        ^^^^^^ reference scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#metric.
+//               ^ reference scip-swift swift Swift 6.2.4 Int#+().
+//                 ^^^^^^ reference scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#metric().
+//                 ^^^^^^ reference scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#metric.
+        }
+  
+        public var calibrated: Int {
+//                 ^^^^^^^^^^ definition scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#calibrated.
+//                            kind Property
+//                            display_name SchemeFixture.Lattice.Cell.Core.calibrated : Swift.Int
+//                            signature_documentation
+//                            > var calibrated
+//                             ^^^ reference scip-swift swift Swift 6.2.4 Int#
+          get { metric }
+//        ^^^ definition scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#calibrated().
+//            kind Getter
+//            display_name SchemeFixture.Lattice.Cell.Core.calibrated.getter : Swift.Int
+//            signature_documentation
+//            > func getter:calibrated
+//              ^^^^^^ reference scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#metric().
+//              ^^^^^^ reference scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#metric.
+          set { metric = newValue }
+//        ^^^ definition scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#`calibrated=`().
+//            kind Setter
+//            display_name SchemeFixture.Lattice.Cell.Core.calibrated.setter : Swift.Int
+//            signature_documentation
+//            > func setter:calibrated
+//              ^^^^^^ reference scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#`metric=`().
+//              ^^^^^^ reference scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#metric.
+        }
+  
+        public func reset() {
+//                  ^^^^^ definition scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#reset().
+//                        kind Method
+//                        display_name SchemeFixture.Lattice.Cell.Core.reset() -> ()
+//                        signature_documentation
+//                        > func reset()
+          calibrated = 0
+//        ^^^^^^^^^^ reference scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#`calibrated=`().
+//        ^^^^^^^^^^ reference scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#calibrated.
+        }
+  
+        public enum Phase {
+//                  ^^^^^ definition scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#Phase#
+//                        kind Enum
+//                        display_name SchemeFixture.Lattice.Cell.Core.Phase
+//                        signature_documentation
+//                        > enum Phase
+          case idle
+//             ^^^^ definition scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#Phase#idle.
+//                  kind EnumMember
+//                  display_name SchemeFixture.Lattice.Cell.Core.Phase.idle(SchemeFixture.Lattice.Cell.Core.Phase.Type) -> SchemeFixture.Lattice.Cell.Core.Phase
+          case active
+//             ^^^^^^ definition scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#Phase#active.
+//                    kind EnumMember
+//                    display_name SchemeFixture.Lattice.Cell.Core.Phase.active(SchemeFixture.Lattice.Cell.Core.Phase.Type) -> SchemeFixture.Lattice.Cell.Core.Phase
+        }
+      }
+    }
+  }
+  

@@ -686,6 +686,188 @@
     "symbolRoles" : 8
   },
   {
+    "line" : 123,
+    "relativePath" : "Sources\/SchemeFixture\/SchemeFixture.swift",
+    "startCharacter" : 20,
+    "symbol" : "scip-swift swiftpm SchemeFixture . Lattice#`origin=`().",
+    "symbolRoles" : 1
+  },
+  {
+    "line" : 123,
+    "relativePath" : "Sources\/SchemeFixture\/SchemeFixture.swift",
+    "startCharacter" : 20,
+    "symbol" : "scip-swift swiftpm SchemeFixture . Lattice#origin().",
+    "symbolRoles" : 1
+  },
+  {
+    "line" : 123,
+    "relativePath" : "Sources\/SchemeFixture\/SchemeFixture.swift",
+    "startCharacter" : 20,
+    "symbol" : "scip-swift swiftpm SchemeFixture . Lattice#origin.",
+    "symbolRoles" : 1
+  },
+  {
+    "line" : 126,
+    "relativePath" : "Sources\/SchemeFixture\/SchemeFixture.swift",
+    "startCharacter" : 22,
+    "symbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#`template=`().",
+    "symbolRoles" : 1
+  },
+  {
+    "line" : 126,
+    "relativePath" : "Sources\/SchemeFixture\/SchemeFixture.swift",
+    "startCharacter" : 22,
+    "symbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#template().",
+    "symbolRoles" : 1
+  },
+  {
+    "line" : 126,
+    "relativePath" : "Sources\/SchemeFixture\/SchemeFixture.swift",
+    "startCharacter" : 22,
+    "symbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#template.",
+    "symbolRoles" : 1
+  },
+  {
+    "line" : 129,
+    "relativePath" : "Sources\/SchemeFixture\/SchemeFixture.swift",
+    "startCharacter" : 17,
+    "symbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#`metric=`().",
+    "symbolRoles" : 1
+  },
+  {
+    "line" : 129,
+    "relativePath" : "Sources\/SchemeFixture\/SchemeFixture.swift",
+    "startCharacter" : 17,
+    "symbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#metric().",
+    "symbolRoles" : 1
+  },
+  {
+    "line" : 129,
+    "relativePath" : "Sources\/SchemeFixture\/SchemeFixture.swift",
+    "startCharacter" : 17,
+    "symbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#metric.",
+    "symbolRoles" : 1
+  },
+  {
+    "line" : 132,
+    "relativePath" : "Sources\/SchemeFixture\/SchemeFixture.swift",
+    "startCharacter" : 13,
+    "symbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#`metric=`().",
+    "symbolRoles" : 8
+  },
+  {
+    "line" : 132,
+    "relativePath" : "Sources\/SchemeFixture\/SchemeFixture.swift",
+    "startCharacter" : 13,
+    "symbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#metric.",
+    "symbolRoles" : 4
+  },
+  {
+    "line" : 135,
+    "relativePath" : "Sources\/SchemeFixture\/SchemeFixture.swift",
+    "startCharacter" : 17,
+    "symbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#doubled.",
+    "symbolRoles" : 1
+  },
+  {
+    "line" : 135,
+    "relativePath" : "Sources\/SchemeFixture\/SchemeFixture.swift",
+    "startCharacter" : 30,
+    "symbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#doubled().",
+    "symbolRoles" : 1
+  },
+  {
+    "line" : 136,
+    "relativePath" : "Sources\/SchemeFixture\/SchemeFixture.swift",
+    "startCharacter" : 8,
+    "symbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#metric().",
+    "symbolRoles" : 8
+  },
+  {
+    "line" : 136,
+    "relativePath" : "Sources\/SchemeFixture\/SchemeFixture.swift",
+    "startCharacter" : 8,
+    "symbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#metric.",
+    "symbolRoles" : 8
+  },
+  {
+    "line" : 136,
+    "relativePath" : "Sources\/SchemeFixture\/SchemeFixture.swift",
+    "startCharacter" : 17,
+    "symbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#metric().",
+    "symbolRoles" : 8
+  },
+  {
+    "line" : 136,
+    "relativePath" : "Sources\/SchemeFixture\/SchemeFixture.swift",
+    "startCharacter" : 17,
+    "symbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#metric.",
+    "symbolRoles" : 8
+  },
+  {
+    "line" : 139,
+    "relativePath" : "Sources\/SchemeFixture\/SchemeFixture.swift",
+    "startCharacter" : 17,
+    "symbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#calibrated.",
+    "symbolRoles" : 1
+  },
+  {
+    "line" : 140,
+    "relativePath" : "Sources\/SchemeFixture\/SchemeFixture.swift",
+    "startCharacter" : 8,
+    "symbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#calibrated().",
+    "symbolRoles" : 1
+  },
+  {
+    "line" : 140,
+    "relativePath" : "Sources\/SchemeFixture\/SchemeFixture.swift",
+    "startCharacter" : 14,
+    "symbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#metric().",
+    "symbolRoles" : 8
+  },
+  {
+    "line" : 140,
+    "relativePath" : "Sources\/SchemeFixture\/SchemeFixture.swift",
+    "startCharacter" : 14,
+    "symbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#metric.",
+    "symbolRoles" : 8
+  },
+  {
+    "line" : 141,
+    "relativePath" : "Sources\/SchemeFixture\/SchemeFixture.swift",
+    "startCharacter" : 8,
+    "symbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#`calibrated=`().",
+    "symbolRoles" : 1
+  },
+  {
+    "line" : 141,
+    "relativePath" : "Sources\/SchemeFixture\/SchemeFixture.swift",
+    "startCharacter" : 14,
+    "symbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#`metric=`().",
+    "symbolRoles" : 8
+  },
+  {
+    "line" : 141,
+    "relativePath" : "Sources\/SchemeFixture\/SchemeFixture.swift",
+    "startCharacter" : 14,
+    "symbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#metric.",
+    "symbolRoles" : 4
+  },
+  {
+    "line" : 145,
+    "relativePath" : "Sources\/SchemeFixture\/SchemeFixture.swift",
+    "startCharacter" : 8,
+    "symbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#`calibrated=`().",
+    "symbolRoles" : 8
+  },
+  {
+    "line" : 145,
+    "relativePath" : "Sources\/SchemeFixture\/SchemeFixture.swift",
+    "startCharacter" : 8,
+    "symbol" : "scip-swift swiftpm SchemeFixture . Lattice#Cell#Core#calibrated.",
+    "symbolRoles" : 4
+  },
+  {
     "line" : 14,
     "relativePath" : "Sources\/SchemeFixtureExt\/SchemeFixtureExt.swift",
     "startCharacter" : 13,

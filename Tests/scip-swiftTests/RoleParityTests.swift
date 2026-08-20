@@ -36,7 +36,7 @@ struct RoleParityTests {
 
   // MARK: - Task 1 (tracer): end-to-end WriteAccess proof over property writes
 
-  @Test("WriteAccess occurs exactly at the eight property-write sites (both directions)")
+  @Test("WriteAccess occurs exactly at the eleven property-write sites (both directions)")
   func writeAccessExactSites() throws {
     let index = try Self.sharedIndex()
     let lib = try Self.sourcesFixture()
@@ -51,6 +51,12 @@ struct RoleParityTests {
       (lib, "self.content = content", Family.boxContent),
       (lib, "backing = newValue", Family.observedBacking),
       (lib, "prepared = true", Family.observedPrepared),
+      // Deep-nesting section (03-02): the stored-property init assignment, the
+      // computed property's setter writing its backing storage, and the
+      // computed-property write via setter assignment inside reset().
+      (lib, "self.metric = metric", Family.coreMetric),
+      (lib, "set { metric = newValue }", Family.coreMetric),
+      (lib, "calibrated = 0", Family.coreCalibrated),
       // Tests/SchemeFixtureTests/SchemeFixtureTests.swift — three test-file writes.
       (test, #"poster.label = "demo""#, Family.posterLabel),
       (test, "observed.computed = 5", Family.observedComputed),
@@ -67,7 +73,7 @@ struct RoleParityTests {
       )
       expected.insert(RowKey(relativePath: fixture.relativePath, line: line, symbol: symbol))
     }
-    #expect(expected.count == 8, "the eight write sites must be distinct")
+    #expect(expected.count == 11, "the eleven write sites must be distinct")
 
     // Direction B (sweep): every WriteAccess occurrence in the whole corpus is an
     // expected site. Direction A: every expected site has its WriteAccess occurrence.
@@ -103,6 +109,9 @@ struct RoleParityTests {
       (lib, "self.content = content", Family.boxContentSetter),
       (lib, "backing = newValue", Family.observedBackingSetter),
       (lib, "prepared = true", Family.observedPreparedSetter),
+      (lib, "self.metric = metric", Family.coreMetricSetter),
+      (lib, "set { metric = newValue }", Family.coreMetricSetter),
+      (lib, "calibrated = 0", Family.coreCalibratedSetter),
       (test, #"poster.label = "demo""#, Family.posterLabelSetter),
       (test, "observed.computed = 5", Family.observedComputedSetter),
       (test, "observed.watched = 6", Family.observedWatchedSetter),
@@ -162,7 +171,6 @@ struct RoleParityTests {
     let ext = try Self.extensionFixture()
     let test = try Self.testsFixture()
 
-
     // Pinned read sites, resolved structurally: (fixture, unique source anchor, symbols
     // read there). The anchors name the READ expressions; the source is the truth.
     let expectedReadSites: [(Fixture, String, [String])] = [
@@ -189,6 +197,10 @@ struct RoleParityTests {
       // Subscript read at `vector[0]` — the property Term and the getter Term, both on
       // the test-target module header (CR-01: fallback attribution is location-based).
       (test, "vector[0] == 1", [Family.subscriptTermTests, Family.subscriptGetterTermTests]),
+      // Deep-nesting section (03-02): reads of the stored property in the computed
+      // getter bodies (the read-only `doubled` and `calibrated`'s get clause).
+      (lib, "metric + metric", [Family.coreMetric]),
+      (lib, "get { metric }", [Family.coreMetric]),
     ]
 
     var expected = Set<RowKey>()
@@ -515,9 +527,16 @@ struct RoleParityTests {
     static let observedWatched = libraryPrefix + "Observed#watched."
     static let observedPrepared = libraryPrefix + "Observed#prepared."
     static let vecManhattanLength = libraryPrefix + "Vec#manhattanLength."
+    // Deep-nesting section (03-02): Lattice.Cell.Core members + the level-1/2 lets.
+    static let coreMetric = libraryPrefix + "Lattice#Cell#Core#metric."
+    static let coreCalibrated = libraryPrefix + "Lattice#Cell#Core#calibrated."
+    static let coreDoubled = libraryPrefix + "Lattice#Cell#Core#doubled."
+    static let latticeOrigin = libraryPrefix + "Lattice#origin."
+    static let cellTemplate = libraryPrefix + "Lattice#Cell#template."
     static let propertyTerms: Set<String> = [
       vecX, vecY, boxContent, posterLabel, observedComputed, observedBacking,
       observedWatched, observedPrepared, vecManhattanLength,
+      coreMetric, coreCalibrated, coreDoubled, latticeOrigin, cellTemplate,
     ]
 
     // Accessor method forms: getters (zero-arg method string), setters (`name=`), and
@@ -530,6 +549,8 @@ struct RoleParityTests {
     static let observedBackingSetter = libraryPrefix + "Observed#`backing=`()."
     static let observedPreparedSetter = libraryPrefix + "Observed#`prepared=`()."
     static let observedWatchedSetter = libraryPrefix + "Observed#`watched=`()."
+    static let coreMetricSetter = libraryPrefix + "Lattice#Cell#Core#`metric=`()."
+    static let coreCalibratedSetter = libraryPrefix + "Lattice#Cell#Core#`calibrated=`()."
     static let watchedWillSet = libraryPrefix + "Observed#`watched=`(+1)."
     static let accessorTerms: Set<String> = [
       libraryPrefix + "Vec#x().", libraryPrefix + "Vec#y().",
@@ -537,6 +558,12 @@ struct RoleParityTests {
       libraryPrefix + "Observed#computed().", libraryPrefix + "Observed#backing().",
       libraryPrefix + "Observed#watched().", libraryPrefix + "Observed#prepared().",
       libraryPrefix + "Vec#manhattanLength().",
+      // Deep-nesting section (03-02) accessors.
+      libraryPrefix + "Lattice#Cell#Core#metric().", coreMetricSetter,
+      libraryPrefix + "Lattice#Cell#Core#doubled().",
+      libraryPrefix + "Lattice#Cell#Core#calibrated().", coreCalibratedSetter,
+      libraryPrefix + "Lattice#origin().", libraryPrefix + "Lattice#`origin=`().",
+      libraryPrefix + "Lattice#Cell#template().", libraryPrefix + "Lattice#Cell#`template=`().",
       vecXSetter, vecYSetter, boxContentSetter, posterLabelSetter,
       observedComputedSetter, observedBackingSetter, observedPreparedSetter,
       observedWatchedSetter, watchedWillSet,

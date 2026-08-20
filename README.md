@@ -172,13 +172,28 @@ ReadAccess/WriteAccess bits. The `RoleParity` suite
 (`Tests/scip-swiftTests/RoleParityTests.swift`) is therefore the programmatic oracle for the
 frozen access-bit contract (write > read/reference > no access bit; call sites contribute
 nothing): it rebuilds the SchemeFixture index in-process and asserts role bits for every
-occurrence family — property writes (both directions over the eight write sites),
+occurrence family — property writes (both directions over the eleven write sites),
 property/param/subscript reads, params on both symbol paths (clean `local n` symbols and
 raw-USR fallback Terms), enum-case/type/function references, accessors including willSet,
 and the definition invariants — against the committed expectation table
 `Fixtures/SchemeFixture/role-table.json`. Regenerate that table with
 `UPDATE_ROLE_TABLE=1 swift test --filter RoleParity`, under the pinned toolchain only (same
 discipline as the snapshot goldens: role rows are toolchain-sensitive data).
+
+### Outline oracle (`DocumentOutline`, NAV-02)
+
+`documentSymbols` correctness is gated structurally, not inferred from byte-identical
+goldens: the `DocumentOutline` suite (`Tests/scip-swiftTests/DocumentOutlineTests.swift`)
+rebuilds the SchemeFixture index in-process and (1) sweeps EVERY document for the
+exhaustive invariant that every non-empty `enclosing_symbol` resolves to a symbol in the
+same document (only `local n` symbols carry one), (2) pins the locals' enclosing targets,
+and (3) derives each file's nesting tree by splitting `document.symbols` canonical strings
+on their descriptor suffixes and asserts it equals a hand-written expected outline — for
+the library file (including the `#if`-wrapped declaration and the same-file extension
+member), the extension file (declarations as file-level entries, members under the
+extended types, cross-module per the frozen scheme), and the deep-nesting section
+(`Lattice#Cell#Core#Phase#…`, four container levels). Accepted outline shapes are
+asserted explicitly, not assumed — see the outline bullets under Known limitations.
 
 ## macOS-host requirement
 
@@ -205,6 +220,27 @@ the common case for a real iOS app repo. If the underlying build command fails f
     order.
   - **Parameters take the raw-USR fallback** — their canonical form needs enclosing-function
     container parsing, planned for a later phase.
+
+- **Outline shape (documentSymbols), accepted v1 behavior** — gated by the `DocumentOutline`
+  suite:
+  - **Extension declarations are file-level entries.** An `extension Vec { … }` declaration
+    emits a fallback-Term `SymbolInformation` (kind Extension) that cannot nest via its
+    symbol string; its MEMBERS nest under the extended type's path, across modules
+    (SYM-02). The extended type is then a path-only outline node in the extending file.
+  - **Generic type parameters emit definitions under the TypeAlias kind.** The store has no
+    `genericTypeParam` symbol kind, so `Box#T#` renders kind TypeAlias (WR-05) — the
+    type-parameter *descriptor* form (`[T]`) never appears in emitted symbols.
+  - **Swift-Testing documents carry no local-property symbols** — the store emits no `.local`
+    occurrences for test-file declarations on the pinned toolchain, so `enclosing_symbol`
+    coverage in test documents is empty (the invariant holds trivially there).
+  - **`enclosing_symbol` targets render the un-disambiguated overload-group form** — the
+    locals branch assembles the `.childOf` symbol without the overload index, so a local
+    inside `parse(+1)` carries the `parse()` string. The target still resolves inside the
+    same document; adding `(+N)` would change emitted bytes (a `symbolFormatVersion` bump).
+  - **Parameters are file-level raw-USR fallback Terms** (D-06), so they cannot nest under
+    their enclosing function by symbol string; and structs without stored properties gain
+    compiler-synthesized default `init()` definitions in the outline.
+
 - **Occurrence ranges**: IndexStoreDB (like the underlying IndexStore format) only records a
   single anchor point per occurrence — not a start/end range. The end column is the exact
   identifier-token extent from a `SwiftSyntax` parse of the file; the name-length approximation

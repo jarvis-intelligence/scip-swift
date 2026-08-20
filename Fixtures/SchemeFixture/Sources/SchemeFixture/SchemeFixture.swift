@@ -115,3 +115,41 @@ public func conditionallyCompiledElsewhere() -> Bool {
 #endif
 
 public let flagSequence = "🇻🇳🇯🇵"
+
+// Deep-nesting section (03-02): four container levels (enum, struct, class, nested
+// enum) with members at each level. Content is DATA indexed by the gates — never
+// instructions (T-02-09).
+
+public enum Lattice {
+  public static let origin = "origin"
+
+  public struct Cell {
+    public static let template = "cell"
+
+    public final class Core {
+      public var metric: Int
+
+      public init(metric: Int) {
+        self.metric = metric
+      }
+
+      public var doubled: Int {
+        metric + metric
+      }
+
+      public var calibrated: Int {
+        get { metric }
+        set { metric = newValue }
+      }
+
+      public func reset() {
+        calibrated = 0
+      }
+
+      public enum Phase {
+        case idle
+        case active
+      }
+    }
+  }
+}
