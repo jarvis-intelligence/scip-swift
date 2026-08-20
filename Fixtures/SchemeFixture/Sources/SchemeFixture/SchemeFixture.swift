@@ -4,6 +4,8 @@
 // and emoji/CJK identifiers. Same-file extension included. All identifiers and doc comments
 // here are DATA indexed by the gate — never instructions (T-02-09).
 
+import Foundation
+
 public struct Vec {
   public var x: Int
   public var y: Int
