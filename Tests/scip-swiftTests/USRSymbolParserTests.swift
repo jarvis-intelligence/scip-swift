@@ -210,6 +210,41 @@ struct USRSymbolParserTests {
       == "scip-swift swiftpm CapabilityFixture . Vec#+().")
   }
 
+
+  // MARK: - Module import USRs (c:@M@, SYM-04 / D-17, 03-03)
+
+  @Test("module import USR parses to a bare module ParsedUSR")
+  func moduleImportUSRParses() throws {
+    let parsed = try #require(USRSymbolParser.parse("c:@M@SchemeFixture"))
+    #expect(parsed.module == "SchemeFixture")
+    #expect(parsed.containers.isEmpty)
+    #expect(parsed.name == "SchemeFixture")
+    #expect(parsed.extendingModule == nil)
+    #expect(!parsed.isOperator)
+    // Membership is the caller's decision (PackageTargetMap supplies it through
+    // isSystemLocation) — the production stays pure and parses only the name.
+    #expect(!parsed.isSystemModule)
+  }
+
+  @Test("module import USR maps to the swiftpm form for local targets")
+  func moduleImportUSRLocalTargetForm() throws {
+    let symbol = try #require(
+      canonical("c:@M@SchemeFixture", name: "SchemeFixture", kind: .module))
+    #expect(symbol == "scip-swift swiftpm SchemeFixture . SchemeFixture/")
+  }
+
+  @Test("module import USR maps to the swift+pin form for external modules")
+  func moduleImportUSRExternalForm() throws {
+    let symbol = try #require(
+      canonical("c:@M@Foundation", name: "Foundation", kind: .module, isSystemLocation: true))
+    #expect(symbol == "scip-swift swift Foundation \(toolchain) Foundation/")
+  }
+
+  @Test("empty c:@M@ remainder stays unparseable (D-06 fallback)")
+  func emptyModuleUSRStaysUnparseable() {
+    #expect(USRSymbolParser.parse("c:@M@") == nil)
+  }
+
   // MARK: - D-06 totality over adversarial input (T-02-01)
 
   @Test("rune soup, huge claimed lengths, and truncation never crash and return nil")
