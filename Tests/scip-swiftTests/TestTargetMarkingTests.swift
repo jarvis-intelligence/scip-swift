@@ -80,11 +80,14 @@ struct TestTargetMarkingTests {
 
     // definition|test (0x21) on the test suite struct's own definition. The struct's
     // USR is a local-context mangling the parser does not decode, so its definition
-    // renders as the D-06 fallback Term anchored at the @Suite attribute line (the
-    // store's anchor for the declaration) — pinned exactly, hash-free and deterministic.
-    let suiteLine = try Self.uniqueLine(in: test, containing: "@Suite(")
+    // renders as the D-06 fallback Term anchored at the struct declaration line —
+    // pinned exactly, hash-free and deterministic.
+    let suiteLine = try Self.uniqueLine(in: test, containing: "struct SchemeFixtureTests")
     let structDefs = index.occurrences(in: Self.testDocPath, atLine: suiteLine)
-      .filter { $0.symbol == "scip-swift swiftpm SchemeFixtureTests . `s:18SchemeFixtureTestsAAV`." }
+      .filter {
+        $0.symbol == "scip-swift swiftpm SchemeFixtureTests . `s:18SchemeFixtureTestsAAV`."
+          && $0.symbolRoles & Int32(Scip_SymbolRole.definition.rawValue) != 0
+      }
     #expect(!structDefs.isEmpty, "the suite struct definition must be present")
     for occurrence in structDefs {
       #expect(

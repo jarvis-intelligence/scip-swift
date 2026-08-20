@@ -195,6 +195,61 @@ extended types, cross-module per the frozen scheme), and the deep-nesting sectio
 (`Lattice#Cell#Core#Phase#…`, four container levels). Accepted outline shapes are
 asserted explicitly, not assumed — see the outline bullets under Known limitations.
 
+### Import occurrences (`ImportOccurrence`, SYM-04)
+
+Every written `import` / `@testable import` statement emits exactly ONE occurrence with
+the Import role (0x2) — anchored on the module-name token (past any `@testable`
+attribute) — resolving to the module's canonical symbol, REPLACING the old
+reference-with-fallback-Term line at the same anchor. Module symbol forms follow the
+frozen Phase-1 scheme (module descriptors end in `/`, never `#`):
+
+- repo-local target module: `scip-swift swiftpm <Module> . <Module>/`
+- external/system module: `scip-swift swift <Module> <pinned Swift version> <Module>/`
+
+The manager choice comes from a fail-soft SwiftSyntax parse of the repo's `Package.swift`
+(`PackageTargetMap`): a module named in the target list is repo-local; everything else
+(Foundation, Testing, SDK modules) uses the `swift` manager plus the pinned toolchain
+version. Module symbols land in `external_symbols` with the module's own name as the
+display name. Implicit module occurrences — Swift Testing's macro expansion floods every
+`#expect`/`@Suite` site with `c:@M@Testing` references — are filtered
+(`!roles.contains(.implicit)`): they still emit as references to the module symbol but
+never carry the Import role. The `ImportOccurrence` suite
+(`Tests/scip-swiftTests/ImportOccurrenceTests.swift`) proves all of this corpus-wide:
+exactly-one-per-import with column-precise anchors, zero Import roles at implicit or
+non-import positions, corpus Import count == written-import count, and byte-identical
+round-trips of both manager forms through the engine's own formatter.
+
+### Test-target marking (`TestTargetMarking`, NAV-03)
+
+Occurrences in test-target documents carry the Test bit composed with their other roles
+(`definition|test` 0x21, `read|test` 0x28, `write|test` 0x24, `import|test` 0x22) — the
+"locate tests for a symbol" query; no occurrence in a library-target document
+(`Sources/**`) ever carries it. Detection is Package.swift-driven (the same
+`PackageTargetMap`): PRIMARY = the document's relativePath falls under a `.testTarget`'s
+declared (or default `Tests/<name>`) path; SECONDARY = the document's store
+`location.moduleName` names a test target. The store's `SymbolProperty.unitTest` property
+path in `SymbolRoleMapping` is retained as a belt: it never fires for SwiftPM + Swift
+Testing targets (empirically), but it DOES fire for XCTest-shaped targets (class +
+method occurrences carry it), so marking stays correct either way. The
+`TestTargetMarking` suite (`Tests/scip-swiftTests/TestTargetMarkingTests.swift`) proves
+both directions and pins the composed bit values on concrete sites.
+
+### Clean-runner reproducibility (`CleanRunner`, PROJ-01)
+
+`scip-swift index` on a cold cache reproduces byte-identical output. The CLI default
+path (no `--cache-dir`/`--index-only`) is cold by construction — scratch, index DB, and
+cache all land in a fresh temp directory. The `CleanRunner` suite
+(`Tests/scip-swiftTests/CleanRunnerTests.swift`) wires the proof as tests on every push:
+two cold runs with a persistent cache dir that is DELETED between runs (plus the
+default-path double-run) must serialize byte-identical indexes with non-empty documents,
+per-document symbols AND occurrences, and definition / reference-bearing counts above
+thresholds — never an empty-but-lint-clean index. Build failures surface actionably:
+an injected syntax error in a fixture COPY throws `BuildError.buildFailed` whose message
+names `swift build` and carries the full compiler output. A cache written under symbol
+format 3 is wholesale-invalidated by the next run (the manifest gate; the current
+emitted-byte format version is 4 — see `SymbolFormatVersion` in
+`Sources/scip-swift/Caching/IndexManifest.swift`).
+
 ## macOS-host requirement
 
 Indexing any repo that imports Apple-platform-only frameworks (`UIKit`, `WatchKit`, `WidgetKit`)

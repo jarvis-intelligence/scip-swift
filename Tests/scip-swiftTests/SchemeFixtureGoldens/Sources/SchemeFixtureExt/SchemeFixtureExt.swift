@@ -1,5 +1,5 @@
   import SchemeFixture
-//       ^^^^^^^^^^^^^ reference scip-swift swiftpm SchemeFixtureExt . `c:@M@SchemeFixture`.
+//       ^^^^^^^^^^^^^ reference scip-swift swiftpm SchemeFixture . SchemeFixture/
   
   // Cross-module extensions (FBQ-02): members attribute to the extended type's OWNING module
   // (SYM-02) — the Box and Vec members below emit under the SchemeFixture header despite

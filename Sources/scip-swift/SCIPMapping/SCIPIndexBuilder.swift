@@ -12,6 +12,10 @@ struct SCIPIndexBuilder {
   let symbolVersion: String
   let cacheStore: CacheStore?
   let demangle: Bool
+  /// SYM-04/NAV-03 (03-03): the indexed repo's Package.swift target map — nil when no
+  /// readable manifest exists. Serves the import-symbol manager decision (D-17) and
+  /// test-target document detection (D-18).
+  let packageTargets: PackageTargetMap?
 
   /// Per-run D-06 fallback accounting, surfaced as a diagnostic at the end of `build()`.
   let symbolMappingDiagnostics = SymbolMappingDiagnostics()
@@ -34,6 +38,7 @@ struct SCIPIndexBuilder {
     self.symbolVersion = symbolVersion
     self.cacheStore = cacheStore
     self.demangle = demangle
+    self.packageTargets = PackageTargetMap(packageDirectory: repoPath)
   }
 
   func build() throws -> Scip_Index {
@@ -168,6 +173,11 @@ struct SCIPIndexBuilder {
             // deterministically from the symbol string itself.
             if let usr = usrSideMap[sym] {
               info.displayName = demangler.demangledDisplayName(usr: usr) ?? ""
+            } else if let moduleName = CanonicalSymbolFormatter.moduleDisplayName(fromCanonicalString: sym) {
+              // SYM-04 (D-17, 03-03): module symbols land in external_symbols with the
+              // module's own name — derived from the canonical string itself so fresh and
+              // cache-hit runs produce identical bytes.
+              info.displayName = moduleName
             } else {
               info.displayName = CanonicalSymbolFormatter.displayName(fromCanonicalString: sym)
             }
@@ -335,6 +345,14 @@ struct SCIPIndexBuilder {
     var definedSymbols: [String: (info: Scip_SymbolInformation, position: DefinitionPosition)] = [:]
     let refiner = SwiftSyntaxRefiner(filePath: filePath)
     let fallbackRecorder = USRSideMapRecorder()
+    // NAV-03 (D-18, 03-03): test-target documents — PRIMARY: relativePath under a
+    // Package.swift `.testTarget`'s path; SECONDARY: the document's store moduleName
+    // (uniform per document, empirically) names a test target. Computed once per
+    // document; every occurrence in it — imports included — ORs in the Test bit below.
+    // The store's SymbolProperty.unitTest path stays as a belt in SymbolRoleMapping.
+    let isTestTargetDocument = packageTargets?.isTestTargetDocument(
+      relativePath: document.relativePath,
+      moduleName: occurrences.first?.location.moduleName) ?? false
 
     for occurrence in occurrences.sorted() {
       let symbol = occurrence.symbol
@@ -346,7 +364,8 @@ struct SCIPIndexBuilder {
           sourceName: symbol.name, ordinal: localNumberer.id(forUSR: symbol.usr))
         : canonicalSymbolString(
           for: symbol,
-          isSystemLocation: occurrence.location.isSystem,
+          isSystemLocation: Self.effectiveIsSystemLocation(
+            for: symbol, storeReported: occurrence.location.isSystem, packageTargets: packageTargets),
           locationModuleName: occurrence.location.moduleName,
           overloadIndex: overloadIndex,
           fallbackRecorder: fallbackRecorder
@@ -355,8 +374,18 @@ struct SCIPIndexBuilder {
       var scipOccurrence = Scip_Occurrence()
       scipOccurrence.symbol = symbolString
       scipOccurrence.symbolRoles = SymbolRoleMapping.scipRoles(for: occurrence.roles, symbol: symbol)
+      if Self.isWrittenImport(symbol: symbol, roles: occurrence.roles) {
+        // SYM-04 (D-17, 03-03): REPLACE, never OR — the (symbol, range, roles) dedup key
+        // would otherwise keep both the old reference line and the Import occurrence at
+        // the same anchor. Implicit module occurrences (Swift Testing macro expansion)
+        // never take the Import role.
+        scipOccurrence.symbolRoles = Int32(Scip_SymbolRole.import.rawValue)
+      }
       if Self.isGeneratedPath(filePath) {
         scipOccurrence.symbolRoles |= Int32(Scip_SymbolRole.generated.rawValue)
+      }
+      if isTestTargetDocument {
+        scipOccurrence.symbolRoles |= Int32(Scip_SymbolRole.test.rawValue)
       }
       scipOccurrence.singleLineRange = PositionMapping.singleLineRange(
         location: occurrence.location,
@@ -493,5 +522,28 @@ struct SCIPIndexBuilder {
     let generatedComponents: Set<String> = [".build", "DerivedData", ".index-build"]
     let components = filePath.split(separator: "/")
     return components.contains { generatedComponents.contains(String($0)) }
+  }
+
+  /// SYM-04 (D-17, 03-03): a written `import` / `@testable import` statement — the store
+  /// surfaces it as a non-implicit module occurrence anchored on the module-name token
+  /// (past any `@testable` attribute). Implicit module occurrences (Swift Testing macro
+  /// expansion at #expect/@Suite sites) are excluded so the index never floods with
+  /// Import roles at unrelated positions.
+  static func isWrittenImport(symbol: Symbol, roles: SymbolRole) -> Bool {
+    symbol.usr.hasPrefix("c:@M@") && symbol.kind == .module && !roles.contains(.implicit)
+  }
+
+  /// SYM-04 (D-17, 03-03): for module symbols the header manager comes from the
+  /// Package.swift target map — a module named in the target list is repo-local
+  /// (`swiftpm` header); everything else is external (`swift` + pinned version). The
+  /// store reports isSystem=false at user-file import sites, so the map is the only
+  /// source of this classification. A nil map (no manifest) conservatively classifies
+  /// every module as external.
+  static func effectiveIsSystemLocation(
+    for symbol: Symbol, storeReported: Bool, packageTargets: PackageTargetMap?
+  ) -> Bool {
+    guard symbol.kind == .module, symbol.usr.hasPrefix("c:@M@") else { return storeReported }
+    let moduleName = String(symbol.usr.dropFirst("c:@M@".count))
+    return !(packageTargets?.containsTarget(named: moduleName) ?? false)
   }
 }

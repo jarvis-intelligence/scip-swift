@@ -914,209 +914,209 @@
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 4,
     "symbol" : "scip-swift swiftpm SchemeFixture . Vec#manhattanLength().",
-    "symbolRoles" : 8
+    "symbolRoles" : 40
   },
   {
     "line" : 20,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 4,
     "symbol" : "scip-swift swiftpm SchemeFixture . Vec#manhattanLength.",
-    "symbolRoles" : 8
+    "symbolRoles" : 40
   },
   {
     "line" : 20,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 19,
     "symbol" : "scip-swift swiftpm SchemeFixture . Vec#manhattanLength().",
-    "symbolRoles" : 8
+    "symbolRoles" : 40
   },
   {
     "line" : 20,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 19,
     "symbol" : "scip-swift swiftpm SchemeFixture . Vec#manhattanLength.",
-    "symbolRoles" : 8
+    "symbolRoles" : 40
   },
   {
     "line" : 24,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 4,
     "symbol" : "scip-swift swiftpm SchemeFixtureTests . `s:13SchemeFixture3VecVyS2icig`.",
-    "symbolRoles" : 8
+    "symbolRoles" : 40
   },
   {
     "line" : 24,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 4,
     "symbol" : "scip-swift swiftpm SchemeFixtureTests . `s:13SchemeFixture3VecVyS2icip`.",
-    "symbolRoles" : 8
+    "symbolRoles" : 40
   },
   {
     "line" : 24,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 18,
     "symbol" : "scip-swift swiftpm SchemeFixtureTests . `s:13SchemeFixture3VecVyS2icig`.",
-    "symbolRoles" : 8
+    "symbolRoles" : 40
   },
   {
     "line" : 24,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 18,
     "symbol" : "scip-swift swiftpm SchemeFixtureTests . `s:13SchemeFixture3VecVyS2icip`.",
-    "symbolRoles" : 8
+    "symbolRoles" : 40
   },
   {
     "line" : 26,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 4,
     "symbol" : "scip-swift swiftpm SchemeFixture . Spectrum#blue.",
-    "symbolRoles" : 8
+    "symbolRoles" : 40
   },
   {
     "line" : 26,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 4,
     "symbol" : "scip-swift swiftpm SchemeFixture . Spectrum#red.",
-    "symbolRoles" : 8
+    "symbolRoles" : 40
   },
   {
     "line" : 26,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 21,
     "symbol" : "scip-swift swiftpm SchemeFixture . Spectrum#red.",
-    "symbolRoles" : 8
+    "symbolRoles" : 40
   },
   {
     "line" : 26,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 37,
     "symbol" : "scip-swift swiftpm SchemeFixture . Spectrum#blue.",
-    "symbolRoles" : 8
+    "symbolRoles" : 40
   },
   {
     "line" : 29,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 11,
     "symbol" : "scip-swift swiftpm SchemeFixture . Poster#`label=`().",
-    "symbolRoles" : 8
+    "symbolRoles" : 40
   },
   {
     "line" : 29,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 11,
     "symbol" : "scip-swift swiftpm SchemeFixture . Poster#label.",
-    "symbolRoles" : 4
+    "symbolRoles" : 36
   },
   {
     "line" : 33,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 13,
     "symbol" : "scip-swift swiftpm SchemeFixture . Observed#`computed=`().",
-    "symbolRoles" : 8
+    "symbolRoles" : 40
   },
   {
     "line" : 33,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 13,
     "symbol" : "scip-swift swiftpm SchemeFixture . Observed#computed.",
-    "symbolRoles" : 4
+    "symbolRoles" : 36
   },
   {
     "line" : 34,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 13,
     "symbol" : "scip-swift swiftpm SchemeFixture . Observed#`watched=`().",
-    "symbolRoles" : 8
+    "symbolRoles" : 40
   },
   {
     "line" : 34,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 13,
     "symbol" : "scip-swift swiftpm SchemeFixture . Observed#watched.",
-    "symbolRoles" : 4
+    "symbolRoles" : 36
   },
   {
     "line" : 35,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 4,
     "symbol" : "scip-swift swiftpm SchemeFixture . Observed#computed().",
-    "symbolRoles" : 8
+    "symbolRoles" : 40
   },
   {
     "line" : 35,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 4,
     "symbol" : "scip-swift swiftpm SchemeFixture . Observed#computed.",
-    "symbolRoles" : 8
+    "symbolRoles" : 40
   },
   {
     "line" : 35,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 4,
     "symbol" : "scip-swift swiftpm SchemeFixture . Observed#prepared().",
-    "symbolRoles" : 8
+    "symbolRoles" : 40
   },
   {
     "line" : 35,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 4,
     "symbol" : "scip-swift swiftpm SchemeFixture . Observed#prepared.",
-    "symbolRoles" : 8
+    "symbolRoles" : 40
   },
   {
     "line" : 35,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 21,
     "symbol" : "scip-swift swiftpm SchemeFixture . Observed#computed().",
-    "symbolRoles" : 8
+    "symbolRoles" : 40
   },
   {
     "line" : 35,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 21,
     "symbol" : "scip-swift swiftpm SchemeFixture . Observed#computed.",
-    "symbolRoles" : 8
+    "symbolRoles" : 40
   },
   {
     "line" : 35,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 47,
     "symbol" : "scip-swift swiftpm SchemeFixture . Observed#prepared().",
-    "symbolRoles" : 8
+    "symbolRoles" : 40
   },
   {
     "line" : 35,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 47,
     "symbol" : "scip-swift swiftpm SchemeFixture . Observed#prepared.",
-    "symbolRoles" : 8
+    "symbolRoles" : 40
   },
   {
     "line" : 42,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 4,
     "symbol" : "scip-swift swiftpm SchemeFixture . Vec#x().",
-    "symbolRoles" : 8
+    "symbolRoles" : 40
   },
   {
     "line" : 42,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 4,
     "symbol" : "scip-swift swiftpm SchemeFixture . Vec#x.",
-    "symbolRoles" : 8
+    "symbolRoles" : 40
   },
   {
     "line" : 42,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 18,
     "symbol" : "scip-swift swiftpm SchemeFixture . Vec#x().",
-    "symbolRoles" : 8
+    "symbolRoles" : 40
   },
   {
     "line" : 42,
     "relativePath" : "Tests\/SchemeFixtureTests\/SchemeFixtureTests.swift",
     "startCharacter" : 18,
     "symbol" : "scip-swift swiftpm SchemeFixture . Vec#x.",
-    "symbolRoles" : 8
+    "symbolRoles" : 40
   }
 ]

@@ -198,6 +198,37 @@ enum CanonicalSymbolFormatter {
     return parts.filter { !$0.isEmpty }.joined(separator: ".")
   }
 
+  /// The display name for a module-form canonical symbol string — "SchemeFixture" for
+  /// "scip-swift swiftpm SchemeFixture . SchemeFixture/" — or nil when the string does
+  /// not name a module. SYM-04 (03-03): module symbols land in external_symbols with
+  /// the module's own name, derived from the string itself (never a side map) so fresh
+  /// and cache-hit runs emit identical bytes. The module descriptor is the ONLY
+  /// descriptor with the `/` suffix, so the test is exact.
+  static func moduleDisplayName(fromCanonicalString symbolString: String) -> String? {
+    // The module descriptor is the last space-separated field. A single space separates
+    // fields; a doubled space is a literal space inside one — a separator is therefore
+    /// a space with a non-space on BOTH sides.
+    let chars = Array(symbolString)
+    var separator: Int? = nil
+    for index in stride(from: chars.count - 1, through: 1, by: -1) {
+      guard chars[index] == " ", chars[index - 1] != " ",
+        index + 1 == chars.count || chars[index + 1] != " "
+      else { continue }
+      separator = index
+      break
+    }
+    guard let start = separator, start + 1 < chars.count else { return nil }
+    let field = String(chars[(start + 1)...])
+    guard field.hasSuffix("/") else { return nil }
+    var name = String(field.dropLast())
+    // Backtick-escaped names: strip the wrapping pair, collapse doubled backticks.
+    if name.hasPrefix("`"), name.hasSuffix("`"), name.count >= 2 {
+      name = String(name.dropFirst().dropLast())
+    }
+    name = name.replacingOccurrences(of: "``", with: "`")
+    return name.isEmpty ? nil : name
+  }
+
   private static func readDescriptorName(
     _ chars: inout [Character], _ index: inout Int, terminators: [Character]
   ) -> String {

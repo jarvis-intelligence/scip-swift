@@ -45,6 +45,21 @@ enum USRSymbolParser {
   /// ride inside local-context `A...L_` manglings the grammar pass does not decode) also
   /// fall back in this phase.
   static func parse(_ usr: String) -> ParsedUSR? {
+    // Module import USRs (SYM-04 / D-17, 03-03): the store surfaces each written
+    // `import` / `@testable import` as a module occurrence whose USR is exactly
+    // `c:@M@<ModuleName>`. The production is total for non-empty remainders; an empty
+    // remainder stays a miss (D-06 fallback). It parses ONLY the name — whether the
+    // module is repo-local (`swiftpm` header) or external (`swift` + pinned version)
+    // is the caller's decision, supplied through the mapper's `isSystemLocation`
+    // exactly like store-reported system locations.
+    if usr.hasPrefix("c:@M@") {
+      let name = String(usr.dropFirst("c:@M@".count))
+      guard !name.isEmpty else { return nil }
+      return ParsedUSR(
+        module: name, isSystemModule: false, containers: [], name: name,
+        extendingModule: nil, isOperator: false)
+    }
+
     var cursor = Cursor(usr)
     guard cursor.consume(prefix: "s:") else { return nil }
 

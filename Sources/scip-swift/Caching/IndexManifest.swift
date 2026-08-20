@@ -76,5 +76,9 @@ enum SymbolFormatVersion {
   /// `CacheStore.documentCacheKey` — so byte-identical files never share an entry (02-05 /
   /// G-02-2). Derived keys never match a format-2 flat content-hash file, so the bump reclaims
   /// those caches wholesale via the existing manifest gate instead of orphaning them.
-  static let current = 3
+  /// Format 4 (03-03) changes emitted occurrence bytes: written imports emit Import-role
+  /// occurrences resolving to module symbols (`c:@M@` USRs parse; the D-06 fallback Terms
+  /// for them vanish), and every occurrence in a test-target document carries the Test bit.
+  /// A bump wholesale-invalidates format-3 caches via the same manifest gate.
+  static let current = 4
 }

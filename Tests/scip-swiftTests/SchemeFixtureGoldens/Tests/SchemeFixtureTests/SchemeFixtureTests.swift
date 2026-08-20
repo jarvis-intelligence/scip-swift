@@ -1,17 +1,17 @@
   import Testing
-//       ^^^^^^^ reference scip-swift swiftpm SchemeFixtureTests . `c:@M@Testing`.
+//       ^^^^^^^ reference scip-swift swift Testing 6.2.4 Testing/
   
   @testable import SchemeFixture
-//                 ^^^^^^^^^^^^^ reference scip-swift swiftpm SchemeFixtureTests . `c:@M@SchemeFixture`.
+//                 ^^^^^^^^^^^^^ reference scip-swift swiftpm SchemeFixture . SchemeFixture/
   @testable import SchemeFixtureExt
-//                 ^^^^^^^^^^^^^^^^ reference scip-swift swiftpm SchemeFixtureTests . `c:@M@SchemeFixtureExt`.
+//                 ^^^^^^^^^^^^^^^^ reference scip-swift swiftpm SchemeFixtureExt . SchemeFixtureExt/
   
   // Test-target category of the FBQ-02 corpus: exercising every fixture category from test
   // code compiles this target into the same index store (the gate builds with --build-tests),
   // so Tests/SchemeFixtureTests/SchemeFixtureTests.swift is an indexed document too.
   
   @Suite("SchemeFixture exercises every category end-to-end")
-//^ reference scip-swift swiftpm SchemeFixtureTests . `c:@M@Testing`.
+//^ reference scip-swift swift Testing 6.2.4 Testing/
 //^ definition scip-swift swiftpm SchemeFixtureTests . `s:18SchemeFixtureTestsAAV0049$s18SchemeFixtureTestsAA5SuitefMm_4__$fMu__GpHDGbO19__testContentRecords6UInt32V4kind_AG9reserved1SbSv_S2VSgSutXCSg8accessorSu7contextSu9reserved2tvgZ`.
 //  kind Getter
 //  display_name static SchemeFixtureTests.SchemeFixtureTests.$s18SchemeFixtureTestsAA5SuitefMm_4__🟡$fMu_.__testContentRecord.getter : (kind: Swift.UInt32, reserved1: Swift.UInt32, accessor: (@convention(c) (Swift.UnsafeMutableRawPointer, Swift.UnsafeRawPointer, Swift.UnsafeRawPointer?, Swift.UInt) -> Swift.Bool)?, context: Swift.UInt, reserved2: Swift.UInt)
@@ -86,8 +86,8 @@
 //                          signature_documentation
 //                          > struct SchemeFixtureTests
     @Test("overloads, operators, extensions, and Unicode identifiers behave")
-//  ^ reference scip-swift swiftpm SchemeFixtureTests . `c:@M@Testing`.
-//  ^ reference scip-swift swiftpm SchemeFixtureTests . `c:@M@_Concurrency`.
+//  ^ reference scip-swift swift Testing 6.2.4 Testing/
+//  ^ reference scip-swift swift _Concurrency 6.2.4 _Concurrency/
 //  ^ definition scip-swift swiftpm SchemeFixtureTests . `s:18SchemeFixtureTestsAAV0086$s18SchemeFixtureTestsAAV18exerciseCategories4TestfMp_20__$b98945a684f99f28fMu__izJCFfO19__testContentRecords6UInt32V4kind_AG9reserved1SbSv_S2VSgSutXCSg8accessorSu7contextSu9reserved2tvgZ`.
 //    kind Getter
 //    display_name static SchemeFixtureTests.SchemeFixtureTests.$s18SchemeFixtureTestsAAV18exerciseCategories4TestfMp_20__🟡$b98945a684f99f28fMu_.__testContentRecord.getter : (kind: Swift.UInt32, reserved1: Swift.UInt32, accessor: (@convention(c) (Swift.UnsafeMutableRawPointer, Swift.UnsafeRawPointer, Swift.UnsafeRawPointer?, Swift.UInt) -> Swift.Bool)?, context: Swift.UInt, reserved2: Swift.UInt)
@@ -177,11 +177,11 @@
 //                 ^^^ reference scip-swift swiftpm SchemeFixture . Vec#init(+1).
   
       #expect(vector + scalar == Vec(x: 4, y: 5))
+//    ^ reference scip-swift swift Testing 6.2.4 Testing/
 //    ^ reference scip-swift swiftpm SchemeFixture . Vec#
 //    ^ reference scip-swift swiftpm SchemeFixture . Vec#+().
 //    ^ reference scip-swift swiftpm SchemeFixture . Vec#`==`().
 //    ^ reference scip-swift swiftpm SchemeFixture . Vec#init().
-//    ^ reference scip-swift swiftpm SchemeFixtureTests . `c:@M@Testing`.
 //    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:Sa12arrayLiteralSayxGxd_tcfc`.
 //    ^ reference scip-swift swiftpm Testing . SourceLocation#
 //     ^^^^^^ reference scip-swift swiftpm Testing . expect!
@@ -191,8 +191,8 @@
 //                               ^^^ reference scip-swift swiftpm SchemeFixture . Vec#init().
       #expect(parse("7") == 7)
 //    ^ reference scip-swift swift Swift 6.2.4 Int#`==`().
+//    ^ reference scip-swift swift Testing 6.2.4 Testing/
 //    ^ reference scip-swift swiftpm SchemeFixture . parse().
-//    ^ reference scip-swift swiftpm SchemeFixtureTests . `c:@M@Testing`.
 //    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:Sa12arrayLiteralSayxGxd_tcfc`.
 //    ^ reference scip-swift swiftpm Testing . SourceLocation#
 //     ^^^^^^ reference scip-swift swiftpm Testing . expect!
@@ -200,16 +200,16 @@
 //                       ^^ reference scip-swift swift Swift 6.2.4 Int#`==`().
       #expect(parse(7) == "7")
 //    ^ reference scip-swift swift Swift 6.2.4 String#`==`().
+//    ^ reference scip-swift swift Testing 6.2.4 Testing/
 //    ^ reference scip-swift swiftpm SchemeFixture . parse(+1).
-//    ^ reference scip-swift swiftpm SchemeFixtureTests . `c:@M@Testing`.
 //    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:Sa12arrayLiteralSayxGxd_tcfc`.
 //    ^ reference scip-swift swiftpm Testing . SourceLocation#
 //     ^^^^^^ reference scip-swift swiftpm Testing . expect!
 //            ^^^^^ reference scip-swift swiftpm SchemeFixture . parse(+1).
 //                     ^^ reference scip-swift swift Swift 6.2.4 String#`==`().
       #expect(vector.length() > 0)
+//    ^ reference scip-swift swift Testing 6.2.4 Testing/
 //    ^ reference scip-swift swiftpm SchemeFixture . Vec#length().
-//    ^ reference scip-swift swiftpm SchemeFixtureTests . `c:@M@Testing`.
 //    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:SL1goiySbx_xtFZ`.
 //    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:Sa12arrayLiteralSayxGxd_tcfc`.
 //    ^ reference scip-swift swiftpm Testing . SourceLocation#
@@ -218,9 +218,9 @@
 //                            ^ reference scip-swift swiftpm SchemeFixtureTests . `s:SL1goiySbx_xtFZ`.
       #expect(vector.manhattanLength == 3)
 //    ^ reference scip-swift swift Swift 6.2.4 Int#`==`().
+//    ^ reference scip-swift swift Testing 6.2.4 Testing/
 //    ^ reference scip-swift swiftpm SchemeFixture . Vec#manhattanLength().
 //    ^ reference scip-swift swiftpm SchemeFixture . Vec#manhattanLength.
-//    ^ reference scip-swift swiftpm SchemeFixtureTests . `c:@M@Testing`.
 //    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:Sa12arrayLiteralSayxGxd_tcfc`.
 //    ^ reference scip-swift swiftpm Testing . SourceLocation#
 //     ^^^^^^ reference scip-swift swiftpm Testing . expect!
@@ -229,10 +229,10 @@
 //                                   ^^ reference scip-swift swift Swift 6.2.4 Int#`==`().
       #expect(Box(content: vector).describe() == "box")
 //    ^ reference scip-swift swift Swift 6.2.4 String#`==`().
+//    ^ reference scip-swift swift Testing 6.2.4 Testing/
 //    ^ reference scip-swift swiftpm SchemeFixture . Box#
 //    ^ reference scip-swift swiftpm SchemeFixture . Box#describe().
 //    ^ reference scip-swift swiftpm SchemeFixture . Box#init().
-//    ^ reference scip-swift swiftpm SchemeFixtureTests . `c:@M@Testing`.
 //    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:Sa12arrayLiteralSayxGxd_tcfc`.
 //    ^ reference scip-swift swiftpm Testing . SourceLocation#
 //     ^^^^^^ reference scip-swift swiftpm Testing . expect!
@@ -241,11 +241,11 @@
 //                                 ^^^^^^^^ reference scip-swift swiftpm SchemeFixture . Box#describe().
 //                                            ^^ reference scip-swift swift Swift 6.2.4 String#`==`().
       #expect(Box(content: vector).unwrap() == vector)
+//    ^ reference scip-swift swift Testing 6.2.4 Testing/
 //    ^ reference scip-swift swiftpm SchemeFixture . Box#
 //    ^ reference scip-swift swiftpm SchemeFixture . Box#init().
 //    ^ reference scip-swift swiftpm SchemeFixture . Box#unwrap().
 //    ^ reference scip-swift swiftpm SchemeFixture . Vec#`==`().
-//    ^ reference scip-swift swiftpm SchemeFixtureTests . `c:@M@Testing`.
 //    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:Sa12arrayLiteralSayxGxd_tcfc`.
 //    ^ reference scip-swift swiftpm Testing . SourceLocation#
 //     ^^^^^^ reference scip-swift swiftpm Testing . expect!
@@ -256,7 +256,7 @@
       #expect("hey".schemeShout() == "HEY!")
 //    ^ reference scip-swift swift Swift 6.2.4 String#`==`().
 //    ^ reference scip-swift swift Swift 6.2.4 String#schemeShout().
-//    ^ reference scip-swift swiftpm SchemeFixtureTests . `c:@M@Testing`.
+//    ^ reference scip-swift swift Testing 6.2.4 Testing/
 //    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:Sa12arrayLiteralSayxGxd_tcfc`.
 //    ^ reference scip-swift swiftpm Testing . SourceLocation#
 //     ^^^^^^ reference scip-swift swiftpm Testing . expect!
@@ -264,7 +264,7 @@
 //                                ^^ reference scip-swift swift Swift 6.2.4 String#`==`().
       #expect(vector[0] == 1)
 //    ^ reference scip-swift swift Swift 6.2.4 Int#`==`().
-//    ^ reference scip-swift swiftpm SchemeFixtureTests . `c:@M@Testing`.
+//    ^ reference scip-swift swift Testing 6.2.4 Testing/
 //    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:13SchemeFixture3VecVyS2icig`.
 //    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:13SchemeFixture3VecVyS2icip`.
 //    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:Sa12arrayLiteralSayxGxd_tcfc`.
@@ -274,17 +274,17 @@
 //                  ^ reference scip-swift swiftpm SchemeFixtureTests . `s:13SchemeFixture3VecVyS2icip`.
 //                      ^^ reference scip-swift swift Swift 6.2.4 Int#`==`().
       #expect(conditionallyCompiled())
+//    ^ reference scip-swift swift Testing 6.2.4 Testing/
 //    ^ reference scip-swift swiftpm SchemeFixture . conditionallyCompiled().
-//    ^ reference scip-swift swiftpm SchemeFixtureTests . `c:@M@Testing`.
 //    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:Sa12arrayLiteralSayxGxd_tcfc`.
 //    ^ reference scip-swift swiftpm Testing . SourceLocation#
 //     ^^^^^^ reference scip-swift swiftpm Testing . expect!
 //            ^^^^^^^^^^^^^^^^^^^^^ reference scip-swift swiftpm SchemeFixture . conditionallyCompiled().
       #expect(Spectrum.red != Spectrum.blue)
+//    ^ reference scip-swift swift Testing 6.2.4 Testing/
 //    ^ reference scip-swift swiftpm SchemeFixture . Spectrum#
 //    ^ reference scip-swift swiftpm SchemeFixture . Spectrum#blue.
 //    ^ reference scip-swift swiftpm SchemeFixture . Spectrum#red.
-//    ^ reference scip-swift swiftpm SchemeFixtureTests . `c:@M@Testing`.
 //    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:SQsE2neoiySbx_xtFZ`.
 //    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:Sa12arrayLiteralSayxGxd_tcfc`.
 //    ^ reference scip-swift swiftpm Testing . SourceLocation#
@@ -303,8 +303,8 @@
 //           ^^^^^ reference scip-swift swiftpm SchemeFixture . Poster#label.
       #expect(poster.draw() == "poster(demo)")
 //    ^ reference scip-swift swift Swift 6.2.4 String#`==`().
+//    ^ reference scip-swift swift Testing 6.2.4 Testing/
 //    ^ reference scip-swift swiftpm SchemeFixture . Poster#draw().
-//    ^ reference scip-swift swiftpm SchemeFixtureTests . `c:@M@Testing`.
 //    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:Sa12arrayLiteralSayxGxd_tcfc`.
 //    ^ reference scip-swift swiftpm Testing . SourceLocation#
 //     ^^^^^^ reference scip-swift swiftpm Testing . expect!
@@ -323,11 +323,11 @@
       #expect(observed.computed == 5 && observed.prepared)
 //    ^ reference scip-swift swift Swift 6.2.4 Bool#`&&`().
 //    ^ reference scip-swift swift Swift 6.2.4 Int#`==`().
+//    ^ reference scip-swift swift Testing 6.2.4 Testing/
 //    ^ reference scip-swift swiftpm SchemeFixture . Observed#computed().
 //    ^ reference scip-swift swiftpm SchemeFixture . Observed#computed.
 //    ^ reference scip-swift swiftpm SchemeFixture . Observed#prepared().
 //    ^ reference scip-swift swiftpm SchemeFixture . Observed#prepared.
-//    ^ reference scip-swift swiftpm SchemeFixtureTests . `c:@M@Testing`.
 //    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:Sa12arrayLiteralSayxGxd_tcfc`.
 //    ^ reference scip-swift swiftpm Testing . SourceLocation#
 //     ^^^^^^ reference scip-swift swiftpm Testing . expect!
@@ -340,9 +340,9 @@
   
       #expect(🚀 == "rocket")
 //    ^ reference scip-swift swift Swift 6.2.4 String#`==`().
+//    ^ reference scip-swift swift Testing 6.2.4 Testing/
 //    ^ reference scip-swift swiftpm SchemeFixture . `🚀`().
 //    ^ reference scip-swift swiftpm SchemeFixture . `🚀`.
-//    ^ reference scip-swift swiftpm SchemeFixtureTests . `c:@M@Testing`.
 //    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:Sa12arrayLiteralSayxGxd_tcfc`.
 //    ^ reference scip-swift swiftpm Testing . SourceLocation#
 //     ^^^^^^ reference scip-swift swiftpm Testing . expect!
@@ -351,32 +351,32 @@
 //                 ^^ reference scip-swift swift Swift 6.2.4 String#`==`().
       #expect(名前を付ける() == "名前")
 //    ^ reference scip-swift swift Swift 6.2.4 String#`==`().
+//    ^ reference scip-swift swift Testing 6.2.4 Testing/
 //    ^ reference scip-swift swiftpm SchemeFixture . `名前を付ける`().
-//    ^ reference scip-swift swiftpm SchemeFixtureTests . `c:@M@Testing`.
 //    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:Sa12arrayLiteralSayxGxd_tcfc`.
 //    ^ reference scip-swift swiftpm Testing . SourceLocation#
 //     ^^^^^^ reference scip-swift swiftpm Testing . expect!
 //            ^^^^^^^^^^^^^^^^^^ reference scip-swift swiftpm SchemeFixture . `名前を付ける`().
 //                                 ^^ reference scip-swift swift Swift 6.2.4 String#`==`().
       #expect(flagSequence.contains("🇻🇳"))
+//    ^ reference scip-swift swift Testing 6.2.4 Testing/
 //    ^ reference scip-swift swiftpm SchemeFixture . flagSequence().
 //    ^ reference scip-swift swiftpm SchemeFixture . flagSequence.
-//    ^ reference scip-swift swiftpm SchemeFixtureTests . `c:@M@Testing`.
-//    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:STsSQ7ElementRpzrlE8containsySbABF`.
 //    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:Sa12arrayLiteralSayxGxd_tcfc`.
+//    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:Sy10FoundationE8containsySbqd__SyRd__lF`.
 //    ^ reference scip-swift swiftpm Testing . SourceLocation#
 //     ^^^^^^ reference scip-swift swiftpm Testing . expect!
 //            ^^^^^^^^^^^^ reference scip-swift swiftpm SchemeFixture . flagSequence().
 //            ^^^^^^^^^^^^ reference scip-swift swiftpm SchemeFixture . flagSequence.
-//                         ^^^^^^^^ reference scip-swift swiftpm SchemeFixtureTests . `s:STsSQ7ElementRpzrlE8containsySbABF`.
+//                         ^^^^^^^^ reference scip-swift swiftpm SchemeFixtureTests . `s:Sy10FoundationE8containsySbqd__SyRd__lF`.
   
       let point: Point = vector
 //               ^^^^^ reference scip-swift swiftpm SchemeFixture . Point#
       #expect(point.x == 1)
 //    ^ reference scip-swift swift Swift 6.2.4 Int#`==`().
+//    ^ reference scip-swift swift Testing 6.2.4 Testing/
 //    ^ reference scip-swift swiftpm SchemeFixture . Vec#x().
 //    ^ reference scip-swift swiftpm SchemeFixture . Vec#x.
-//    ^ reference scip-swift swiftpm SchemeFixtureTests . `c:@M@Testing`.
 //    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:Sa12arrayLiteralSayxGxd_tcfc`.
 //    ^ reference scip-swift swiftpm Testing . SourceLocation#
 //     ^^^^^^ reference scip-swift swiftpm Testing . expect!
