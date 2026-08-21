@@ -101,6 +101,44 @@ struct ImportOccurrenceTests {
     #expect(!customPaths.isTestTargetDocument(relativePath: "Tests/LibTests/A.swift"))
   }
 
+  @Test("PackageTargetMap recognizes every repo-local target kind (WR-01)")
+  func packageTargetMapRecognizesNonLibraryTargetKinds() {
+    let map = PackageTargetMap(
+      manifestSource: #"""
+        // swift-tools-version: 6.2
+        import PackageDescription
+
+        let package = Package(
+          name: "CLI",
+          targets: [
+            .executableTarget(name: "cli"),
+            .macro(name: "Macros"),
+            .plugin(name: "Pluginy"),
+            .systemLibrary(name: "Clib", path: "Vendor/Clib"),
+            .binaryTarget(name: "Prebuilt"),
+            .testTarget(name: "cliTests"),
+          ]
+        )
+        """#)
+    // Every repo-local product kind is a declared target ⇒ repo-local for the SYM-04
+    // manager decision (the type's documented contract) — an .executableTarget's module
+    // must NOT classify as external `swift <pin>`.
+    for repoLocal in ["cli", "Macros", "Pluginy", "Clib"] {
+      #expect(
+        map.containsTarget(named: repoLocal),
+        "\(repoLocal) is a declared target ⇒ repo-local manager form")
+      #expect(!map.isTestTarget(named: repoLocal))
+    }
+    // .binaryTarget is the documented miss: prebuilt artifacts have no repo-local
+    // sources to classify, so they stay external.
+    #expect(!map.containsTarget(named: "Prebuilt"))
+    // Test-target scoping is untouched: only .testTarget feeds NAV-03 marking.
+    #expect(map.containsTarget(named: "cliTests"))
+    #expect(map.isTestTarget(named: "cliTests"))
+    #expect(!map.isTestTargetDocument(relativePath: "Sources/cli/main.swift"))
+    #expect(map.isTestTargetDocument(relativePath: "Tests/cliTests/X.swift"))
+  }
+
   @Test("tracer: the module symbol is registered in externalSymbols with the module name")
   func tracerModuleSymbolRegisteredExternally() throws {
     let index = try Self.sharedIndex()
