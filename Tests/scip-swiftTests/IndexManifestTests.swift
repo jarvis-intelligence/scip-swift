@@ -214,6 +214,17 @@ struct IndexManifestTests {
     }
   }
 
+  @Test("old manifest without packageManifestFingerprint fails decode (strict schema, CR-01)")
+  func legacyManifestWithoutPackageFingerprintFailsDecode() throws {
+    // Every key the pre-CR-01 engine wrote is present — packageManifestFingerprint is
+    // the ONLY missing field, so decode failure isolates the new schema requirement.
+    let legacyJSON =
+      #"{"toolchainVersion":"6.2.4","converterVersion":"0.2.1","indexstoreDbRevision":"c993f4fb","buildToolName":"swiftpm","symbolFormatVersion":4,"overloadTableFingerprint":"abc","demangle":true}"#
+    #expect(throws: DecodingError.self) {
+      try JSONDecoder().decode(IndexManifest.self, from: Data(legacyJSON.utf8))
+    }
+  }
+
   @Test("demangle mode mismatch invalidates the cache (W2 — display names differ per mode)")
   func demangleModeIsACompatibilityKey() {
     let demangledCache = IndexManifest(

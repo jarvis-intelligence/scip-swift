@@ -125,10 +125,58 @@ struct CleanRunnerTests {
     try Self.assertReproducibleAndSubstantive(first, second, threshold: 20)
   }
 
+  // MARK: - Test 5: Package.swift kind-flip regression (CR-01, 03 review)
+
+  @Test("a .target → .testTarget flip in Package.swift invalidates the warm cache (CR-01)")
+  func packageManifestFlipInvalidatesWarmCache() throws {
+    let fixtureRepoPath = try Self.materializeFixtureCopy("SchemeFixture")
+    defer { try? FileManager.default.removeItem(atPath: fixtureRepoPath) }
+
+    let workDirectory = try Self.makeTempDir()
+    defer { try? FileManager.default.removeItem(atPath: workDirectory) }
+    let cacheDir = (workDirectory as NSString).appendingPathComponent("cache")
+
+    // Warm run: real build over the pristine manifest. Plain `swift build` compiles the
+    // two library targets only, so no occurrence carries the Test bit yet.
+    let first = try Self.index(fixtureRepoPath: fixtureRepoPath, cacheDir: cacheDir)
+    #expect(Self.testBitCount(first) == 0)
+
+    // The flip (the review's minimal repro): SchemeFixtureExt .target → .testTarget —
+    // same name, same source path (explicit), no source file touched, so every content
+    // hash and every definition USR stays identical and ONLY the Package.swift bytes
+    // differ. The store's units survive in the persistent build scratch exactly as they
+    // do between two real incremental runs, so the re-index below sees them unchanged.
+    try Self.flipExtTargetToTestTarget(in: fixtureRepoPath)
+    let second = try Self.index(
+      fixtureRepoPath: fixtureRepoPath, cacheDir: cacheDir, indexOnly: true)
+
+    // The flip is observable in emitted bytes: a fresh emission marks every occurrence
+    // under the now-test-target path with the Test bit; a stale cache serves none.
+    let testBitsAfterFlip = Self.testBitCount(second)
+    #expect(
+      testBitsAfterFlip > 0,
+      "the flipped manifest must change the Test-bit population (got 0 — stale cache served)")
+
+    // Cold control over the SAME index store (the store is not the variable under test —
+    // Package.swift is): a fresh cache dir holding a copy of the run-1 build scratch
+    // must produce byte-identical output to the warm-with-flip run.
+    let coldCacheDir = (workDirectory as NSString).appendingPathComponent("cold-cache")
+    try FileManager.default.createDirectory(atPath: coldCacheDir, withIntermediateDirectories: true)
+    try FileManager.default.copyItem(
+      atPath: (cacheDir as NSString).appendingPathComponent("build-scratch"),
+      toPath: (coldCacheDir as NSString).appendingPathComponent("build-scratch"))
+    let fresh = try Self.index(
+      fixtureRepoPath: fixtureRepoPath, cacheDir: coldCacheDir, indexOnly: true)
+    #expect(Self.testBitCount(fresh) == testBitsAfterFlip)
+    try Self.assertReproducibleAndSubstantive(second, fresh, threshold: 20)
+  }
+
   // MARK: - Plumbing
 
   /// Runs the real pipeline (`IndexCommand.indexOneRepo`) over a fixture copy.
-  private static func index(fixtureRepoPath: String, cacheDir: String?) throws -> Scip_Index {
+  private static func index(
+    fixtureRepoPath: String, cacheDir: String?, indexOnly: Bool = false
+  ) throws -> Scip_Index {
     try IndexCommand.indexOneRepo(
       repoPath: fixtureRepoPath,
       output: nil,
@@ -136,7 +184,7 @@ struct CleanRunnerTests {
       configuration: .debug,
       scheme: nil,
       cacheDir: cacheDir,
-      indexOnly: false,
+      indexOnly: indexOnly,
       symbolVersion: "",
       demangle: true
     )
@@ -177,6 +225,40 @@ struct CleanRunnerTests {
       .appendingPathComponent("scip-swift-clean-runner-\(fixtureName)-\(UUID().uuidString)")
     try FileManager.default.copyItem(atPath: source, toPath: copy)
     return copy
+  }
+
+  /// Occurrences carrying the Test bit (NAV-03) across the whole index.
+  private static func testBitCount(_ index: Scip_Index) -> Int {
+    index.documents.reduce(0) { count, document in
+      count + document.occurrences.filter {
+        $0.symbolRoles & Int32(Scip_SymbolRole.test.rawValue) != 0
+      }.count
+    }
+  }
+
+  /// CR-01 (03 review): rewrites the fixture copy's Package.swift, flipping
+  /// SchemeFixtureExt from `.target` to `.testTarget` with its source path pinned —
+  /// same name, same path, no source file touched. `dependencies` must precede `path`
+  /// in SwiftPM's argument grammar, hence the explicit ordering.
+  private static func flipExtTargetToTestTarget(in repoPath: String) throws {
+    let manifestPath = (repoPath as NSString).appendingPathComponent("Package.swift")
+    let source = try String(contentsOfFile: manifestPath, encoding: .utf8)
+    let original = #"  .target(name: "SchemeFixtureExt", dependencies: ["SchemeFixture"]),"#
+    let flipped =
+      #"  .testTarget(name: "SchemeFixtureExt", dependencies: ["SchemeFixture"], path: "Sources/SchemeFixtureExt"),"#
+    guard let range = source.range(of: original), source.range(of: original, options: .backwards) == range else {
+      throw FixtureFlipError(
+        "fixture Package.swift must declare exactly one '"
+          + original.trimmingCharacters(in: .whitespaces) + "' line to flip")
+    }
+    var edited = source
+    edited.replaceSubrange(range, with: flipped)
+    try edited.write(toFile: manifestPath, atomically: true, encoding: .utf8)
+  }
+
+  private struct FixtureFlipError: Error, CustomStringConvertible {
+    let description: String
+    init(_ description: String) { self.description = description }
   }
 
   private static func makeTempDir() throws -> String {
