@@ -24,7 +24,8 @@ import SwiftSyntax
 /// `TestTargetMarkingTests`.
 ///
 /// The manifest content is DATA, never instructions (canary discipline, T-02-09): the
-/// parse is purely syntactic — it extracts `.target`/`.testTarget` call names and paths
+/// parse is purely syntactic — it extracts the target-kind call names and paths
+/// (`.target`, `.testTarget`, and the other repo-local kinds — see `targetKindAndName`)
 /// and never evaluates anything. Fail-soft everywhere: a missing, unreadable, or
 /// unparseable manifest yields nil from the factory; a parseable manifest with no
 /// recognized targets yields an empty map. Nothing here throws.
@@ -116,7 +117,14 @@ struct PackageTargetMap {
   }
 
   /// `.target(name: "...")` / `.testTarget(name: "...")` — the implicit-member call
-  /// shape every manifest uses inside `Package(targets: [...])`.
+  /// shape every manifest uses inside `Package(targets: [...])`. The repo-local product
+  /// kinds `.executableTarget` / `.macro` / `.plugin` / `.systemLibrary` all classify as
+  /// `.target` (WR-01, 03 review): a module named in the target list is repo-local for
+  /// the SYM-04 manager decision regardless of which product kind declares it — the
+  /// common CLI-package shape must not classify its own module external. `.binaryTarget`
+  /// is a known miss (prebuilt artifacts have no repo-local sources to classify) and
+  /// stays external. Test-target scoping is untouched: only `.testTarget` maps to
+  /// `.testTarget`, so NAV-03 path marking never widens.
   private static func targetKindAndName(
     of call: FunctionCallExprSyntax
   ) -> (kind: TargetKind, name: String)? {
@@ -125,7 +133,8 @@ struct PackageTargetMap {
       let name = stringLiteral(argument: "name", of: call)
     else { return nil }
     switch member.declName.baseName.tokenKind {
-    case .identifier("target"):
+    case .identifier("target"), .identifier("executableTarget"),
+      .identifier("macro"), .identifier("plugin"), .identifier("systemLibrary"):
       return (.target, name)
     case .identifier("testTarget"):
       return (.testTarget, name)
