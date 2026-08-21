@@ -44,11 +44,11 @@
 //                                    signature_documentation
 //                                    > func getter:manhattanLength
       abs(x) + abs(y)
-//    ^^^ reference scip-swift swiftpm SchemeFixtureExt . `s:s3absyxxSLRzs13SignedNumericRzlF`.
+//    ^^^ reference scip-swift swift Swift 6.2.4 abs().
 //        ^ reference scip-swift swiftpm SchemeFixture . Vec#x().
 //        ^ reference scip-swift swiftpm SchemeFixture . Vec#x.
 //           ^ reference scip-swift swift Swift 6.2.4 Int#+().
-//             ^^^ reference scip-swift swiftpm SchemeFixtureExt . `s:s3absyxxSLRzs13SignedNumericRzlF`.
+//             ^^^ reference scip-swift swift Swift 6.2.4 abs().
 //                 ^ reference scip-swift swiftpm SchemeFixture . Vec#y().
 //                 ^ reference scip-swift swiftpm SchemeFixture . Vec#y.
     }

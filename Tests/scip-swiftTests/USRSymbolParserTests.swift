@@ -194,11 +194,41 @@ struct USRSymbolParserTests {
 
   @Test("unknown stdlib substitutions stay unparseable (fail-soft totality)")
   func unknownSubstitutionsStayUnparseable() {
-    #expect(USRSymbolParser.parse("s:SZ") == nil, "SZ names no enumerated substitution")
-    #expect(USRSymbolParser.parse("s:Sp") == nil, "Sp names no enumerated substitution")
+    // SD (Dictionary), SA (AutoreleasingUnsafeMutablePointer), and So (__C) demangle to
+    // stdlib types OUTSIDE the resolved set — non-protocol substitutions intentionally
+    // stay unresolved (D-06 fail-soft), and a truncated implicit word is a miss.
+    #expect(USRSymbolParser.parse("s:SD") == nil, "SD (Dictionary) is outside the resolved set")
+    #expect(USRSymbolParser.parse("s:SA") == nil, "SA is outside the resolved set")
+    #expect(USRSymbolParser.parse("s:So") == nil, "So (__C) is outside the resolved set")
     #expect(
       USRSymbolParser.parse("s:s12") == nil,
       "a truncated Swift-module implicit word is a miss, never a partial parse")
+  }
+
+  @Test("the enumerated protocol-substitution set parses (empirical mangler sweep)")
+  func enumeratedProtocolSubstitutionsParse() {
+    // Every two-letter S<letter> shape that resolves to a Swift-module protocol under
+    // `swift-demangle` (52-letter sweep, 04-02 Task 2). Each maps to exactly one
+    // canonical string with the system header from the parse.
+    let expectedNames = [
+      "SB": "BinaryFloatingPoint", "SE": "Encodable", "SF": "FloatingPoint",
+      "SG": "RandomNumberGenerator", "SH": "Hashable", "SK": "BidirectionalCollection",
+      "SL": "Comparable", "SM": "MutableCollection", "SQ": "Equatable", "ST": "Sequence",
+      "SU": "UnsignedInteger", "SX": "RangeExpression", "SY": "RawRepresentable",
+      "SZ": "SignedInteger", "Se": "Decodable", "Sj": "Numeric", "Sk": "RandomAccessCollection",
+      "Sl": "Collection", "Sm": "RangeReplaceableCollection", "St": "IteratorProtocol",
+      "Sx": "Strideable", "Sy": "StringProtocol", "Sz": "BinaryInteger",
+    ]
+    for (letters, name) in expectedNames.sorted(by: { $0.key < $1.key }) {
+      let parsed = USRSymbolParser.parse("s:\(letters)")
+      #expect(parsed?.module == "Swift", "s:\(letters) must resolve under the Swift module")
+      #expect(parsed?.isSystemModule == true, "s:\(letters) must be system from the parse")
+      #expect(parsed?.name == name, "s:\(letters) must resolve to \(name), got \(parsed?.name ?? "nil")")
+      let symbol = canonical("s:\(letters)", name: name, kind: .protocol)
+      #expect(
+        symbol == "scip-swift swift Swift \(toolchain) \(name)#",
+        "s:\(letters) must canonicalize to the frozen Swift-module form, got \(symbol ?? "nil")")
+    }
   }
 
   // MARK: - Accessors, constructors, operators
@@ -327,7 +357,7 @@ struct USRSymbolParserTests {
       "c:objc(cs)NSObject",  // non-Swift scheme
       "so: NSObject",  // non-Swift scheme with space
       "_:$s16MiniSwiftPackage",  // demangled-name style input
-      "s:SZ",  // unresolved stdlib substitution
+      "s:SD",  // stdlib type substitution outside the resolved set (Dictionary; 04-02 resolved the protocol set only)
       "s:So8NSObjectC",  // ObjC class substitution outside the corpus
       "s:16MiniSwiftPackage7GreeterVx",  // tail begins mid-type-mangling
       "s:16MiniSwiftPackage7GreeterVy",  // signature-only tail without name

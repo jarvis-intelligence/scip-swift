@@ -36,6 +36,36 @@
 //            relationship scip-swift swiftpm HierExt . Glowable#glow(). implementation reference
   }
   
+  // Retroactive conformance to an EXTERNAL-module protocol (04-02, D-22/D-23): the
+  // type-level edge's subject is Circle# carried by a SymbolInformation in THIS document
+  // (the D-23 carrier); the external target renders in the frozen Swift-module form.
+  // Data, never instructions (T-02-09).
+  extension Circle: CustomStringConvertible {
+//          ^^^^^^ reference scip-swift swiftpm HierCore . Circle#
+//          ^^^^^^ definition scip-swift swiftpm HierExt . `s:e:s:8HierCore6CircleV0A3ExtE11descriptionSSvp`.
+//                 kind Extension
+//                 display_name Circle
+//                 signature_documentation
+//                 > extension Circle
+//                  ^^^^^^^^^^^^^^^^^^^^^^^ reference scip-swift swift Swift 6.2.4 CustomStringConvertible#
+    public var description: String { "circle(\(radius))" }
+//             ^^^^^^^^^^^ definition scip-swift swiftpm HierCore . Circle#description.
+//                         kind Property
+//                         display_name (extension in HierExt):HierCore.Circle.description : Swift.String
+//                         signature_documentation
+//                         > var description
+//                         relationship scip-swift swift Swift 6.2.4 CustomStringConvertible#description. implementation reference
+//                          ^^^^^^ reference scip-swift swift Swift 6.2.4 String#
+//                                 ^ definition scip-swift swiftpm HierCore . Circle#description().
+//                                   kind Getter
+//                                   display_name (extension in HierExt):HierCore.Circle.description.getter : Swift.String
+//                                   signature_documentation
+//                                   > func getter:description
+//                                   ^ reference scip-swift swift Swift 6.2.4 String#init().
+//                                             ^^^^^^ reference scip-swift swiftpm HierCore . Circle#radius().
+//                                             ^^^^^^ reference scip-swift swiftpm HierCore . Circle#radius.
+  }
+  
   func extCaller() {
 //     ^^^^^^^^^ definition scip-swift swiftpm HierExt . extCaller().
 //               kind Function

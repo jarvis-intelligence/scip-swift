@@ -67,6 +67,28 @@ enum USRSymbolParser {
     var isSystem = false
     var containers: [CanonicalSymbolFormatter.Container] = []
 
+    // Swift-module implicit head (REL-01 / D-22, 04-02): the Swift module itself is
+    // mangled as a bare lowercase `s` directly after the scheme —
+    // `s:s23CustomStringConvertibleP` is Swift.CustomStringConvertible. Only an `s`
+    // followed by a digit introduces it (the module word is always length-prefixed
+    // there); any other shape falls through to the ordinary paths and misses when
+    // unparseable. System-ness comes from the parse — stdlib protocols report
+    // isSystem=false at their use sites, so the location can never supply the header.
+    if cursor.peek() == "s", cursor.peek(at: 1).map({ $0.isNumber && $0.isASCII }) == true {
+      cursor.advance()
+      module = "Swift"
+      isSystem = true
+      if cursor.isAtEnd {
+        return ParsedUSR(
+          module: module, isSystemModule: isSystem, containers: [], name: module,
+          extendingModule: nil, isOperator: false)
+      }
+      guard let entity = parseEntity(afterHead: &cursor, containers: &containers) else {
+        return nil
+      }
+      return finish(module: module, isSystem: isSystem, containers: containers, entity: entity)
+    }
+
     // Head context: either a stdlib substitution (system module) or the owning module word.
     if let substitution = cursor.peekSubstitution() {
       guard let resolved = stdlibSubstitution(substitution) else { return nil }
@@ -234,7 +256,14 @@ enum USRSymbolParser {
     let container: CanonicalSymbolFormatter.Container
   }
 
-  /// The stdlib substitutions the parser resolves; every other `S…` shape falls back (D-06).
+  /// The stdlib substitutions the parser resolves; every other `S…` shape falls back
+  /// (D-06). The TYPE set is the frozen six (SS/Sd/Si/Sb/Sf/Su); the PROTOCOL set
+  /// (REL-01 / D-22, 04-02) is enumerated empirically from the mangler — every
+  /// two-letter `S<letter>` shape that resolves to a Swift-module PROTOCOL under
+  /// `swift-demangle` (sweep of all 52 letters, pinned in USRSymbolParserTests corpus
+  /// rows). Non-protocol substitutions (SA, SD, So, …) intentionally stay unresolved:
+  /// the D-22 scope is protocol conformance edges, and an unresolved shape fails soft
+  /// into the raw-USR Term (visible in diagnostics), never silently mis-named.
   private static func stdlibSubstitution(_ letters: String) -> SubstitutedType? {
     switch letters {
     case "SS": return SubstitutedType(
@@ -249,8 +278,37 @@ enum USRSymbolParser {
       container: CanonicalSymbolFormatter.Container(name: "Float", kind: .struct))
     case "Su": return SubstitutedType(
       container: CanonicalSymbolFormatter.Container(name: "UInt", kind: .struct))
+    // Protocols (04-02, D-22) — the empirically enumerated Swift-module set.
+    case "SB": return protocolContainer("BinaryFloatingPoint")
+    case "SE": return protocolContainer("Encodable")
+    case "SF": return protocolContainer("FloatingPoint")
+    case "SG": return protocolContainer("RandomNumberGenerator")
+    case "SH": return protocolContainer("Hashable")
+    case "SK": return protocolContainer("BidirectionalCollection")
+    case "SL": return protocolContainer("Comparable")
+    case "SM": return protocolContainer("MutableCollection")
+    case "SQ": return protocolContainer("Equatable")
+    case "ST": return protocolContainer("Sequence")
+    case "SU": return protocolContainer("UnsignedInteger")
+    case "SX": return protocolContainer("RangeExpression")
+    case "SY": return protocolContainer("RawRepresentable")
+    case "SZ": return protocolContainer("SignedInteger")
+    case "Se": return protocolContainer("Decodable")
+    case "Sj": return protocolContainer("Numeric")
+    case "Sk": return protocolContainer("RandomAccessCollection")
+    case "Sl": return protocolContainer("Collection")
+    case "Sm": return protocolContainer("RangeReplaceableCollection")
+    case "St": return protocolContainer("IteratorProtocol")
+    case "Sx": return protocolContainer("Strideable")
+    case "Sy": return protocolContainer("StringProtocol")
+    case "Sz": return protocolContainer("BinaryInteger")
     default: return nil
     }
+  }
+
+  private static func protocolContainer(_ name: String) -> SubstitutedType {
+    SubstitutedType(
+      container: CanonicalSymbolFormatter.Container(name: name, kind: .protocol))
   }
 
   // MARK: - Punycode (docs/ABI Mangling.rst identifiers: `00<length><punycode>`)
@@ -364,6 +422,11 @@ enum USRSymbolParser {
     /// The words of every identifier read so far in this USR, first-appearance order — the
     /// substitution table `0`-prefixed identifiers reference (docs/ABI Mangling.rst).
     var wordTable = WordTable()
+    /// Peeks the character `offset` positions ahead (0 == `peek()`), nil past the end.
+    func peek(at offset: Int) -> Character? {
+      let target = index + offset
+      return target < scalars.count ? scalars[target] : nil
+    }
 
     init(_ string: String) {
       self.scalars = Array(string)

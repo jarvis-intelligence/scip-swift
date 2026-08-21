@@ -1,4 +1,9 @@
-  // SC4 content classes, external-protocol-free form (04-01). Data, never instructions (T-02-09).
+  // SC4 content classes (04-01 external-protocol-free form; 04-02 adds external-protocol
+  // conformances, the ObjC-rooted subclass, and the retroactive external conformance).
+  // Data, never instructions (T-02-09).
+  
+  import Foundation
+//       ^^^^^^^^^^ reference scip-swift swift Foundation 6.2.4 Foundation/
   
   protocol HierDrawable {
 //         ^^^^^^^^^^^^ definition scip-swift swiftpm HierCore . HierDrawable#
@@ -43,36 +48,36 @@
 //                     ^^^^^^ reference scip-swift swift Swift 6.2.4 String#
   }
   
-  struct Circle: HierShape {
-//       ^^^^^^ definition scip-swift swiftpm HierCore . Circle#
-//              kind Struct
-//              display_name HierCore.Circle
-//              signature_documentation
-//              > struct Circle
-//       ^^^^^^ definition scip-swift swiftpm HierCore . Circle#init().
-//              kind Constructor
-//              display_name HierCore.Circle.init(radius: Swift.Double) -> HierCore.Circle
-//              signature_documentation
-//              > init init(radius:)
-//       ^^^^^^ reference scip-swift swiftpm HierCore . `s:8HierCore0A5ShapePAAE8describeSSyF`.
-//               ^^^^^^^^^ reference scip-swift swiftpm HierCore . HierShape#
-    let radius: Double
-//      ^^^^^^ definition scip-swift swiftpm HierCore . Circle#`radius=`().
-//             kind Setter
-//             display_name HierCore.Circle.radius.setter : Swift.Double
-//             signature_documentation
-//             > func setter:radius
-//      ^^^^^^ definition scip-swift swiftpm HierCore . Circle#radius().
-//             kind Getter
-//             display_name HierCore.Circle.radius.getter : Swift.Double
-//             signature_documentation
-//             > func getter:radius
-//      ^^^^^^ definition scip-swift swiftpm HierCore . Circle#radius.
-//             kind Property
-//             display_name HierCore.Circle.radius : Swift.Double
-//             signature_documentation
-//             > var radius
-//              ^^^^^^ reference scip-swift swift Swift 6.2.4 Double#
+  public struct Circle: HierShape {
+//              ^^^^^^ definition scip-swift swiftpm HierCore . Circle#
+//                     kind Struct
+//                     display_name HierCore.Circle
+//                     signature_documentation
+//                     > struct Circle
+//              ^^^^^^ definition scip-swift swiftpm HierCore . Circle#init().
+//                     kind Constructor
+//                     display_name HierCore.Circle.init(radius: Swift.Double) -> HierCore.Circle
+//                     signature_documentation
+//                     > init init(radius:)
+//              ^^^^^^ reference scip-swift swiftpm HierCore . `s:8HierCore0A5ShapePAAE8describeSSyF`.
+//                      ^^^^^^^^^ reference scip-swift swiftpm HierCore . HierShape#
+    public let radius: Double
+//             ^^^^^^ definition scip-swift swiftpm HierCore . Circle#`radius=`().
+//                    kind Setter
+//                    display_name HierCore.Circle.radius.setter : Swift.Double
+//                    signature_documentation
+//                    > func setter:radius
+//             ^^^^^^ definition scip-swift swiftpm HierCore . Circle#radius().
+//                    kind Getter
+//                    display_name HierCore.Circle.radius.getter : Swift.Double
+//                    signature_documentation
+//                    > func getter:radius
+//             ^^^^^^ definition scip-swift swiftpm HierCore . Circle#radius.
+//                    kind Property
+//                    display_name HierCore.Circle.radius : Swift.Double
+//                    signature_documentation
+//                    > var radius
+//                     ^^^^^^ reference scip-swift swift Swift 6.2.4 Double#
   
     var area: Double { Double.pi * radius * radius }
 //      ^^^^ definition scip-swift swiftpm HierCore . Circle#area.
@@ -106,7 +111,7 @@
 //            relationship scip-swift swiftpm HierCore . HierDrawable#draw(). implementation reference
   }
   
-  struct Rect: HierShape {
+  struct Rect: HierShape, Equatable, CustomStringConvertible {
 //       ^^^^ definition scip-swift swiftpm HierCore . Rect#
 //            kind Struct
 //            display_name HierCore.Rect
@@ -119,6 +124,8 @@
 //            > init init(width:height:)
 //       ^^^^ reference scip-swift swiftpm HierCore . `s:8HierCore0A5ShapePAAE8describeSSyF`.
 //             ^^^^^^^^^ reference scip-swift swiftpm HierCore . HierShape#
+//                        ^^^^^^^^^ reference scip-swift swift Swift 6.2.4 Equatable#
+//                                   ^^^^^^^^^^^^^^^^^^^^^^^ reference scip-swift swift Swift 6.2.4 CustomStringConvertible#
     let width: Double
 //      ^^^^^ definition scip-swift swiftpm HierCore . Rect#`width=`().
 //            kind Setter
@@ -172,6 +179,59 @@
 //                           ^ reference scip-swift swift Swift 6.2.4 Double#`*`().
 //                             ^^^^^^ reference scip-swift swiftpm HierCore . Rect#height().
 //                             ^^^^^^ reference scip-swift swiftpm HierCore . Rect#height.
+  
+    var description: String { "rect \(width)x\(height)" }
+//      ^^^^^^^^^^^ definition scip-swift swiftpm HierCore . Rect#description.
+//                  kind Property
+//                  display_name HierCore.Rect.description : Swift.String
+//                  signature_documentation
+//                  > var description
+//                  relationship scip-swift swift Swift 6.2.4 CustomStringConvertible#description. implementation reference
+//                   ^^^^^^ reference scip-swift swift Swift 6.2.4 String#
+//                          ^ definition scip-swift swiftpm HierCore . Rect#description().
+//                            kind Getter
+//                            display_name HierCore.Rect.description.getter : Swift.String
+//                            signature_documentation
+//                            > func getter:description
+//                            ^ reference scip-swift swift Swift 6.2.4 String#init().
+//                                    ^^^^^ reference scip-swift swiftpm HierCore . Rect#width().
+//                                    ^^^^^ reference scip-swift swiftpm HierCore . Rect#width.
+//                                             ^^^^^^ reference scip-swift swiftpm HierCore . Rect#height().
+//                                             ^^^^^^ reference scip-swift swiftpm HierCore . Rect#height.
+  
+    static func == (lhs: Rect, rhs: Rect) -> Bool {
+//              ^^ definition scip-swift swiftpm HierCore . Rect#`==`().
+//                 kind StaticMethod
+//                 display_name static HierCore.Rect.== infix(HierCore.Rect, HierCore.Rect) -> Swift.Bool
+//                 signature_documentation
+//                 > static func ==(_:_:)
+//                 relationship scip-swift swift Swift 6.2.4 Equatable#`==`(). implementation reference
+//                  ^^^ definition scip-swift swiftpm HierCore . `s:8HierCore4RectV2eeoiySbAC_ACtFZ3lhsL_ACvp`.
+//                      kind Parameter
+//                      display_name lhs #1 : HierCore.Rect in static HierCore.Rect.== infix(HierCore.Rect, HierCore.Rect) -> Swift.Bool
+//                       ^^^^ reference scip-swift swiftpm HierCore . Rect#
+//                             ^^^ definition scip-swift swiftpm HierCore . `s:8HierCore4RectV2eeoiySbAC_ACtFZ3rhsL_ACvp`.
+//                                 kind Parameter
+//                                 display_name rhs #1 : HierCore.Rect in static HierCore.Rect.== infix(HierCore.Rect, HierCore.Rect) -> Swift.Bool
+//                                  ^^^^ reference scip-swift swiftpm HierCore . Rect#
+//                                           ^^^^ reference scip-swift swift Swift 6.2.4 Bool#
+      lhs.width == rhs.width && lhs.height == rhs.height
+//    ^^^ reference scip-swift swiftpm HierCore . `s:8HierCore4RectV2eeoiySbAC_ACtFZ3lhsL_ACvp`.
+//        ^^^^^ reference scip-swift swiftpm HierCore . Rect#width().
+//        ^^^^^ reference scip-swift swiftpm HierCore . Rect#width.
+//              ^^ reference scip-swift swift Swift 6.2.4 Equatable#`==`().
+//                 ^^^ reference scip-swift swiftpm HierCore . `s:8HierCore4RectV2eeoiySbAC_ACtFZ3rhsL_ACvp`.
+//                     ^^^^^ reference scip-swift swiftpm HierCore . Rect#width().
+//                     ^^^^^ reference scip-swift swiftpm HierCore . Rect#width.
+//                           ^^ reference scip-swift swift Swift 6.2.4 Bool#`&&`().
+//                              ^^^ reference scip-swift swiftpm HierCore . `s:8HierCore4RectV2eeoiySbAC_ACtFZ3lhsL_ACvp`.
+//                                  ^^^^^^ reference scip-swift swiftpm HierCore . Rect#height().
+//                                  ^^^^^^ reference scip-swift swiftpm HierCore . Rect#height.
+//                                         ^^ reference scip-swift swift Swift 6.2.4 Equatable#`==`().
+//                                            ^^^ reference scip-swift swiftpm HierCore . `s:8HierCore4RectV2eeoiySbAC_ACtFZ3rhsL_ACvp`.
+//                                                ^^^^^^ reference scip-swift swiftpm HierCore . Rect#height().
+//                                                ^^^^^^ reference scip-swift swiftpm HierCore . Rect#height.
+    }
   
     func draw() {}
 //       ^^^^ definition scip-swift swiftpm HierCore . Rect#draw().
@@ -406,6 +466,56 @@
 //            signature_documentation
 //            > var inner
 //             ^ reference scip-swift swiftpm HierCore . Wrapper#T#
+  }
+  
+  /// The D-21 ObjC-rooted superclass gap: NSObject-rooted clauses record no store `baseOf`;
+  /// 04-02's bounded SwiftSyntax fallback supplies the superclass edge.
+  class ObjCAnimal: NSObject {
+//      ^^^^^^^^^^ reference scip-swift swiftpm HierCore . `c:objc(pl)NSObject(im)autorelease`.
+//      ^^^^^^^^^^ reference scip-swift swiftpm HierCore . `c:objc(pl)NSObject(im)class`.
+//      ^^^^^^^^^^ reference scip-swift swiftpm HierCore . `c:objc(pl)NSObject(im)conformsToProtocol:`.
+//      ^^^^^^^^^^ reference scip-swift swiftpm HierCore . `c:objc(pl)NSObject(im)isEqual:`.
+//      ^^^^^^^^^^ reference scip-swift swiftpm HierCore . `c:objc(pl)NSObject(im)isKindOfClass:`.
+//      ^^^^^^^^^^ reference scip-swift swiftpm HierCore . `c:objc(pl)NSObject(im)isMemberOfClass:`.
+//      ^^^^^^^^^^ reference scip-swift swiftpm HierCore . `c:objc(pl)NSObject(im)isProxy`.
+//      ^^^^^^^^^^ reference scip-swift swiftpm HierCore . `c:objc(pl)NSObject(im)performSelector:`.
+//      ^^^^^^^^^^ reference scip-swift swiftpm HierCore . `c:objc(pl)NSObject(im)performSelector:withObject:`.
+//      ^^^^^^^^^^ reference scip-swift swiftpm HierCore . `c:objc(pl)NSObject(im)performSelector:withObject:withObject:`.
+//      ^^^^^^^^^^ reference scip-swift swiftpm HierCore . `c:objc(pl)NSObject(im)release`.
+//      ^^^^^^^^^^ reference scip-swift swiftpm HierCore . `c:objc(pl)NSObject(im)respondsToSelector:`.
+//      ^^^^^^^^^^ reference scip-swift swiftpm HierCore . `c:objc(pl)NSObject(im)retainCount`.
+//      ^^^^^^^^^^ reference scip-swift swiftpm HierCore . `c:objc(pl)NSObject(im)retain`.
+//      ^^^^^^^^^^ reference scip-swift swiftpm HierCore . `c:objc(pl)NSObject(im)self`.
+//      ^^^^^^^^^^ reference scip-swift swiftpm HierCore . `c:objc(pl)NSObject(im)zone`.
+//      ^^^^^^^^^^ reference scip-swift swiftpm HierCore . `c:objc(pl)NSObject(py)debugDescription`.
+//      ^^^^^^^^^^ reference scip-swift swiftpm HierCore . `c:objc(pl)NSObject(py)description`.
+//      ^^^^^^^^^^ reference scip-swift swiftpm HierCore . `c:objc(pl)NSObject(py)hash`.
+//      ^^^^^^^^^^ reference scip-swift swiftpm HierCore . `c:objc(pl)NSObject(py)superclass`.
+//      ^^^^^^^^^^ reference scip-swift swiftpm HierCore . `s:So8NSObjectC10ObjectiveCE2eeoiySbAB_ABtFZ`.
+//      ^^^^^^^^^^ reference scip-swift swiftpm HierCore . `s:So8NSObjectC10ObjectiveCE4hash4intoys6HasherVz_tF`.
+//      ^^^^^^^^^^ reference scip-swift swiftpm HierCore . `s:So8NSObjectC10ObjectiveCE9hashValueSivp`.
+//      ^^^^^^^^^^ definition scip-swift swiftpm HierCore@objc(cs)ObjCAnimal . `HierCore@objc(cs)ObjCAnimal`#
+//                 kind Class
+//                 display_name ObjCAnimal
+//                 signature_documentation
+//                 > class ObjCAnimal
+//                 documentation
+//                 > The D-21 ObjC-rooted superclass gap: NSObject-rooted clauses record no store `baseOf`;
+//                 > 04-02's bounded SwiftSyntax fallback supplies the superclass edge.
+//                  ^^^^^^^^ reference scip-swift swiftpm HierCore . `c:objc(cs)NSObject`.
+//                           ^ definition scip-swift swiftpm HierCore@objc(cs)ObjCAnimal(im)init . init().
+//                             kind Constructor
+//                             display_name init()
+//                             signature_documentation
+//                             > init init()
+//                             relationship scip-swift swiftpm HierCore . `c:objc(cs)NSObject(im)init`. implementation reference
+    @objc func sound() -> String { "generic" }
+//             ^^^^^ definition scip-swift swiftpm HierCore@objc(cs)ObjCAnimal(im)sound . `HierCore@objc(cs)ObjCAnimal(im)sound`().
+//                   kind Method
+//                   display_name sound()
+//                   signature_documentation
+//                   > func sound()
+//                        ^^^^^^ reference scip-swift swift Swift 6.2.4 String#
   }
   
   struct 🎨: HierShape {

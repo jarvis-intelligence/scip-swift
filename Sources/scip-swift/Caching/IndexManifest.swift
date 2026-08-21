@@ -96,6 +96,11 @@ enum SymbolFormatVersion {
   /// Format 4 (03-03) changes emitted occurrence bytes: written imports emit Import-role
   /// occurrences resolving to module symbols (`c:@M@` USRs parse; the D-06 fallback Terms
   /// for them vanish), and every occurrence in a test-target document carries the Test bit.
-  /// A bump wholesale-invalidates format-3 caches via the same manifest gate.
-  static let current = 4
+  /// Format 5 (04-02) changes emitted relationship and symbol bytes: type-level
+  /// is_implementation edges ride type SymbolInformation (the clause-relation harvest),
+  /// relationship targets mint into external_symbols, and stdlib-protocol USRs
+  /// (`s:SQ`-family substitutions, `s:s<n><word>P` Swift-module implicit words, and their
+  /// requirement members) canonicalize instead of falling back to raw-USR Terms.
+  /// A bump wholesale-invalidates older caches via the same manifest gate.
+  static let current = 5
 }

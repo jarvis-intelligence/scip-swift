@@ -86,6 +86,7 @@
 //                          signature_documentation
 //                          > struct SchemeFixtureTests
     @Test("overloads, operators, extensions, and Unicode identifiers behave")
+//  ^ reference scip-swift swift Swift 6.2.4 Void#
 //  ^ reference scip-swift swift Testing 6.2.4 Testing/
 //  ^ reference scip-swift swift _Concurrency 6.2.4 _Concurrency/
 //  ^ definition scip-swift swiftpm SchemeFixtureTests . `s:18SchemeFixtureTestsAAV0086$s18SchemeFixtureTestsAAV18exerciseCategories4TestfMp_20__$b98945a684f99f28fMu__izJCFfO19__testContentRecords6UInt32V4kind_AG9reserved1SbSv_S2VSgSutXCSg8accessorSu7contextSu9reserved2tvgZ`.
@@ -157,7 +158,6 @@
 //  ^ reference scip-swift swiftpm SchemeFixtureTests . `s:18SchemeFixtureTestsAAV`.
 //  ^ reference scip-swift swiftpm SchemeFixtureTests . `s:Sa12arrayLiteralSayxGxd_tcfc`.
 //  ^ reference scip-swift swiftpm SchemeFixtureTests . `s:ScA`.
-//  ^ reference scip-swift swiftpm SchemeFixtureTests . `s:s4Voida`.
 //  ^ reference scip-swift swiftpm Testing . SourceLocation#
 //  ^ reference scip-swift swiftpm Testing . SourceLocation#init().
 //  ^ reference scip-swift swiftpm Testing . Test#
@@ -208,14 +208,14 @@
 //            ^^^^^ reference scip-swift swiftpm SchemeFixture . parse(+1).
 //                     ^^ reference scip-swift swift Swift 6.2.4 String#`==`().
       #expect(vector.length() > 0)
+//    ^ reference scip-swift swift Swift 6.2.4 Comparable#`>`().
 //    ^ reference scip-swift swift Testing 6.2.4 Testing/
 //    ^ reference scip-swift swiftpm SchemeFixture . Vec#length().
-//    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:SL1goiySbx_xtFZ`.
 //    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:Sa12arrayLiteralSayxGxd_tcfc`.
 //    ^ reference scip-swift swiftpm Testing . SourceLocation#
 //     ^^^^^^ reference scip-swift swiftpm Testing . expect!
 //                   ^^^^^^ reference scip-swift swiftpm SchemeFixture . Vec#length().
-//                            ^ reference scip-swift swiftpm SchemeFixtureTests . `s:SL1goiySbx_xtFZ`.
+//                            ^ reference scip-swift swift Swift 6.2.4 Comparable#`>`().
       #expect(vector.manhattanLength == 3)
 //    ^ reference scip-swift swift Swift 6.2.4 Int#`==`().
 //    ^ reference scip-swift swift Testing 6.2.4 Testing/
@@ -359,16 +359,16 @@
 //            ^^^^^^^^^^^^^^^^^^ reference scip-swift swiftpm SchemeFixture . `名前を付ける`().
 //                                 ^^ reference scip-swift swift Swift 6.2.4 String#`==`().
       #expect(flagSequence.contains("🇻🇳"))
+//    ^ reference scip-swift swift Swift 6.2.4 StringProtocol#contains().
 //    ^ reference scip-swift swift Testing 6.2.4 Testing/
 //    ^ reference scip-swift swiftpm SchemeFixture . flagSequence().
 //    ^ reference scip-swift swiftpm SchemeFixture . flagSequence.
 //    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:Sa12arrayLiteralSayxGxd_tcfc`.
-//    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:Sy10FoundationE8containsySbqd__SyRd__lF`.
 //    ^ reference scip-swift swiftpm Testing . SourceLocation#
 //     ^^^^^^ reference scip-swift swiftpm Testing . expect!
 //            ^^^^^^^^^^^^ reference scip-swift swiftpm SchemeFixture . flagSequence().
 //            ^^^^^^^^^^^^ reference scip-swift swiftpm SchemeFixture . flagSequence.
-//                         ^^^^^^^^ reference scip-swift swiftpm SchemeFixtureTests . `s:Sy10FoundationE8containsySbqd__SyRd__lF`.
+//                         ^^^^^^^^ reference scip-swift swift Swift 6.2.4 StringProtocol#contains().
   
       let point: Point = vector
 //               ^^^^^ reference scip-swift swiftpm SchemeFixture . Point#
