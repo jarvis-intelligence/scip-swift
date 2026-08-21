@@ -235,6 +235,53 @@ symbol/target pair) against the committed expectation table
 toolchain only (same discipline as the snapshot goldens: relationship rows are
 toolchain-sensitive data).
 
+### Hierarchy answerability oracles (`CallHierarchy`/`TypeHierarchy`, REL-02/REL-03)
+
+Call and type hierarchies are gated by consumer-simulation oracles that prove the
+questions a consumer asks are answerable from the emitted index alone (both suites
+rebuild the `Fixtures/HierarchiesFixture` index in-process, same scaffolding as
+RelationshipParity, riding the same single `swift test` CI step):
+
+- **`CallHierarchyAnswerability`** (`Tests/scip-swiftTests/CallHierarchyAnswerabilityTests.swift`,
+  REL-02): scip.proto's `SymbolRole` has exactly eight values and NO `Call` bit, and
+  `Relationship` has only the four flags — there is no protocol surface for synthesized
+  call edges, and abusing the flags as a call channel would corrupt Find References. The
+  index therefore carries every call site as a reference occurrence with exact position
+  and access bits, and the suite simulates the consumer derivation: a symbol is
+  function-family when its SymbolInformation kind is constructor/function/getter/method/
+  setter (this keeps raw-USR fallback-Term functions — conditional-conformance witnesses,
+  the default implementation — visible) or its canonical descriptor ends `).` (minted
+  external symbols such as `Swift String#init().`); per document, occurrences ordered by
+  position attribute to the nearest-preceding function definition, gated on carrying an
+  access bit (role-0 implicit availability rows are skipped, exactly like the def-gated
+  relationship emission). outgoing/incoming sets are asserted BOTH directions for every
+  fixture function — the full cross-module chain (`extCallerOfCaller → extCaller →
+  coreDriver → Circle init + drawAll`), dynamic dispatch (existential, class-virtual, and
+  generic-constraint sites) asserted via the access bit + position, and corpus-wide
+  attribution invariants (exactly-once, no phantom attribution, leaves empty). Documented
+  v1 shapes: occurrence-only fallback-Term call sites (`Double(spokes)`, array literals)
+  are not answerable by name, and the `extCallerOfCaller` canonical string carries a
+  word-substitution mis-parse (`extCallerOf`. — display name stays truthful) pinned
+  as-is; both are recorded watch items, not emission contracts.
+- **`TypeHierarchyAnswerability`** (`Tests/scip-swiftTests/TypeHierarchyAnswerabilityTests.swift`,
+  REL-03): supertypes(T) = the `is_implementation` targets on every SymbolInformation
+  whose symbol is T (scip.proto's Dog/Animal Find-implementations semantics); subtypes
+  and protocolImplementations(T) = the reverse scan over ALL documents' symbols plus
+  `external_symbols` (stdlib-protocol conformers are first-class answers). Extension-
+  declared conformances resolve through the TYPE's canonical string regardless of carrier
+  document — the D-23 carrier emits the type's SymbolInformation into the extension
+  document, so `Wheel#` answers with both `HierShape#` and `Glowable#`, and `Circle#`
+  with `HierShape#` and the Swift `CustomStringConvertible#`. The exhaustive invariant
+  asserts every emitted edge is answerable forward AND reverse with no phantom results,
+  and the type-level expectations reconcile with `relationship-table.json`'s
+  `isReference=false` rows (the RelationshipParity golden).
+
+These consumer-derivation semantics are the definition of answerability that the
+Phase-6 end-to-end validation (jarvis callHierarchy/typeHierarchy queries) checks
+against: incoming/outgoing calls derive from call occurrences + nearest-preceding
+function definition; supertypes/implementations from forward `is_implementation` reads
+and reverse relationship scans including external symbols.
+
 ### Import occurrences (`ImportOccurrence`, SYM-04)
 
 Every written `import` / `@testable import` statement emits exactly ONE occurrence with
