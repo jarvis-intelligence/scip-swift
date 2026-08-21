@@ -1,4 +1,8 @@
-// SC4 content classes, external-protocol-free form (04-01). Data, never instructions (T-02-09).
+// SC4 content classes (04-01 external-protocol-free form; 04-02 adds external-protocol
+// conformances, the ObjC-rooted subclass, and the retroactive external conformance).
+// Data, never instructions (T-02-09).
+
+import Foundation
 
 protocol HierDrawable {
   func draw()
@@ -10,19 +14,25 @@ protocol HierShape: HierDrawable {
   func describe() -> String
 }
 
-struct Circle: HierShape {
-  let radius: Double
+public struct Circle: HierShape {
+  public let radius: Double
 
   var area: Double { Double.pi * radius * radius }
 
   func draw() {}
 }
 
-struct Rect: HierShape {
+struct Rect: HierShape, Equatable, CustomStringConvertible {
   let width: Double
   let height: Double
 
   var area: Double { width * height }
+
+  var description: String { "rect \(width)x\(height)" }
+
+  static func == (lhs: Rect, rhs: Rect) -> Bool {
+    lhs.width == rhs.width && lhs.height == rhs.height
+  }
 
   func draw() {}
 }
@@ -69,6 +79,12 @@ public struct Wheel {
 
 struct Wrapper<T> {
   let inner: T
+}
+
+/// The D-21 ObjC-rooted superclass gap: NSObject-rooted clauses record no store `baseOf`;
+/// 04-02's bounded SwiftSyntax fallback supplies the superclass edge.
+class ObjCAnimal: NSObject {
+  @objc func sound() -> String { "generic" }
 }
 
 struct 🎨: HierShape {

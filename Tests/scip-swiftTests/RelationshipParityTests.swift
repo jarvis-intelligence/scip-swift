@@ -3,16 +3,17 @@ import Testing
 
 @testable import scip_swift
 
-/// Requirement: REL-01 / D-24 (04-01) — the witness-level relationship oracle over
-/// HierarchiesFixture.
+/// Requirement: REL-01 / D-24 (04-01 witness baseline, extended 04-02) — the
+/// relationship oracle over HierarchiesFixture.
 ///
-/// Proves BOTH DIRECTIONS over the relationships the engine emits today from
-/// IndexStoreDB `.overrideOf` relations through the byte-stable
-/// `.overrideOf` → (is_reference, is_implementation) mapping (`RelationshipMapping`):
-/// every expected witness edge IS emitted, and every emitted edge IS expected — no
-/// unexpected edges anywhere in the corpus. This suite freezes the witness baseline
-/// exactly as RoleParity froze D-16 before any Phase-3 emission work; 04-02 EXTENDS
-/// the expected set (type-level clause edges), never rewrites it (RESEARCH pitfall 10).
+/// Proves BOTH DIRECTIONS over the relationships the engine emits from IndexStoreDB:
+/// the byte-stable witness mapping (`.overrideOf` → is_reference + is_implementation,
+/// frozen in 04-01 — coverage EXTENDS, never rewrites it, RESEARCH pitfall 10) plus
+/// the 04-02 type-level clause edges (baseOf/extendedBy harvest → isImplementation
+/// ONLY, scip.proto:477-500 Find-implementations semantics; D-23 carrier for
+/// retroactive conformances; D-21 ObjC fallback for the NSObject-rooted superclass
+/// gap). Every expected edge IS emitted, and every emitted edge IS expected — no
+/// unexpected edges anywhere in the corpus.
 ///
 /// `UPDATE_RELATIONSHIP_TABLE=1` regenerates the committed expectation table
 /// `Fixtures/HierarchiesFixture/relationship-table.json` (the fourth env-hook golden —
@@ -80,7 +81,8 @@ struct RelationshipParityTests {
     // hand-reviewed against the fixture source (the D-24 review; RESEARCH pitfall 10 —
     // never author expectations the engine does not already meet). Each row:
     // (document, subject symbol, target symbol, fragment that must appear on the
-    // source line where the subject is DEFINED).
+    // source line where the subject is DEFINED) — witness edges are always
+    // is_reference + is_implementation (the byte-stable `.overrideOf` mapping).
     let inventory: [(path: String, fixture: Fixture, symbol: String, target: String, lineFragment: String)] = [
       // Local-protocol witnesses — direct conformances.
       (Family.hierCorePath, hierCore, Family.circleArea, Family.hierShapeArea, "radius * radius"),
@@ -93,7 +95,7 @@ struct RelationshipParityTests {
       (Family.hierCorePath, hierCore, Family.wheelArea, Family.hierShapeArea, "Double(spokes)"),
       (Family.hierCorePath, hierCore, Family.wheelDraw, Family.hierDrawableDraw, "func draw()"),
       // Conditional-conformance witnesses (raw-USR fallback Terms — pinned as emitted,
-      // v1-documented; a 04-02 parser rule would change these bytes deliberately).
+      // v1-documented; a future parser rule would change these bytes deliberately).
       (Family.hierCorePath, hierCore, Family.wrapperAreaTerm, Family.hierShapeArea, "inner.area"),
       (Family.hierCorePath, hierCore, Family.wrapperDrawTerm, Family.hierDrawableDraw, "inner.draw()"),
       // The default implementation is itself a witness of the requirement.
@@ -110,8 +112,19 @@ struct RelationshipParityTests {
       // Cross-module retroactive conformance to a LOCAL-package protocol — the D-23
       // carrier: witness edges already ride the extension's document today.
       (Family.hierExtPath, hierExt, Family.wheelGlow, Family.glowableGlow, "func glow()"),
+      // External-protocol witnesses (04-02, D-22): targets render in the frozen
+      // Swift-module form — `scip-swift swift Swift <pin> …` — with system-ness from
+      // the USR parse, never the use-site location (RESEARCH Q4).
+      (Family.hierCorePath, hierCore, Family.rectDescription, Family.csdDescription, "var description: String"),
+      (Family.hierCorePath, hierCore, Family.rectEquals, Family.equatableEquals, "static func == (lhs: Rect, rhs: Rect)"),
+      // The retroactive external witness rides the extension document (D-23).
+      (Family.hierExtPath, hierExt, Family.circleDescriptionExt, Family.csdDescription, "public var description"),
+      // The ObjC-rooted subclass's inherited init: the store records it as a
+      // definition at the decl line with an overrideOf edge to the never-minted
+      // c:objc NSObject init (04-01 finding; 04-02 minting makes it lint-safe).
+      (Family.hierCorePath, hierCore, Family.objcAnimalInit, Family.nsObjectInitTerm, "class ObjCAnimal: NSObject"),
     ]
-    #expect(inventory.count == 19, "the witness inventory enumerates every expected edge")
+    #expect(inventory.count == 23, "the witness inventory enumerates every expected edge")
 
     var expected = Set<EdgeKey>()
     for row in inventory {
@@ -138,7 +151,11 @@ struct RelationshipParityTests {
           relativePath: row.path, symbol: row.symbol, target: row.target,
           isReference: true, isImplementation: true))
     }
-    #expect(expected.count == 19, "the nineteen witness edges must be distinct")
+    #expect(expected.count == 23, "the twenty-three witness edges must be distinct")
+
+    // The type-level clause edges are part of the same corpus (04-02): the corpus-wide
+    // both-direction sweep below must account for them too.
+    expected.formUnion(try Self.expectedTypeLevelEdges(hierCore: hierCore, hierExt: hierExt))
 
     // Both directions over the WHOLE corpus: every expected edge IS emitted, every
     // emitted edge IS expected — no unexpected edges anywhere.
@@ -167,13 +184,12 @@ struct RelationshipParityTests {
     // relationship to them — a rule reading relations off non-def occurrences would
     // synthesize phantom edges.
     let conformanceDeclAnchors = [
-      "struct Circle: HierShape {",
-      "struct Rect: HierShape {",
+      "public struct Circle: HierShape {",
+      "struct Rect: HierShape, Equatable, CustomStringConvertible {",
       "struct 🎨: HierShape {",
       "extension Wheel: HierShape {",
       "extension Wrapper: HierShape, HierDrawable where T: HierShape {",
     ]
-
     for anchor in conformanceDeclAnchors {
       let line = try Self.uniqueLine(in: hierCore, containing: anchor)
       let implicitOccurrences = index.occurrences(in: Family.hierCorePath, atLine: line)
@@ -199,35 +215,135 @@ struct RelationshipParityTests {
     )
   }
 
-  @Test("declared conformance/inheritance clauses carry no type-level edges yet")
-  func declaredClausesCarryNoTypeLevelEdgesYet() throws {
+  @Test("every declared clause carries its type-level is_implementation edge (04-02)")
+  func declaredClausesCarryTypeLevelEdges() throws {
     let index = try Self.sharedIndex()
+    let hierCore = try Self.hierCoreFixture()
+    let hierExt = try Self.hierExtFixture()
+    let expected = try Self.expectedTypeLevelEdges(hierCore: hierCore, hierExt: hierExt)
 
-    // The declared-clause inventory of the fixture: every type that declares a
-    // conformance or inheritance clause TODAY emits no relationship on its type
-    // SymbolInformation — type-level is_implementation edges are 04-02 work (the
-    // clause-relation harvest). 04-02 FLIPS this list's assertion direction from
-    // expected-absent to expected-present; keep it as the RED seed.
-    for subject in Family.expectedClauseSubjects {
-      let relationships = index.documentSymbols[Family.hierCorePath]?
-        .first { $0.symbol == subject }?.relationships ?? []
+    // Direction A: every declared clause's type-level edge IS emitted.
+    let actual = Set(index.edges.map(EdgeKey.init))
+    let missing = expected.subtracting(actual).sorted()
+    #expect(
+      missing.isEmpty,
+      "missing type-level clause edges: \(missing) — the clause-relation harvest broke"
+    )
+
+    // Direction B: every type-level edge maps to a declared clause. The family is
+    // identified structurally (the subject set of the clause inventory); an edge from
+    // any clause subject to an undeclared target fails here.
+    let clauseSubjects = Set(Self.clauseInventory(hierCore: hierCore, hierExt: hierExt).map(\.symbol))
+    let actualTypeLevel = actual.filter { clauseSubjects.contains($0.symbol) }
+    let unexpected = actualTypeLevel.subtracting(expected).sorted()
+    #expect(
+      unexpected.isEmpty,
+      "unexpected type-level relationship edges: \(unexpected) — a conformance was invented"
+    )
+
+    // Attachment (D-23): in-decl edges ride the type's OWN SymbolInformation in its
+    // defining document; extension-declared edges ride the EXTENSION document via the
+    // carrier SymbolInformation for the type's canonical string — never an `s:e:`
+    // extension-symbol Term subject (RESEARCH pitfall 3).
+    for row in Self.clauseInventory(hierCore: hierCore, hierExt: hierExt) {
+      let carrier = index.documentSymbols[row.path]?
+        .first { $0.symbol == row.symbol }
       #expect(
-        relationships.isEmpty,
-        "\(subject) carries \(relationships) — type-level clause edges are 04-02 scope, the witness baseline must stay byte-stable"
+        carrier != nil,
+        "\(row.symbol) must have a SymbolInformation in \(row.path) (definition or D-23 carrier)"
       )
+      if let carrier {
+        #expect(
+          carrier.relationships.contains { relationship in
+            relationship.symbol == row.target
+              && relationship.isImplementation && !relationship.isReference
+          },
+          "\(row.symbol) in \(row.path) must carry the type-level edge to \(row.target) with isImplementation only"
+        )
+      }
     }
+  }
+
+  // MARK: - Type-level clause inventory (04-02)
+
+  /// One declared conformance/inheritance clause of the fixture: the type-level edge's
+  /// (document, subject, target) plus the fragment that must appear on the source line
+  /// where the clause is declared. Subjects are canonical TYPE strings — never `s:e:`
+  /// extension-symbol Terms (pitfall 3).
+  private struct ClauseRow {
+    let path: String
+    let fixture: Fixture
+    let symbol: String
+    let target: String
+    let lineFragment: String
+  }
+
+  /// The declared-clause inventory: every conformance/inheritance clause of the fixture,
+  /// one row per (subject, target) edge — direct conformances (Circle, Rect incl. its
+  /// two external protocols, 🎨), extension-declared (Wheel: HierShape same-module,
+  /// Wheel: Glowable + Circle: CustomStringConvertible retroactive cross-module — the
+  /// D-23 carrier rows), the conditional conformance (Wrapper, one edge per protocol),
+  /// the class chain (Square, RoundedSquare), protocol inheritance (HierShape), and the
+  /// ObjC-rooted superclass whose store gap the D-21 SwiftSyntax fallback fills
+  /// (ObjCAnimal → NSObject, c:objc fallback-Term target pinned as-is).
+  private static let clauseInventoryShape: [(path: String, symbol: String, target: String, lineFragment: String)] = [
+    (Family.hierCorePath, Family.circleType, Family.hierShapeType, "public struct Circle: HierShape {"),
+    (Family.hierCorePath, Family.rectType, Family.hierShapeType, "struct Rect: HierShape, Equatable"),
+    (Family.hierCorePath, Family.rectType, Family.equatableType, "struct Rect: HierShape, Equatable"),
+    (Family.hierCorePath, Family.rectType, Family.csdType, "struct Rect: HierShape, Equatable"),
+    (Family.hierCorePath, Family.paletteType, Family.hierShapeType, "struct 🎨: HierShape {"),
+    (Family.hierCorePath, Family.wheelType, Family.hierShapeType, "extension Wheel: HierShape {"),
+    (Family.hierCorePath, Family.wrapperType, Family.hierShapeType, "extension Wrapper: HierShape, HierDrawable where"),
+    (Family.hierCorePath, Family.wrapperType, Family.hierDrawableType, "extension Wrapper: HierShape, HierDrawable where"),
+    (Family.hierCorePath, Family.squareType, Family.baseWidgetType, "class Square: BaseWidget {"),
+    (Family.hierCorePath, Family.roundedSquareType, Family.squareType, "class RoundedSquare: Square {"),
+    (Family.hierCorePath, Family.hierShapeType, Family.hierDrawableType, "protocol HierShape: HierDrawable {"),
+    (Family.hierExtPath, Family.wheelType, Family.glowableType, "extension Wheel: Glowable {"),
+    (Family.hierExtPath, Family.circleType, Family.csdType, "extension Circle: CustomStringConvertible {"),
+    (Family.hierCorePath, Family.objcAnimal, Family.nsObjectTypeTerm, "class ObjCAnimal: NSObject"),
+  ]
+
+  private static func clauseInventory(hierCore: Fixture, hierExt: Fixture) -> [ClauseRow] {
+    clauseInventoryShape.map { row in
+      ClauseRow(
+        path: row.path,
+        fixture: row.path == Family.hierExtPath ? hierExt : hierCore,
+        symbol: row.symbol,
+        target: row.target,
+        lineFragment: row.lineFragment)
+    }
+  }
+
+  /// The expected type-level edge set, structurally grounded: the clause's source line
+  /// must exist and carry the declared shape (one unique line per fragment).
+  private static func expectedTypeLevelEdges(hierCore: Fixture, hierExt: Fixture) throws -> Set<EdgeKey> {
+    var expected = Set<EdgeKey>()
+    for row in clauseInventory(hierCore: hierCore, hierExt: hierExt) {
+      _ = try uniqueLine(in: row.fixture, containing: row.lineFragment)
+      expected.insert(
+        EdgeKey(
+          relativePath: row.path, symbol: row.symbol, target: row.target,
+          isReference: false, isImplementation: true))
+    }
+    return expected
   }
 
   @Test("corpus relationship invariants: flags, ordering, one row per pair")
   func corpusRelationshipInvariantsHold() throws {
     let index = try Self.sharedIndex()
 
-    // Every emitted relationship is an implementation (and reference) edge; the other
-    // two proto flags stay unused (no flag abuse — Scip_Relationship flags are Bool
-    // fields, asserted directly, never bit math).
+    // Every emitted relationship is an implementation edge in exactly one of two shapes
+    // (04-02): witness edges carry isReference+isImplementation (the byte-stable
+    // `.overrideOf` mapping), type-level clause edges carry isImplementation ONLY
+    // (scip.proto:477-500 — Dog# has is_implementation with Animal# but NOT
+    // is_reference). The other two proto flags stay unused (no flag abuse —
+    // Scip_Relationship flags are Bool fields, asserted directly, never bit math).
     for edge in index.edges {
       #expect(edge.isImplementation, "\(edge.symbol) → \(edge.target) must set isImplementation")
-      #expect(edge.isReference, "\(edge.symbol) → \(edge.target) must set isReference")
+      #expect(
+        edge.isReference || (!edge.isTypeDefinition && !edge.isDefinition),
+        "\(edge.symbol) → \(edge.target) is a type-level edge: reference/typeDefinition/definition must all stay false"
+      )
       #expect(
         !edge.isTypeDefinition && !edge.isDefinition,
         "\(edge.symbol) → \(edge.target) must not set isTypeDefinition/isDefinition"
@@ -294,8 +410,8 @@ struct RelationshipParityTests {
       "the table must contain the retroactive-to-local witness row (D-23 carrier)"
     )
     #expect(
-      committedRows.count >= 10 && committedRows.count <= 40,
-      "table row count \(committedRows.count) is outside the clause+witness band [10, 40]"
+      committedRows.count >= 30 && committedRows.count <= 45,
+      "table row count \(committedRows.count) is outside the clause+witness band [30, 45]"
     )
 
     // Both directions: the built rows equal the committed rows.
@@ -617,22 +733,45 @@ struct RelationshipParityTests {
     static let squareFrameGetter = core + "Square#frame()."
     static let squareFrameSetter = core + "Square#`frame=`()."
 
-    /// The declared-clause inventory (04-02 RED seed): every type that declares a
-    /// conformance or inheritance clause — direct conformances (Circle, Rect, 🎨),
-    /// extension-declared (Wheel: HierShape, Wheel: Glowable, Wrapper conditional),
-    /// the class chain (Square, RoundedSquare), and protocol inheritance
-    /// (HierShape: HierDrawable). Today none carries a relationship; 04-02's
-    /// clause-relation harvest FLIPS this list to expected-present.
-    static let expectedClauseSubjects: [String] = [
-      core + "Circle#",
-      core + "Rect#",
-      core + "`🎨`#",
-      core + "Wheel#",
-      core + "Wrapper#",
-      core + "Square#",
-      core + "RoundedSquare#",
-      core + "HierShape#",
-    ]
+    // External-protocol targets (04-02, D-22): the frozen Swift-module form. The
+    // pinned toolchain version is the same constant the mapper uses — these strings
+    // are what the parser rules must produce.
+    static let swiftSystem = "scip-swift swift Swift \(ToolchainInfo.pinnedSwiftVersion) "
+    static let equatableType = swiftSystem + "Equatable#"
+    static let equatableEquals = swiftSystem + "Equatable#`==`()."
+    static let csdType = swiftSystem + "CustomStringConvertible#"
+    static let csdDescription = swiftSystem + "CustomStringConvertible#description."
+
+    // External-protocol witnesses (04-02).
+    static let rectDescription = core + "Rect#description."
+    static let rectEquals = core + "Rect#`==`()."
+    static let circleDescriptionExt = core + "Circle#description."
+
+    // The ObjC-rooted subclass: @objc-exposed members ride pseudo-module USRs
+    // (`c:@M@HierCore@objc(cs)ObjCAnimal(im)init` — the module-import parse path names
+    // them verbatim), the inherited init's never-occurring target is a c:objc fallback
+    // Term (04-01 finding), and the D-21 fallback's superclass edge targets the
+    // NSObject type's c:objc fallback Term — all pinned as-is (v1).
+    static let objcAnimalInit =
+      "scip-swift swiftpm HierCore@objc(cs)ObjCAnimal(im)init . init()."
+    static let objcAnimalType =
+      "scip-swift swiftpm HierCore@objc(cs)ObjCAnimal . `HierCore@objc(cs)ObjCAnimal`#"
+    static let nsObjectInitTerm = core + "`c:objc(cs)NSObject(im)init`."
+    static let nsObjectTypeTerm = core + "`c:objc(cs)NSObject`."
+
+    // Type-level clause subjects and local targets (04-02).
+    static let circleType = core + "Circle#"
+    static let rectType = core + "Rect#"
+    static let paletteType = core + "`🎨`#"
+    static let wheelType = core + "Wheel#"
+    static let wrapperType = core + "Wrapper#"
+    static let squareType = core + "Square#"
+    static let roundedSquareType = core + "RoundedSquare#"
+    static let hierShapeType = core + "HierShape#"
+    static let hierDrawableType = core + "HierDrawable#"
+    static let baseWidgetType = core + "BaseWidget#"
+    static let objcAnimal = objcAnimalType
+    static let glowableType = ext + "Glowable#"
   }
 
   // MARK: - Role bits (Scip_SymbolRole raw values — Generated/Scip.pb.swift).

@@ -141,6 +141,66 @@ struct USRSymbolParserTests {
     #expect(symbol == "scip-swift swift Swift \(toolchain) String#")
   }
 
+  // MARK: - Stdlib-protocol USRs (REL-01 / D-22, 04-02)
+
+  @Test("bare protocol substitution parses to the Swift-module protocol form (s:SQ)")
+  func stdlibProtocolSubstitutionParses() throws {
+    // Verbatim probe USR (04-RESEARCH Q4): Equatable's short substitution. The exact
+    // canonical string below proves system-ness came from the PARSE — the helper's
+    // isSystemLocation defaults to false, and stdlib protocols report isSystem=false
+    // at their use sites (RESEARCH Q4), so the location can never supply the header.
+    let parsed = try #require(USRSymbolParser.parse("s:SQ"))
+    #expect(parsed.module == "Swift")
+    #expect(parsed.isSystemModule)
+    #expect(parsed.containers.isEmpty)
+    #expect(parsed.name == "Equatable")
+
+    let symbol = try #require(canonical("s:SQ", name: "Equatable", kind: .protocol))
+    #expect(symbol == "scip-swift swift Swift \(toolchain) Equatable#")
+  }
+
+  @Test("Swift-module implicit word parses (s:s23CustomStringConvertibleP)")
+  func swiftModuleImplicitWordParses() throws {
+    // Verbatim probe USR: the Swift module head is the implicit lowercase `s`, followed
+    // by the length-prefixed word and the `P` protocol kind letter.
+    let parsed = try #require(USRSymbolParser.parse("s:s23CustomStringConvertibleP"))
+    #expect(parsed.module == "Swift")
+    #expect(parsed.isSystemModule)
+    #expect(parsed.containers.isEmpty)
+    #expect(parsed.name == "CustomStringConvertible")
+
+    let symbol = try #require(
+      canonical("s:s23CustomStringConvertibleP", name: "CustomStringConvertible", kind: .protocol))
+    #expect(symbol == "scip-swift swift Swift \(toolchain) CustomStringConvertible#")
+  }
+
+  @Test("stdlib-protocol requirement members parse under their protocol container")
+  func stdlibProtocolRequirementMembersParse() throws {
+    // Verbatim probe USR: the CustomStringConvertible.description property requirement.
+    let description = try #require(
+      canonical(
+        "s:s23CustomStringConvertibleP11descriptionSSvp", name: "description",
+        kind: .instanceProperty))
+    #expect(
+      description == "scip-swift swift Swift \(toolchain) CustomStringConvertible#description.")
+
+    // Verbatim probe USR: the Equatable == requirement — substitution head plus a
+    // generic-requirement tail (substitution parameters). The parsed word is the
+    // operator's mangled letters; the store name supplies the spelling (assumption A4).
+    let equals = try #require(
+      canonical("s:SQ2eeoiySbx_xtFZ", name: "==(_:_:)", kind: .classMethod))
+    #expect(equals == "scip-swift swift Swift \(toolchain) Equatable#`==`().")
+  }
+
+  @Test("unknown stdlib substitutions stay unparseable (fail-soft totality)")
+  func unknownSubstitutionsStayUnparseable() {
+    #expect(USRSymbolParser.parse("s:SZ") == nil, "SZ names no enumerated substitution")
+    #expect(USRSymbolParser.parse("s:Sp") == nil, "Sp names no enumerated substitution")
+    #expect(
+      USRSymbolParser.parse("s:s12") == nil,
+      "a truncated Swift-module implicit word is a miss, never a partial parse")
+  }
+
   // MARK: - Accessors, constructors, operators
 
   @Test("accessor USRs yield Getter/Setter DeclKinds; the setter name is synthesized")
