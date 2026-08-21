@@ -34,7 +34,8 @@ struct IndexManifestTests {
       toolchainVersion: "A", converterVersion: "B",
       indexstoreDbRevision: "C", buildToolName: "D",
       symbolFormatVersion: 2,
-      demangle: true))
+      demangle: true,
+      packageManifestFingerprint: ""))
   }
 
   @Test("isCompatibleWith returns false when toolchainVersion differs")
@@ -48,7 +49,8 @@ struct IndexManifestTests {
       toolchainVersion: "X", converterVersion: "B",
       indexstoreDbRevision: "C", buildToolName: "D",
       symbolFormatVersion: 2,
-      demangle: true))
+      demangle: true,
+      packageManifestFingerprint: ""))
   }
 
   @Test("isCompatibleWith returns false when converterVersion differs")
@@ -62,7 +64,8 @@ struct IndexManifestTests {
       toolchainVersion: "A", converterVersion: "X",
       indexstoreDbRevision: "C", buildToolName: "D",
       symbolFormatVersion: 2,
-      demangle: true))
+      demangle: true,
+      packageManifestFingerprint: ""))
   }
 
   @Test("manifest written by converter 0.2.1 is incompatible with the current version constant")
@@ -79,7 +82,8 @@ struct IndexManifestTests {
       indexstoreDbRevision: IndexCommand.indexstoreDbRevision,
       buildToolName: BuildTool.swiftpm.rawValue,
       symbolFormatVersion: SymbolFormatVersion.current,
-      demangle: true))
+      demangle: true,
+      packageManifestFingerprint: ""))
   }
 
   @Test("isCompatibleWith returns false when indexstoreDbRevision differs")
@@ -93,7 +97,8 @@ struct IndexManifestTests {
       toolchainVersion: "A", converterVersion: "B",
       indexstoreDbRevision: "X", buildToolName: "D",
       symbolFormatVersion: 2,
-      demangle: true))
+      demangle: true,
+      packageManifestFingerprint: ""))
   }
 
   @Test("isCompatibleWith returns false when buildToolName differs")
@@ -107,7 +112,8 @@ struct IndexManifestTests {
       toolchainVersion: "A", converterVersion: "B",
       indexstoreDbRevision: "C", buildToolName: "X",
       symbolFormatVersion: 2,
-      demangle: true))
+      demangle: true,
+      packageManifestFingerprint: ""))
   }
 
   @Test("empty manifest is not compatible with any non-empty version set")
@@ -121,7 +127,8 @@ struct IndexManifestTests {
       toolchainVersion: "6.2.4", converterVersion: "0.1.2",
       indexstoreDbRevision: "c993f4fb", buildToolName: "swiftpm",
       symbolFormatVersion: 2,
-      demangle: true))
+      demangle: true,
+      packageManifestFingerprint: ""))
   }
 
   // MARK: symbolFormatVersion gating (D-09, 02-02)
@@ -137,12 +144,14 @@ struct IndexManifestTests {
       toolchainVersion: "A", converterVersion: "B",
       indexstoreDbRevision: "C", buildToolName: "D",
       symbolFormatVersion: 2,
-      demangle: true))
+      demangle: true,
+      packageManifestFingerprint: ""))
     #expect(manifest.isCompatibleWith(
       toolchainVersion: "A", converterVersion: "B",
       indexstoreDbRevision: "C", buildToolName: "D",
       symbolFormatVersion: 1,
-      demangle: true))
+      demangle: true,
+      packageManifestFingerprint: ""))
   }
 
   @Test("the format constant is 4 — import-role occurrences + test-target marking (03-03)")
@@ -202,7 +211,8 @@ struct IndexManifestTests {
       toolchainVersion: "A", converterVersion: "B",
       indexstoreDbRevision: "C", buildToolName: "D",
       symbolFormatVersion: SymbolFormatVersion.current,
-      demangle: true))
+      demangle: true,
+      packageManifestFingerprint: ""))
   }
 
   @Test("old manifest without overloadTableFingerprint fails decode (strict schema, D-09)")
@@ -225,6 +235,40 @@ struct IndexManifestTests {
     }
   }
 
+  @Test("packageManifestFingerprint mismatch invalidates — Package.swift bytes are a cache key (CR-01)")
+  func packageManifestFingerprintIsACompatibilityKey() {
+    let manifest = IndexManifest(
+      toolchainVersion: "A", converterVersion: "B",
+      indexstoreDbRevision: "C", buildToolName: "D",
+      symbolFormatVersion: SymbolFormatVersion.current,
+      packageManifestFingerprint: "hash-1"
+    )
+    #expect(!manifest.isCompatibleWith(
+      toolchainVersion: "A", converterVersion: "B",
+      indexstoreDbRevision: "C", buildToolName: "D",
+      symbolFormatVersion: SymbolFormatVersion.current,
+      demangle: true,
+      packageManifestFingerprint: "hash-2"))
+    #expect(manifest.isCompatibleWith(
+      toolchainVersion: "A", converterVersion: "B",
+      indexstoreDbRevision: "C", buildToolName: "D",
+      symbolFormatVersion: SymbolFormatVersion.current,
+      demangle: true,
+      packageManifestFingerprint: "hash-1"))
+  }
+
+  @Test("manifest round-trips packageManifestFingerprint")
+  func packageFingerprintRoundTrip() throws {
+    let manifest = IndexManifest(
+      toolchainVersion: "A", converterVersion: "B",
+      indexstoreDbRevision: "C", buildToolName: "D",
+      packageManifestFingerprint: "cafebabe"
+    )
+    let decoded = try JSONDecoder().decode(
+      IndexManifest.self, from: JSONEncoder().encode(manifest))
+    #expect(decoded.packageManifestFingerprint == "cafebabe")
+  }
+
   @Test("demangle mode mismatch invalidates the cache (W2 — display names differ per mode)")
   func demangleModeIsACompatibilityKey() {
     let demangledCache = IndexManifest(
@@ -237,11 +281,13 @@ struct IndexManifestTests {
       toolchainVersion: "A", converterVersion: "B",
       indexstoreDbRevision: "C", buildToolName: "D",
       symbolFormatVersion: SymbolFormatVersion.current,
-      demangle: false))
+      demangle: false,
+      packageManifestFingerprint: ""))
     #expect(demangledCache.isCompatibleWith(
       toolchainVersion: "A", converterVersion: "B",
       indexstoreDbRevision: "C", buildToolName: "D",
       symbolFormatVersion: SymbolFormatVersion.current,
-      demangle: true))
+      demangle: true,
+      packageManifestFingerprint: ""))
   }
 }

@@ -119,6 +119,13 @@ struct IndexCommand: ParsableCommand {
       )
     }
 
+    // CR-01 (03 review): the emitted bytes depend on PackageTargetMap (Test bits, import
+    // manager forms), so the manifest's own bytes are a cache key. Raw-content hash —
+    // catches kind flips AND path edits; "" when the repo has no Package.swift (xcodebuild
+    // repos hash stably to "" across runs).
+    let packageManifestFingerprint = (try? ContentHasher.sha256Hex(
+      of: (repoPath as NSString).appendingPathComponent("Package.swift"))) ?? ""
+
     var cacheStore: CacheStore?
     if persistentCache {
       let store = CacheStore(cacheDir: resolvedCacheDir)
@@ -129,7 +136,8 @@ struct IndexCommand: ParsableCommand {
           indexstoreDbRevision: indexstoreDbRevision,
           buildToolName: tool.rawValue,
           symbolFormatVersion: SymbolFormatVersion.current,
-          demangle: demangle
+          demangle: demangle,
+          packageManifestFingerprint: packageManifestFingerprint
         ) {
           try store.invalidateAll()
           try store.saveManifest(IndexManifest(
@@ -138,7 +146,8 @@ struct IndexCommand: ParsableCommand {
             indexstoreDbRevision: indexstoreDbRevision,
             buildToolName: tool.rawValue,
             symbolFormatVersion: SymbolFormatVersion.current,
-            demangle: demangle
+            demangle: demangle,
+            packageManifestFingerprint: packageManifestFingerprint
           ))
         }
       } else {
@@ -152,7 +161,8 @@ struct IndexCommand: ParsableCommand {
           indexstoreDbRevision: indexstoreDbRevision,
           buildToolName: tool.rawValue,
           symbolFormatVersion: SymbolFormatVersion.current,
-          demangle: demangle
+          demangle: demangle,
+          packageManifestFingerprint: packageManifestFingerprint
         ))
       }
       cacheStore = store

@@ -19,6 +19,18 @@ import Foundation
 ///     `isCompatibleWith` — it depends on the opened index store, which the caller cannot
 ///     know before the build; `SCIPIndexBuilder` validates it right after its definitions
 ///     pre-pass, and any change wholesale-invalidates cached documents.
+///   - packageManifestFingerprint: SHA-256 over the indexed repo's Package.swift bytes
+///     ("" when absent) — CR-01 (03 review). From format 4 the emitted document bytes
+///     depend on `PackageTargetMap` (NAV-03 Test bits, SYM-04 import manager forms), so
+///     a manifest-only edit that leaves every source hash and definition USR identical
+///     (e.g. `.target` → `.testTarget` with the path pinned) would otherwise serve stale
+///     cached documents forever. Raw bytes (not a derived-map digest) so path edits the
+///     map normalizes away also invalidate. Decodes NON-optionally: a manifest written
+///     before the field existed fails decode, reads as no-manifest, and the caller takes
+///     the fresh-save + wholesale-invalidation path (same strict-schema choice as
+///     symbolFormatVersion). Like overloadTableFingerprint it is not knowable inside the
+///     builder's default init, so it defaults to "" there — IndexCommand computes and
+///     validates the real hash.
 struct IndexManifest: Codable {
   var toolchainVersion: String
   var converterVersion: String
@@ -27,6 +39,7 @@ struct IndexManifest: Codable {
   var symbolFormatVersion: Int
   var overloadTableFingerprint: String
   var demangle: Bool
+  var packageManifestFingerprint: String
 
   init(
     toolchainVersion: String,
@@ -35,7 +48,8 @@ struct IndexManifest: Codable {
     buildToolName: String,
     symbolFormatVersion: Int = SymbolFormatVersion.current,
     overloadTableFingerprint: String = "",
-    demangle: Bool = true
+    demangle: Bool = true,
+    packageManifestFingerprint: String = ""
   ) {
     self.toolchainVersion = toolchainVersion
     self.converterVersion = converterVersion
@@ -44,6 +58,7 @@ struct IndexManifest: Codable {
     self.symbolFormatVersion = symbolFormatVersion
     self.overloadTableFingerprint = overloadTableFingerprint
     self.demangle = demangle
+    self.packageManifestFingerprint = packageManifestFingerprint
   }
 
   func isCompatibleWith(
@@ -52,7 +67,8 @@ struct IndexManifest: Codable {
     indexstoreDbRevision: String,
     buildToolName: String,
     symbolFormatVersion: Int,
-    demangle: Bool
+    demangle: Bool,
+    packageManifestFingerprint: String
   ) -> Bool {
     self.toolchainVersion == toolchainVersion
       && self.converterVersion == converterVersion
@@ -60,6 +76,7 @@ struct IndexManifest: Codable {
       && self.buildToolName == buildToolName
       && self.symbolFormatVersion == symbolFormatVersion
       && self.demangle == demangle
+      && self.packageManifestFingerprint == packageManifestFingerprint
   }
 }
 
