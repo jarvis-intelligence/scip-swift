@@ -26,6 +26,16 @@ struct ScipCLIGateTests {
     try Self.lintExpectingZeroErrors(index, fixtureName: "SchemeFixture")
   }
 
+  @Test("HierarchiesFixture index passes scip lint")
+  func hierarchiesFixturePassesLint() throws {
+    // REL-01 / D-24 (04-01): the relationship fixture's same-package conformances must
+    // lint clean from the first commit — every relationship target exists as a document
+    // symbol. External-protocol conformance content is deliberately 04-02 scope, where
+    // relationship-target minting makes it lint-safe (04-01 flagged assumption).
+    let index = try Self.buildIndex(fixtureName: "HierarchiesFixture")
+    try Self.lintExpectingZeroErrors(index, fixtureName: "HierarchiesFixture")
+  }
+
   @Test("SchemeFixture covers the full FBQ-02 category list")
   func schemeFixtureCoversCategories() throws {
     let index = try Self.buildIndex(fixtureName: "SchemeFixture")
@@ -235,24 +245,41 @@ struct ScipCLIGateTests {
 
   @Test("SchemeFixture snapshot goldens match scip snapshot output")
   func schemeFixtureSnapshotGoldensMatch() throws {
-    // D-13 / A6: `scip snapshot` has no verify mode — the CLI writes caret-annotated files,
-    // and this harness owns the directory diff against the committed goldens. Set
-    // UPDATE_GOLDENS=1 to regenerate the committed goldens after an intentional emission
-    // change (documented in the README).
-    //
-    // `--strict=false` is deliberate: the pinned v0.9.0 CLI's strict mode wraps every
-    // document result unconditionally (even nil errors), so `scip snapshot` with its default
-    // --strict=true fails on ANY index — a known upstream bug (scip-code/scip
-    // cmd/scip/snapshot.go strict OnError), logged in the orchestrator repo's
-    // deferred-items. Lenient formatting renders our all-canonical symbols identically;
-    // symbol canonicality itself is already gated by `scip lint`.
-    let index = try Self.buildIndex(fixtureName: "SchemeFixture")
+    try Self.snapshotGoldensMatch(
+      fixtureName: "SchemeFixture", goldensDirectory: Self.schemeFixtureGoldensPath())
+  }
+
+  @Test("HierarchiesFixture snapshot goldens match scip snapshot output")
+  func hierarchiesFixtureSnapshotGoldensMatch() throws {
+    // REL-01 / SC1 / SC4 (04-01): the relationship fixture's caret goldens — the
+    // `relationship <sym> implementation reference` lines under witness definitions
+    // are the SC1 visibility surface for the witness baseline.
+    try Self.snapshotGoldensMatch(
+      fixtureName: "HierarchiesFixture", goldensDirectory: Self.hierarchiesFixtureGoldensPath())
+  }
+
+  /// The snapshot-gate harness both fixture rows share (D-13 / A6): `scip snapshot`
+  /// has no verify mode — the CLI writes caret-annotated files, and this harness owns
+  /// the directory diff against the committed goldens. Set UPDATE_GOLDENS=1 to
+  /// regenerate the committed goldens after an intentional emission change (documented
+  /// in the README).
+  ///
+  /// `--strict=false` is deliberate: the pinned v0.9.0 CLI's strict mode wraps every
+  /// document result unconditionally (even nil errors), so `scip snapshot` with its
+  /// default --strict=true fails on ANY index — a known upstream bug (scip-code/scip
+  /// cmd/scip/snapshot.go strict OnError), logged in the orchestrator repo's
+  /// deferred-items. Lenient formatting renders our all-canonical symbols identically;
+  /// symbol canonicality itself is already gated by `scip lint`.
+  private static func snapshotGoldensMatch(
+    fixtureName: String, goldensDirectory: String
+  ) throws {
+    let index = try Self.buildIndex(fixtureName: fixtureName)
     let scip = try ScipCLIGate.locateScipBinary()
-    let fixtureRepoPath = Self.fixtureRepoPath(fixtureName: "SchemeFixture")
+    let fixtureRepoPath = Self.fixtureRepoPath(fixtureName: fixtureName)
 
     let workDirectory = try Self.makeTemporaryDirectory()
     defer { try? FileManager.default.removeItem(atPath: workDirectory) }
-    let indexPath = (workDirectory as NSString).appendingPathComponent("SchemeFixture.scip")
+    let indexPath = (workDirectory as NSString).appendingPathComponent("\(fixtureName).scip")
     try index.serializedData().write(to: URL(fileURLWithPath: indexPath))
     let outputDirectory = (workDirectory as NSString).appendingPathComponent("snapshot")
 
@@ -266,7 +293,6 @@ struct ScipCLIGateTests {
     )
     #expect(result.exitCode == 0, "scip snapshot must exit 0: \(result.combinedOutput)")
 
-    let goldensDirectory = Self.schemeFixtureGoldensPath()
     if ProcessInfo.processInfo.environment["UPDATE_GOLDENS"] == "1" {
       try? FileManager.default.removeItem(atPath: goldensDirectory)
       try FileManager.default.createDirectory(
@@ -690,6 +716,13 @@ struct ScipCLIGateTests {
       .deletingLastPathComponent()
       .deletingLastPathComponent()
     return repoRoot.appendingPathComponent("scip-swiftTests/SchemeFixtureGoldens").path
+  }
+
+  private static func hierarchiesFixtureGoldensPath() -> String {
+    let repoRoot = URL(fileURLWithPath: #filePath)
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+    return repoRoot.appendingPathComponent("scip-swiftTests/HierarchiesFixtureGoldens").path
   }
 
   /// Relative paths of every regular file under `directory`, recursively, using "/" separators.

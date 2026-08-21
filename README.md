@@ -139,11 +139,13 @@ Every emitted fixture index is validated by the real `scip` CLI from
 [scip-code/scip](https://github.com/scip-code/scip) — the same tool consumers run — via the
 `ScipCLIGate` suite (`Tests/scip-swiftTests/ScipCLIGateTests.swift`):
 
-- `scip lint` on the MiniSwiftPackage and SchemeFixture indexes must exit 0 with zero
-  `error:` findings.
-- `scip snapshot --strict=false` output for the SchemeFixture index is diffed against the
-  committed goldens in `Tests/scip-swiftTests/SchemeFixtureGoldens/` (the CLI has no verify
-  mode; the test harness owns the directory diff).
+- `scip lint` on the MiniSwiftPackage, SchemeFixture, and HierarchiesFixture indexes must
+  exit 0 with zero `error:` findings.
+- `scip snapshot --strict=false` output for the SchemeFixture and HierarchiesFixture
+  indexes is diffed against the committed goldens in
+  `Tests/scip-swiftTests/SchemeFixtureGoldens/` and
+  `Tests/scip-swiftTests/HierarchiesFixtureGoldens/` (the CLI has no verify mode; the
+  test harness owns the directory diff).
 - The gating binary's version is cross-checked against `ScipSwiftVersion.scipCliVersion` —
   drift between the CI pin and the engine constant fails the suite.
 
@@ -155,6 +157,7 @@ Environment variables the gate understands:
 | `UPDATE_GOLDENS=1` | Regenerate the committed snapshot goldens instead of diffing (use after an intentional emission change). |
 | `UPDATE_ROLE_TABLE=1` | Regenerate `Fixtures/SchemeFixture/role-table.json`, the committed role-expectation table diffed by the `RoleParity` suite (see below). |
 | `UPDATE_SYMBOL_TABLE=1` | Regenerate `Fixtures/SchemeFixture/symbol-table.json` (see the cross-repo parity check below). |
+| `UPDATE_RELATIONSHIP_TABLE=1` | Regenerate `Fixtures/HierarchiesFixture/relationship-table.json`, the committed relationship-expectation table diffed by the `RelationshipParity` suite (see below). |
 
 
 CI downloads the pinned CLI tarball from the scip-code/scip GitHub release over HTTPS,
@@ -194,6 +197,28 @@ member), the extension file (declarations as file-level entries, members under t
 extended types, cross-module per the frozen scheme), and the deep-nesting section
 (`Lattice#Cell#Core#Phase#…`, four container levels). Accepted outline shapes are
 asserted explicitly, not assumed — see the outline bullets under Known limitations.
+
+### Relationship oracle (`RelationshipParity`, REL-01 witness half)
+
+Relationship edges are gated like roles: in code, both directions, against a committed
+golden. The `RelationshipParity` suite
+(`Tests/scip-swiftTests/RelationshipParityTests.swift`) rebuilds the
+`Fixtures/HierarchiesFixture` index in-process (two modules, HierCore + HierExt — the
+SC4 content classes in external-protocol-free form: protocol inheritance, direct and
+extension-declared conformances to LOCAL protocols, a conditional conformance, a
+2-level subclass chain with overridden inits/properties/methods, a default
+implementation, an emoji-named conforming type, and a cross-module retroactive
+conformance) and asserts BOTH DIRECTIONS over every relationship the engine emits
+today: every expected witness edge (`.overrideOf` → `is_reference` +
+`is_implementation`) IS emitted, and every emitted edge IS expected. It also pins the
+NON-edges (implicit default-implementation occurrences at conformance-declaration
+lines contribute no relationship; declared conformance/inheritance clauses carry no
+type-level edges yet — the list that 04-02 flips to expected-present) and the corpus
+invariants (flags, ascending target order, one row per symbol/target pair) against the
+committed expectation table `Fixtures/HierarchiesFixture/relationship-table.json`.
+Regenerate that table with `UPDATE_RELATIONSHIP_TABLE=1 swift test --filter
+RelationshipParity`, under the pinned toolchain only (same discipline as the snapshot
+goldens: relationship rows are toolchain-sensitive data).
 
 ### Import occurrences (`ImportOccurrence`, SYM-04)
 

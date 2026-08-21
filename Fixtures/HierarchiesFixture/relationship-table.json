@@ -1,0 +1,135 @@
+[
+  {
+    "isImplementation" : true,
+    "isReference" : true,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . Circle#area.",
+    "target" : "scip-swift swiftpm HierCore . HierShape#area."
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : true,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . Circle#draw().",
+    "target" : "scip-swift swiftpm HierCore . HierDrawable#draw()."
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : true,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . Rect#area.",
+    "target" : "scip-swift swiftpm HierCore . HierShape#area."
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : true,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . Rect#draw().",
+    "target" : "scip-swift swiftpm HierCore . HierDrawable#draw()."
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : true,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . RoundedSquare#init().",
+    "target" : "scip-swift swiftpm HierCore . Square#init()."
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : true,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . RoundedSquare#render().",
+    "target" : "scip-swift swiftpm HierCore . Square#render()."
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : true,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . Square#`frame=`().",
+    "target" : "scip-swift swiftpm HierCore . BaseWidget#`frame=`()."
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : true,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . Square#frame().",
+    "target" : "scip-swift swiftpm HierCore . BaseWidget#frame()."
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : true,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . Square#frame.",
+    "target" : "scip-swift swiftpm HierCore . BaseWidget#frame."
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : true,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . Square#init().",
+    "target" : "scip-swift swiftpm HierCore . BaseWidget#init()."
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : true,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . Square#render().",
+    "target" : "scip-swift swiftpm HierCore . BaseWidget#render()."
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : true,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . Wheel#area.",
+    "target" : "scip-swift swiftpm HierCore . HierShape#area."
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : true,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . Wheel#draw().",
+    "target" : "scip-swift swiftpm HierCore . HierDrawable#draw()."
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : true,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . `s:8HierCore0A5ShapePAAE8describeSSyF`.",
+    "target" : "scip-swift swiftpm HierCore . HierShape#describe()."
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : true,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . `s:8HierCore7WrapperVA2A0A5ShapeRzlE4areaSdvp`.",
+    "target" : "scip-swift swiftpm HierCore . HierShape#area."
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : true,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . `s:8HierCore7WrapperVA2A0A5ShapeRzlE4drawyyF`.",
+    "target" : "scip-swift swiftpm HierCore . HierDrawable#draw()."
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : true,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . `🎨`#area.",
+    "target" : "scip-swift swiftpm HierCore . HierShape#area."
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : true,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . `🎨`#draw().",
+    "target" : "scip-swift swiftpm HierCore . HierDrawable#draw()."
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : true,
+    "relativePath" : "Sources\/HierExt\/HierExt.swift",
+    "symbol" : "scip-swift swiftpm HierCore . Wheel#glow().",
+    "target" : "scip-swift swiftpm HierExt . Glowable#glow()."
+  }
+]

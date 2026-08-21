@@ -1,0 +1,9 @@
+scip-swift swift Swift 6.2.4 Double#
+scip-swift swift Swift 6.2.4 Double#`*`().
+scip-swift swift Swift 6.2.4 Double#pi().
+scip-swift swift Swift 6.2.4 Double#pi.
+scip-swift swift Swift 6.2.4 Int#
+scip-swift swift Swift 6.2.4 String#
+scip-swift swiftpm HierCore . HierCore/
+scip-swift swiftpm HierCore . `s:Sa12arrayLiteralSayxGxd_tcfc`.
+scip-swift swiftpm HierCore . `s:SdySdSicfc`.

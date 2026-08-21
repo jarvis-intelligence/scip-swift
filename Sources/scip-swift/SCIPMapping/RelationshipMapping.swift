@@ -4,15 +4,22 @@ import IndexStoreDB
 ///
 /// Maps IndexStoreDB `SymbolRelation` entries to SCIP `Scip_Relationship` messages.
 ///
-/// Spike findings (META-06): Swift's IndexStoreDB populates relations on member
-/// occurrences (methods, properties, initializers), not on type-level definitions.
-/// The key relation roles populated for Swift are:
-///   - `.overrideOf` — overriding method → superclass method (maps to is_reference + is_implementation)
+/// Store model (04-RESEARCH Q1, reconciling the META-06 spike): type-DEFINITION
+/// occurrences carry zero relations for Swift, but member occurrences (methods,
+/// properties, initializers) carry `.overrideOf`, and each conformance/inheritance
+/// CLAUSE reference occurrence (`class Dog: Animal`, `extension X: P`) carries a
+/// pairing `SymbolRelation` (`.baseOf` / `.extendedBy`) naming the derived entity.
+/// The relation roles relevant here:
+///   - `.overrideOf` — witness/override member → protocol requirement or superclass
+///     member (maps to is_reference + is_implementation)
+///   - `.baseOf` / `.extendedBy` — clause-reference pairings; NOT harvested into
+///     relationships yet (type-level `is_implementation` edges are 04-02 work)
 ///   - `.childOf` — member → containing type (used for enclosing_symbol, NOT relationships)
 ///
-/// Type-level inheritance (class Dog: Animal) does NOT produce `.baseOf` or `.extendedBy`
-/// relations for Swift code. Protocol conformance also does not produce type-level
-/// relations. Relationship mapping is therefore limited to override relationships.
+/// The emitted witness baseline is proven both directions by the `RelationshipParity`
+/// suite (`Tests/scip-swiftTests/RelationshipParityTests.swift`) against the committed
+/// `Fixtures/HierarchiesFixture/relationship-table.json` golden (D-24). This mapping is
+/// frozen byte-stable — Phase-4 work EXTENDS the expected edge set, never rewrites it.
 enum RelationshipMapping {
   static func scipRelationships(
     for relations: [SymbolRelation],
