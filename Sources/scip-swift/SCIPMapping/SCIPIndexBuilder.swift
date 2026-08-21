@@ -165,22 +165,23 @@ struct SCIPIndexBuilder {
         if !sym.hasPrefix("local ") && !definedSymbolStrings.contains(sym) && externalSymbols[sym] == nil {
           var info = Scip_SymbolInformation()
           info.symbol = sym
-          if let demangler {
-            // D-06 fallback symbols ride the canonicalSymbol -> USR side map (captured during
-            // emission on fresh runs, loaded from docs/<composite-key>.usrmap on cache-hit
-            // runs), so they keep their demangled display names identically in both. Canonical
-            // descriptor chains never enter the side map: their display name derives
-            // deterministically from the symbol string itself.
-            if let usr = usrSideMap[sym] {
-              info.displayName = demangler.demangledDisplayName(usr: usr) ?? ""
-            } else if let moduleName = CanonicalSymbolFormatter.moduleDisplayName(fromCanonicalString: sym) {
-              // SYM-04 (D-17, 03-03): module symbols land in external_symbols with the
-              // module's own name — derived from the canonical string itself so fresh and
-              // cache-hit runs produce identical bytes.
-              info.displayName = moduleName
-            } else {
-              info.displayName = CanonicalSymbolFormatter.displayName(fromCanonicalString: sym)
-            }
+          // D-06 fallback symbols ride the canonicalSymbol -> USR side map (captured during
+          // emission on fresh runs, loaded from docs/<composite-key>.usrmap on cache-hit
+          // runs), so they keep their demangled display names identically in both. Canonical
+          // descriptor chains never enter the side map: their display name derives
+          // deterministically from the symbol string itself.
+          if let usr = usrSideMap[sym], let demangler {
+            info.displayName = demangler.demangledDisplayName(usr: usr) ?? ""
+          } else if let moduleName = CanonicalSymbolFormatter.moduleDisplayName(fromCanonicalString: sym) {
+            // SYM-04 (D-17, 03-03): module symbols land in external_symbols with the
+            // module's own name — derived from the canonical string itself so fresh and
+            // cache-hit runs produce identical bytes. NOT gated on the demangler (WR-02,
+            // 03 review): the derivation is pure string work, so --no-demangle runs name
+            // module symbols too. Module USRs always parse, so canonical module strings
+            // never enter the fallback side map above — the branch order is total.
+            info.displayName = moduleName
+          } else if let demangler {
+            info.displayName = CanonicalSymbolFormatter.displayName(fromCanonicalString: sym)
           }
           externalSymbols[sym] = info
         }
