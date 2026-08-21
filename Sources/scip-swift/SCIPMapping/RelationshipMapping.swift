@@ -38,6 +38,18 @@ enum RelationshipMapping {
         rel.isImplementation = true
       }
 
+      // REL-01 / D-23 (04-02): a clause pairing relation — the base/extended entity a
+      // conformance or inheritance CLAUSE reference names — maps to a type-level edge:
+      // Find-implementations semantics ONLY (scip.proto:477-500: Dog# carries
+      // is_implementation with Animal# but NOT is_reference — "Find references" on
+      // Animal# must not return Dog#). The harvest in `SCIPIndexBuilder` filters a
+      // clause ref's relations down to these roles before calling here and formats
+      // every target to the clause's BASE symbol; the definition-gated witness path
+      // above stays byte-stable.
+      if relation.roles.contains(.baseOf) || relation.roles.contains(.extendedBy) {
+        rel.isImplementation = true
+
+      }
       if !rel.isReference && !rel.isImplementation && !rel.isTypeDefinition && !rel.isDefinition {
         return nil
       }

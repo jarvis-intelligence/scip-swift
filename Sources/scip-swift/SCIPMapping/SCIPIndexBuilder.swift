@@ -20,6 +20,28 @@ struct SCIPIndexBuilder {
   /// Per-run D-06 fallback accounting, surfaced as a diagnostic at the end of `build()`.
   let symbolMappingDiagnostics = SymbolMappingDiagnostics()
 
+  /// REL-01 / D-21 (04-02) — per-run accounting of relationship-emission diagnostics:
+  /// the ObjC-superclass SwiftSyntax fallback edge count, surfaced at build end next
+  /// to the D-06 fallback summary. A class (not a value) so the non-mutating document
+  /// pass can record through it, mirroring `SymbolMappingDiagnostics`.
+  let relationshipDiagnostics = RelationshipDiagnostics()
+
+  /// Requirement: REL-01 / D-21 (04-02) — the bounded ObjC fallback's counter. Count
+  /// only, no paths (ASVS V8 diagnostics discipline).
+  final class RelationshipDiagnostics {
+    private(set) var objcSuperclassFallbackEdgeCount = 0
+
+    func recordObjCSuperclassFallbackEdge() {
+      objcSuperclassFallbackEdgeCount += 1
+    }
+
+    var summary: String? {
+      guard objcSuperclassFallbackEdgeCount > 0 else { return nil }
+      return
+        "\(objcSuperclassFallbackEdgeCount) superclass edge(s) emitted via the ObjC SwiftSyntax fallback (D-21, bounded: class clauses whose store record carries no baseOf)"
+    }
+  }
+
   init(
     repoPath: String,
     indexStorePath: String,
@@ -155,13 +177,20 @@ struct SCIPIndexBuilder {
     // D-10 (02-02): documents ascend by relativePath, mirroring Go `SortDocuments`. Discovery
     // already walks in sorted order; sorting here makes the emitted contract explicit rather
     // than incidental on the directory walk.
-    index.documents.sort { $0.relativePath < $1.relativePath }
-
     var externalSymbols: [String: Scip_SymbolInformation] = [:]
     for doc in index.documents {
       let usrSideMap = usrMapsByPath[doc.relativePath] ?? [:]
-      for occurrence in doc.occurrences {
-        let sym = occurrence.symbol
+      // REL-01 (04-02): the mint scan covers OCCURRENCES and RELATIONSHIP TARGETS —
+      // a relationship target that never appears as an occurrence symbol (e.g. the
+      // CustomStringConvertible.description requirement) must still mint into
+      // external_symbols, because `scip lint` requires every relationship target to
+      // exist as an external symbol or some document's symbol
+      // (cmd/scip/lint.go:186-192 — the live 04-01 finding). The walk reads
+      // document.symbols bytes, so fresh and cache-served documents mint identically.
+      var mintCandidates = doc.occurrences.map(\.symbol)
+      mintCandidates.append(
+        contentsOf: doc.symbols.flatMap { $0.relationships.map(\.symbol) })
+      for sym in mintCandidates {
         if !sym.hasPrefix("local ") && !definedSymbolStrings.contains(sym) && externalSymbols[sym] == nil {
           var info = Scip_SymbolInformation()
           info.symbol = sym
@@ -192,7 +221,9 @@ struct SCIPIndexBuilder {
     if let fallbackSummary = symbolMappingDiagnostics.summary {
       print("warning: \(fallbackSummary)")
     }
-
+    if let relationshipSummary = relationshipDiagnostics.summary {
+      print("warning: \(relationshipSummary)")
+    }
     return index
   }
 
@@ -355,6 +386,17 @@ struct SCIPIndexBuilder {
       relativePath: document.relativePath,
       moduleName: occurrences.first?.location.moduleName) ?? false
 
+    // REL-01 / D-21 / D-23 (04-02) — the clause-relation harvest state. Clause
+    // REFERENCE occurrences carry the store's pairing relations (base ref → derived
+    // entity; 04-RESEARCH Q1): they are collected per document below and become
+    // type-level is_implementation edges attached after the occurrence loop.
+    // extensionTypeByUSR maps each s:e: extension USR to the extended TYPE it pairs
+    // (the same-position extendedBy pairing — the type ref on the clause line always
+    // precedes the protocol refs in canonical occurrence order).
+    var extensionTypeByUSR: [String: (canonical: String, kind: Scip_SymbolInformation.Kind)] = [:]
+    var clauseEdges: [(subject: String, kind: Scip_SymbolInformation.Kind?, relationship: Scip_Relationship)] = []
+    var classDefinitions: [(canonical: String, name: String, moduleName: String)] = []
+
     for occurrence in occurrences.sorted() {
       let symbol = occurrence.symbol
       let isLocal = symbol.properties.contains(.local)
@@ -423,6 +465,51 @@ struct SCIPIndexBuilder {
         )
       }
 
+      // REL-01 / D-21 / D-23 (04-02) — the clause-relation harvest. Unlike the
+      // definition-gated witness emission below, type-level edges derive from clause
+      // REFERENCE occurrences: `.baseOf`/`.extendedBy` relations never ride member
+      // definitions, and implicit occurrences (synthesized conformances, default-
+      // implementation sites) are filtered out — an undeclared "conformance" can
+      // never become an edge (availability is not declaration, plan prohibition).
+      if !isLocal && !occurrence.roles.contains(.implicit) {
+        if occurrence.roles.contains(.definition), symbol.kind == .class {
+          classDefinitions.append((symbolString, symbol.name, occurrence.location.moduleName))
+        }
+        for relation in occurrence.relations {
+          if relation.roles.contains(.extendedBy), occurrence.symbol.kind != .extension {
+            // The TYPE reference of `extension X: P` — the same-position pairing
+            // anchor keyed by the extension USR the baseOf relations name.
+            extensionTypeByUSR[relation.symbol.usr] = (symbolString, symbolInformation.kind)
+          }
+          guard relation.roles.contains(.baseOf) else { continue }
+          // The edge TARGET is this occurrence's own canonical string (the base);
+          // the SUBJECT is the relation's symbol — the derived TYPE for in-decl
+          // clauses, or the extension's TYPE via the same-position pairing for
+          // extension-declared conformances (never the s:e: extension symbol itself,
+          // pitfall 3). A pairing miss skips the edge — positional guessing is
+          // prohibited.
+          let subject: String
+          var carrierKind: Scip_SymbolInformation.Kind? = nil
+          if relation.symbol.kind == .extension {
+            guard let extended = extensionTypeByUSR[relation.symbol.usr] else { continue }
+            subject = extended.canonical
+            carrierKind = extended.kind
+          } else {
+            subject = canonicalSymbolString(
+              for: relation.symbol,
+              isSystemLocation: occurrence.location.isSystem,
+              locationModuleName: occurrence.location.moduleName,
+              fallbackRecorder: fallbackRecorder)
+          }
+          let target = symbolString
+          for relationship in RelationshipMapping.scipRelationships(
+            for: [relation], symbolFormatter: { _ in target })
+          {
+            clauseEdges.append((subject, carrierKind, relationship))
+          }
+        }
+      }
+
       if occurrence.roles.contains(.definition) {
         if !isLocal {
           symbolInformation.relationships = RelationshipMapping.scipRelationships(
@@ -460,8 +547,80 @@ struct SCIPIndexBuilder {
         }
       }
     }
+    // REL-01 / D-23 (04-02): attach the harvested type-level edges. Subjects defined
+    // in THIS document merge into their SymbolInformation; subjects defined elsewhere
+    // (retroactive extension-declared conformances — `extension X: P` in a different
+    // file/module than X) get a CARRIER SymbolInformation for the type's canonical
+    // string in this document: D-23 pins the edge where DECLARED, and the clause's
+    // extendedBy ref already anchors the type here. Lint-legal (duplicateSymbolInfo
+    // warnings are same-document only, cmd/scip/lint.go:143-148); display name and
+    // kind derive from the canonical string / pairing ref, so fresh and cache-hit runs
+    // emit identical bytes.
+    var carrierSymbols: [String: Scip_SymbolInformation] = [:]
+    func attachTypeLevelEdge(_ relationship: Scip_Relationship, to subject: String, kind: Scip_SymbolInformation.Kind?) {
+      if var existing = definedSymbols[subject] {
+        existing.info.relationships.append(relationship)
+        definedSymbols[subject] = existing
+      } else if var carrier = carrierSymbols[subject] {
+        carrier.relationships.append(relationship)
+        carrierSymbols[subject] = carrier
+      } else {
+        var carrier = Scip_SymbolInformation()
+        carrier.symbol = subject
+        carrier.displayName = CanonicalSymbolFormatter.displayName(fromCanonicalString: subject)
+        if let kind {
+          carrier.kind = kind
+        }
+        carrier.relationships = [relationship]
+        carrierSymbols[subject] = carrier
+      }
+    }
+    for edge in clauseEdges {
+      attachTypeLevelEdge(edge.relationship, to: edge.subject, kind: edge.kind)
+    }
 
-    document.symbols = definedSymbols.values.map(\.info).sorted { $0.symbol < $1.symbol }
+    // D-21 (04-02) — the bounded ObjC fallback (ObjCSuperclassClauseMap, D-06-style
+    // documented + counted): class definitions that received NO type-level edge at
+    // all — the proven store gap for ObjC-rooted superclasses (`class X: NSObject`
+    // records no baseOf) — get their superclass edge from the clause syntax. The
+    // target renders through the same D-06 fallback path the store's own NSObject
+    // member USRs take (`c:objc(cs)<Name>` Term under the class's module), and every
+    // fallback edge is counted in diagnostics. Classes whose superclass recorded
+    // normally (all Swift-rooted clauses) already carry their edge and never reach
+    // here.
+    if let clauseMap = ObjCSuperclassClauseMap(filePath: filePath) {
+      let edgeSubjects = Set(clauseEdges.map(\.subject))
+      for classDefinition in classDefinitions
+      where !edgeSubjects.contains(classDefinition.canonical) {
+        guard let superclass = clauseMap.superclass(ofClassName: classDefinition.name)
+        else { continue }
+        let targetSymbol = Symbol(
+          usr: "c:objc(cs)\(superclass)", name: superclass, kind: .class, subKind: .none,
+          language: .swift)
+        let target = canonicalSymbolString(
+          for: targetSymbol,
+          isSystemLocation: false,
+          locationModuleName: classDefinition.moduleName,
+          fallbackRecorder: fallbackRecorder)
+        // The flag assignment rides the real clause-mapping path (baseOf →
+        // isImplementation only): the synthesized relation formats to the fallback
+        // target string.
+        let fallbackRelation = SymbolRelation(symbol: targetSymbol, roles: .baseOf)
+        guard let relationship = RelationshipMapping.scipRelationships(
+          for: [fallbackRelation], symbolFormatter: { _ in target }).first
+        else { continue }
+        attachTypeLevelEdge(relationship, to: classDefinition.canonical, kind: nil)
+        relationshipDiagnostics.recordObjCSuperclassFallbackEdge()
+      }
+    }
+
+    document.symbols = (definedSymbols.values.map(\.info) + carrierSymbols.values)
+      .map { info -> Scip_SymbolInformation in
+        var canonical = info
+        canonical.relationships = Self.canonicalizedRelationships(info.relationships)
+        return canonical
+      }
+      .sorted { $0.symbol < $1.symbol }
     // D-10 (02-02): the emitted occurrence order is the canonical one, never the store's.
     document.occurrences = Self.canonicalizedOccurrences(document.occurrences)
     return (document, fallbackRecorder.entries)
@@ -491,6 +650,30 @@ struct SCIPIndexBuilder {
       deduped.append(occurrence)
     }
     return deduped
+  }
+
+  /// Requirement: REL-01 / D-10 (04-02) — canonical relationship post-pass, ported from
+  /// the Go bindings (`bindings/go/scip`: `canonicalize.go:90-93` `CanonicalizeRelationships
+  /// = SortRelationships(FlattenRelationship(…))`; `flatten.go:88-108` OR-merges the four
+  /// flags per target symbol; `sort.go:121-128` sorts ascending by relationship symbol
+  /// string). Emitted relationships are pre-canonicalized so the byte-identity double-run
+  /// gate holds without post-processing and `scip lint`'s multipleRelationshipWarning
+  /// never fires on a merged pair.
+  static func canonicalizedRelationships(_ relationships: [Scip_Relationship]) -> [Scip_Relationship] {
+    var mergedBySymbol: [String: Scip_Relationship] = [:]
+    mergedBySymbol.reserveCapacity(relationships.count)
+    for relationship in relationships {
+      if var combined = mergedBySymbol[relationship.symbol] {
+        combined.isReference = combined.isReference || relationship.isReference
+        combined.isImplementation = combined.isImplementation || relationship.isImplementation
+        combined.isTypeDefinition = combined.isTypeDefinition || relationship.isTypeDefinition
+        combined.isDefinition = combined.isDefinition || relationship.isDefinition
+        mergedBySymbol[relationship.symbol] = combined
+      } else {
+        mergedBySymbol[relationship.symbol] = relationship
+      }
+    }
+    return mergedBySymbol.values.sorted { $0.symbol < $1.symbol }
   }
 
   /// Dedup key mirroring `scip lint`'s `occurrenceKey` (range + symbol roles), scoped per

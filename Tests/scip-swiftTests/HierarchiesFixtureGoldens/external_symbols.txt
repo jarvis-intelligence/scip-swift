@@ -2,6 +2,7 @@ scip-swift swift Foundation 6.2.4 Foundation/
 scip-swift swift Swift 6.2.4 Bool#
 scip-swift swift Swift 6.2.4 Bool#`&&`().
 scip-swift swift Swift 6.2.4 CustomStringConvertible#
+scip-swift swift Swift 6.2.4 CustomStringConvertible#description.
 scip-swift swift Swift 6.2.4 Double#
 scip-swift swift Swift 6.2.4 Double#`*`().
 scip-swift swift Swift 6.2.4 Double#pi().
@@ -12,6 +13,7 @@ scip-swift swift Swift 6.2.4 Int#
 scip-swift swift Swift 6.2.4 String#
 scip-swift swift Swift 6.2.4 String#init().
 scip-swift swiftpm HierCore . HierCore/
+scip-swift swiftpm HierCore . `c:objc(cs)NSObject(im)init`.
 scip-swift swiftpm HierCore . `c:objc(cs)NSObject`.
 scip-swift swiftpm HierCore . `c:objc(pl)NSObject(im)autorelease`.
 scip-swift swiftpm HierCore . `c:objc(pl)NSObject(im)class`.

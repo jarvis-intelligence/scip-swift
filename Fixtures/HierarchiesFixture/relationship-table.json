@@ -1,6 +1,13 @@
 [
   {
     "isImplementation" : true,
+    "isReference" : false,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . Circle#",
+    "target" : "scip-swift swiftpm HierCore . HierShape#"
+  },
+  {
+    "isImplementation" : true,
     "isReference" : true,
     "relativePath" : "Sources\/HierCore\/HierCore.swift",
     "symbol" : "scip-swift swiftpm HierCore . Circle#area.",
@@ -15,6 +22,41 @@
   },
   {
     "isImplementation" : true,
+    "isReference" : false,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . HierShape#",
+    "target" : "scip-swift swiftpm HierCore . HierDrawable#"
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : false,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . Rect#",
+    "target" : "scip-swift swift Swift 6.2.4 CustomStringConvertible#"
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : false,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . Rect#",
+    "target" : "scip-swift swift Swift 6.2.4 Equatable#"
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : false,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . Rect#",
+    "target" : "scip-swift swiftpm HierCore . HierShape#"
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : true,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . Rect#`==`().",
+    "target" : "scip-swift swift Swift 6.2.4 Equatable#`==`()."
+  },
+  {
+    "isImplementation" : true,
     "isReference" : true,
     "relativePath" : "Sources\/HierCore\/HierCore.swift",
     "symbol" : "scip-swift swiftpm HierCore . Rect#area.",
@@ -24,8 +66,22 @@
     "isImplementation" : true,
     "isReference" : true,
     "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . Rect#description.",
+    "target" : "scip-swift swift Swift 6.2.4 CustomStringConvertible#description."
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : true,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
     "symbol" : "scip-swift swiftpm HierCore . Rect#draw().",
     "target" : "scip-swift swiftpm HierCore . HierDrawable#draw()."
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : false,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . RoundedSquare#",
+    "target" : "scip-swift swiftpm HierCore . Square#"
   },
   {
     "isImplementation" : true,
@@ -40,6 +96,13 @@
     "relativePath" : "Sources\/HierCore\/HierCore.swift",
     "symbol" : "scip-swift swiftpm HierCore . RoundedSquare#render().",
     "target" : "scip-swift swiftpm HierCore . Square#render()."
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : false,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . Square#",
+    "target" : "scip-swift swiftpm HierCore . BaseWidget#"
   },
   {
     "isImplementation" : true,
@@ -78,6 +141,13 @@
   },
   {
     "isImplementation" : true,
+    "isReference" : false,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . Wheel#",
+    "target" : "scip-swift swiftpm HierCore . HierShape#"
+  },
+  {
+    "isImplementation" : true,
     "isReference" : true,
     "relativePath" : "Sources\/HierCore\/HierCore.swift",
     "symbol" : "scip-swift swiftpm HierCore . Wheel#area.",
@@ -89,6 +159,20 @@
     "relativePath" : "Sources\/HierCore\/HierCore.swift",
     "symbol" : "scip-swift swiftpm HierCore . Wheel#draw().",
     "target" : "scip-swift swiftpm HierCore . HierDrawable#draw()."
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : false,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . Wrapper#",
+    "target" : "scip-swift swiftpm HierCore . HierDrawable#"
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : false,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . Wrapper#",
+    "target" : "scip-swift swiftpm HierCore . HierShape#"
   },
   {
     "isImplementation" : true,
@@ -113,6 +197,13 @@
   },
   {
     "isImplementation" : true,
+    "isReference" : false,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore . `🎨`#",
+    "target" : "scip-swift swiftpm HierCore . HierShape#"
+  },
+  {
+    "isImplementation" : true,
     "isReference" : true,
     "relativePath" : "Sources\/HierCore\/HierCore.swift",
     "symbol" : "scip-swift swiftpm HierCore . `🎨`#area.",
@@ -124,6 +215,41 @@
     "relativePath" : "Sources\/HierCore\/HierCore.swift",
     "symbol" : "scip-swift swiftpm HierCore . `🎨`#draw().",
     "target" : "scip-swift swiftpm HierCore . HierDrawable#draw()."
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : false,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore@objc(cs)ObjCAnimal . `HierCore@objc(cs)ObjCAnimal`#",
+    "target" : "scip-swift swiftpm HierCore . `c:objc(cs)NSObject`."
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : true,
+    "relativePath" : "Sources\/HierCore\/HierCore.swift",
+    "symbol" : "scip-swift swiftpm HierCore@objc(cs)ObjCAnimal(im)init . init().",
+    "target" : "scip-swift swiftpm HierCore . `c:objc(cs)NSObject(im)init`."
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : false,
+    "relativePath" : "Sources\/HierExt\/HierExt.swift",
+    "symbol" : "scip-swift swiftpm HierCore . Circle#",
+    "target" : "scip-swift swift Swift 6.2.4 CustomStringConvertible#"
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : true,
+    "relativePath" : "Sources\/HierExt\/HierExt.swift",
+    "symbol" : "scip-swift swiftpm HierCore . Circle#description.",
+    "target" : "scip-swift swift Swift 6.2.4 CustomStringConvertible#description."
+  },
+  {
+    "isImplementation" : true,
+    "isReference" : false,
+    "relativePath" : "Sources\/HierExt\/HierExt.swift",
+    "symbol" : "scip-swift swiftpm HierCore . Wheel#",
+    "target" : "scip-swift swiftpm HierExt . Glowable#"
   },
   {
     "isImplementation" : true,

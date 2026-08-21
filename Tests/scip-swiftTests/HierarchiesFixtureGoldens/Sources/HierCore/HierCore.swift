@@ -25,6 +25,7 @@
 //                   display_name HierCore.HierShape
 //                   signature_documentation
 //                   > protocol HierShape
+//                   relationship scip-swift swiftpm HierCore . HierDrawable# implementation
 //                    ^^^^^^^^^^^^ reference scip-swift swiftpm HierCore . HierDrawable#
     var area: Double { get }
 //      ^^^^ definition scip-swift swiftpm HierCore . HierShape#area.
@@ -54,6 +55,7 @@
 //                     display_name HierCore.Circle
 //                     signature_documentation
 //                     > struct Circle
+//                     relationship scip-swift swiftpm HierCore . HierShape# implementation
 //              ^^^^^^ definition scip-swift swiftpm HierCore . Circle#init().
 //                     kind Constructor
 //                     display_name HierCore.Circle.init(radius: Swift.Double) -> HierCore.Circle
@@ -117,6 +119,9 @@
 //            display_name HierCore.Rect
 //            signature_documentation
 //            > struct Rect
+//            relationship scip-swift swift Swift 6.2.4 CustomStringConvertible# implementation
+//            relationship scip-swift swift Swift 6.2.4 Equatable# implementation
+//            relationship scip-swift swiftpm HierCore . HierShape# implementation
 //       ^^^^ definition scip-swift swiftpm HierCore . Rect#init().
 //            kind Constructor
 //            display_name HierCore.Rect.init(width: Swift.Double, height: Swift.Double) -> HierCore.Rect
@@ -287,6 +292,7 @@
 //             display_name HierCore.Square
 //             signature_documentation
 //             > class Square
+//             relationship scip-swift swiftpm HierCore . BaseWidget# implementation
 //              ^^^^^^^^^^ reference scip-swift swiftpm HierCore . BaseWidget#
     let side: Double
 //      ^^^^ definition scip-swift swiftpm HierCore . Square#`side=`().
@@ -359,6 +365,7 @@
 //                    display_name HierCore.RoundedSquare
 //                    signature_documentation
 //                    > class RoundedSquare
+//                    relationship scip-swift swiftpm HierCore . Square# implementation
 //                     ^^^^^^ reference scip-swift swiftpm HierCore . Square#
 //                            ^ definition scip-swift swiftpm HierCore . RoundedSquare#init().
 //                              kind Constructor
@@ -398,6 +405,7 @@
 //                    display_name HierCore.Wheel
 //                    signature_documentation
 //                    > struct Wheel
+//                    relationship scip-swift swiftpm HierCore . HierShape# implementation
     public let spokes: Int
 //             ^^^^^^ definition scip-swift swiftpm HierCore . Wheel#`spokes=`().
 //                    kind Setter
@@ -439,6 +447,8 @@
 //               display_name HierCore.Wrapper
 //               signature_documentation
 //               > struct Wrapper
+//               relationship scip-swift swiftpm HierCore . HierDrawable# implementation
+//               relationship scip-swift swiftpm HierCore . HierShape# implementation
 //       ^^^^^^^ definition scip-swift swiftpm HierCore . Wrapper#init().
 //               kind Constructor
 //               display_name HierCore.Wrapper.init(inner: A) -> HierCore.Wrapper<A>
@@ -502,6 +512,7 @@
 //                 documentation
 //                 > The D-21 ObjC-rooted superclass gap: NSObject-rooted clauses record no store `baseOf`;
 //                 > 04-02's bounded SwiftSyntax fallback supplies the superclass edge.
+//                 relationship scip-swift swiftpm HierCore . `c:objc(cs)NSObject`. implementation
 //                  ^^^^^^^^ reference scip-swift swiftpm HierCore . `c:objc(cs)NSObject`.
 //                           ^ definition scip-swift swiftpm HierCore@objc(cs)ObjCAnimal(im)init . init().
 //                             kind Constructor
@@ -525,6 +536,7 @@
 //            display_name HierCore.🎨
 //            signature_documentation
 //            > struct 🎨
+//            relationship scip-swift swiftpm HierCore . HierShape# implementation
 //       ^^^^ definition scip-swift swiftpm HierCore . `🎨`#init().
 //            kind Constructor
 //            display_name HierCore.🎨.init() -> HierCore.🎨

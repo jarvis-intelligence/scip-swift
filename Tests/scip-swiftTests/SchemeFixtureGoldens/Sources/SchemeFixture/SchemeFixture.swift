@@ -259,6 +259,7 @@
 //                          display_name SchemeFixture.Poster
 //                          signature_documentation
 //                          > class Poster
+//                          relationship scip-swift swiftpm SchemeFixture . Drawable# implementation
 //                           ^^^^^^^^ reference scip-swift swiftpm SchemeFixture . Drawable#
     public var label: String = ""
 //             ^^^^^ definition scip-swift swiftpm SchemeFixture . Poster#`label=`().

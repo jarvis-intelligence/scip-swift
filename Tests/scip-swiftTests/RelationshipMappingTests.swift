@@ -53,7 +53,9 @@ struct RelationshipMappingTests {
       makeRelation(name: "baseMethod", usr: "s:base", roles: .overrideOf),
       makeRelation(name: "Circle", usr: "s:derived", roles: .baseOf),
     ]
-    let result = RelationshipMapping.scipRelationships(for: relations, symbolFormatter: makeFormatter())
+    let result = RelationshipMapping.scipRelationships(for: relations) { symbol in
+      "formatted \(symbol.usr)"
+    }
     #expect(result.count == 2)
     let witness = result.first { $0.symbol == "formatted s:base" }
     #expect(witness?.isReference == true)
@@ -62,7 +64,6 @@ struct RelationshipMappingTests {
     #expect(clause?.isReference == false)
     #expect(clause?.isImplementation == true)
   }
-
   @Test("childOf is excluded — no Relationship emitted")
   func childOfExcluded() {
     let relations = [makeRelation(name: "Container", usr: "s:container", roles: .childOf)]
@@ -102,6 +103,33 @@ struct RelationshipMappingTests {
       symbol: Symbol(usr: usr, name: name, kind: .instanceMethod, subKind: .none, language: .swift),
       roles: roles
     )
+  }
+
+  // MARK: - ObjCSuperclassClauseMap (REL-01 / D-21, 04-02) — the bounded fallback belt
+
+  @Test("ObjC superclass clause map parses class clauses, fail-soft on everything else")
+  func objCSuperclassClauseMapParses() throws {
+    // Parses: first clause entry of a class is the superclass position.
+    let map = ObjCSuperclassClauseMap(
+      source: """
+        import Foundation
+        class ObjCAnimal: NSObject {
+          @objc func sound() -> String { "generic" }
+        }
+        class Square: BaseWidget, SomeProtocol {}
+        class Bare {}
+        struct NotAClass: NSObject {}
+        """)
+    #expect(map.superclass(ofClassName: "ObjCAnimal") == "NSObject")
+    #expect(map.superclass(ofClassName: "Square") == "BaseWidget")
+    #expect(map.superclass(ofClassName: "Bare") == nil, "no clause — no superclass")
+    #expect(map.superclass(ofClassName: "NotAClass") == nil, "non-class declarations stay out")
+    #expect(map.superclass(ofClassName: "Missing") == nil)
+
+    // Fail-soft: an unreadable file yields nil (never throws); an unparseable source
+    // simply finds no classes.
+    #expect(ObjCSuperclassClauseMap(filePath: "/nonexistent/No.swift") == nil)
+    #expect(ObjCSuperclassClauseMap(source: "func 🎉((( not swift").superclass(ofClassName: "X") == nil)
   }
 
   private func makeFormatter() -> (Symbol) -> String {
