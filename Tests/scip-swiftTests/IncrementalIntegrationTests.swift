@@ -178,6 +178,51 @@ struct IncrementalIntegrationTests {
     #expect(refreshedManifest.converterVersion == ScipSwiftVersion.version)
   }
 
+  @Test("a format-4 manifest (pre-04-02 relationship bytes) is wholesale-rejected under format 5")
+  func format4ManifestIsWholesaleRejected() throws {
+    // D-09 (04-02): format 5 carries relationship bytes (type-level is_implementation
+    // edges, relationship-target external symbols, stdlib-protocol canonical forms).
+    // A cache written by a format-4 engine must NEVER serve its relationship-less
+    // documents: the manifest gate rejects the mismatch wholesale and the run
+    // re-emits. Proven on the relationship fixture — the regenerated documents must
+    // carry the minted never-occurring target a format-4 cache could not know.
+    let workDir = try Self.makeTempDir()
+    let cacheDir = (workDir as NSString).appendingPathComponent("cache")
+    let fixtureRepoPath = try Self.materializeFixtureCopy("HierarchiesFixture")
+    defer { try? FileManager.default.removeItem(atPath: fixtureRepoPath) }
+    let store = CacheStore(cacheDir: cacheDir)
+    try store.saveManifest(IndexManifest(
+      toolchainVersion: ToolchainInfo.pinnedSwiftVersion,
+      converterVersion: ScipSwiftVersion.version,
+      indexstoreDbRevision: IndexCommand.indexstoreDbRevision,
+      buildToolName: BuildTool.swiftpm.rawValue,
+      symbolFormatVersion: 4
+    ))
+
+    let index = try IndexCommand.indexOneRepo(
+      repoPath: fixtureRepoPath,
+      output: nil,
+      buildTool: nil,
+      configuration: .debug,
+      scheme: nil,
+      cacheDir: cacheDir,
+      indexOnly: false,
+      symbolVersion: ""
+    )
+
+    let external = Set(index.externalSymbols.map(\.symbol))
+    #expect(
+      external.contains(
+        "scip-swift swift Swift \(ToolchainInfo.pinnedSwiftVersion) CustomStringConvertible#description."),
+      "the regenerated (not cached) documents must carry the format-5 relationship minting"
+    )
+    let refreshed = try #require(store.loadManifest())
+    #expect(
+      refreshed.symbolFormatVersion == SymbolFormatVersion.current,
+      "the stale format-4 manifest must be replaced (got \(refreshed.symbolFormatVersion))"
+    )
+  }
+
   @Test("cache-hit second run serves byte-identical exact ranges without re-parsing")
   func cacheHitServesExactRanges() throws {
     let fixtureRepoPath = Self.unicodeFixtureRepoPath()

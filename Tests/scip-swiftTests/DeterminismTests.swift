@@ -134,9 +134,19 @@ struct DeterminismTests {
 
   // MARK: - Metadata normalization (Pitfall 2)
 
-  @Test("fresh run and cache-hit run over the same store are byte-identical")
-  func freshVsCachedByteIdentity() throws {
-    let fixtureRepoPath = Self.fixturePath("MiniSwiftPackage")
+  @Test(
+    "fresh run and cache-hit run over the same store are byte-identical",
+    arguments: [
+      "MiniSwiftPackage",
+      // REL-01 (04-02): the relationship fixture carries minted relationship targets
+      // (CustomStringConvertible#description. never occurs as an occurrence symbol), so
+      // this case proves the minting symmetry — cache-served documents mint the same
+      // external symbols as fresh ones — alongside the relationship-byte identity.
+      "HierarchiesFixture",
+    ]
+  )
+  func freshVsCachedByteIdentity(fixtureName: String) throws {
+    let fixtureRepoPath = Self.fixturePath(fixtureName)
     let fixtureBuildPath = (fixtureRepoPath as NSString).appendingPathComponent(".build")
     defer { try? FileManager.default.removeItem(atPath: fixtureBuildPath) }
 
@@ -168,6 +178,19 @@ struct DeterminismTests {
     let freshData = try makeBuilder().build().serializedData()
     let cachedData = try makeBuilder().build().serializedData()
     #expect(freshData == cachedData, "cache-hit run must be byte-identical to the fresh run")
+
+    if fixtureName == "HierarchiesFixture" {
+      // The minting symmetry requirement (04-02): a relationship target that never
+      // occurs as an occurrence symbol must exist in external_symbols on the cache-hit
+      // run exactly as on the fresh run — the byte identity above already proves it,
+      // this pins it loudly for the reviewer.
+      let cachedIndex = try Scip_Index(serializedData: cachedData)
+      let external = Set(cachedIndex.externalSymbols.map(\.symbol))
+      #expect(
+        external.contains("scip-swift swift Swift \(ToolchainInfo.pinnedSwiftVersion) CustomStringConvertible#description."),
+        "the never-occurring relationship target must mint identically on the cache-hit run"
+      )
+    }
   }
 
   @Test("cross-file overload staleness: an added earlier-sorting overload rebuilds the cached document (D-10/T-02-04)")

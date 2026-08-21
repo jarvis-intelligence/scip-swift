@@ -97,9 +97,11 @@ to a persistent cache:
   reprocesses what changed.
 - The cache is invalidated wholesale when the Swift toolchain version, `scip-swift` version,
   indexstore-db revision, build backend, or the emitted symbol format version
-  (`symbolFormatVersion`, currently 3 — format 1 is the raw-USR era, format 2 the canonical
-  descriptor-chain scheme with content-hash cache keys, format 3 composite
-  path+content-hash cache keys) changes (recorded in `manifest.json`). A manifest that fails
+  (`symbolFormatVersion`, currently 5 — format 1 is the raw-USR era, format 2 the canonical
+  descriptor-chain scheme, format 3 composite path+content-hash cache keys, format 4 import
+  occurrences + Test bits, format 5 relationship bytes: type-level is_implementation edges,
+  relationship-target external symbols, and stdlib-protocol canonical forms) changes
+  (recorded in `manifest.json`). A manifest that fails
   to decode — e.g. written by an older engine without
   the current fields — is treated as no manifest: the cache is discarded wholesale, so
   old-format caches never mix with new-format output.
@@ -198,27 +200,40 @@ extended types, cross-module per the frozen scheme), and the deep-nesting sectio
 (`Lattice#Cell#Core#Phase#…`, four container levels). Accepted outline shapes are
 asserted explicitly, not assumed — see the outline bullets under Known limitations.
 
-### Relationship oracle (`RelationshipParity`, REL-01 witness half)
+### Relationship oracle (`RelationshipParity`, REL-01)
 
 Relationship edges are gated like roles: in code, both directions, against a committed
 golden. The `RelationshipParity` suite
 (`Tests/scip-swiftTests/RelationshipParityTests.swift`) rebuilds the
 `Fixtures/HierarchiesFixture` index in-process (two modules, HierCore + HierExt — the
-SC4 content classes in external-protocol-free form: protocol inheritance, direct and
-extension-declared conformances to LOCAL protocols, a conditional conformance, a
-2-level subclass chain with overridden inits/properties/methods, a default
-implementation, an emoji-named conforming type, and a cross-module retroactive
-conformance) and asserts BOTH DIRECTIONS over every relationship the engine emits
+SC4 content classes: protocol inheritance, direct and extension-declared conformances
+(to LOCAL and to Swift-module protocols — `Rect: HierShape, Equatable,
+CustomStringConvertible`, a retroactive `extension Circle: CustomStringConvertible`),
+a conditional conformance, a 2-level subclass chain with overridden
+inits/properties/methods, a default implementation, an emoji-named conforming type, an
+ObjC-rooted subclass, and a cross-module retroactive conformance to a local protocol)
+and asserts BOTH DIRECTIONS over every relationship the engine emits
 today: every expected witness edge (`.overrideOf` → `is_reference` +
-`is_implementation`) IS emitted, and every emitted edge IS expected. It also pins the
-NON-edges (implicit default-implementation occurrences at conformance-declaration
-lines contribute no relationship; declared conformance/inheritance clauses carry no
-type-level edges yet — the list that 04-02 flips to expected-present) and the corpus
-invariants (flags, ascending target order, one row per symbol/target pair) against the
-committed expectation table `Fixtures/HierarchiesFixture/relationship-table.json`.
-Regenerate that table with `UPDATE_RELATIONSHIP_TABLE=1 swift test --filter
-RelationshipParity`, under the pinned toolchain only (same discipline as the snapshot
-goldens: relationship rows are toolchain-sensitive data).
+`is_implementation`, the byte-stable 04-01 baseline) and every type-level clause edge
+(the 04-02 harvest: baseOf/extendedBy clause refs → `is_implementation` ONLY,
+scip.proto's Find-implementations semantics) IS emitted, and every emitted edge IS
+expected. The 04-02 emission seams: (a) the clause-relation harvest attaches type-level
+edges to the type's SymbolInformation in its defining document; (b) retroactive
+extension-declared conformances ride the EXTENSION document via a carrier
+SymbolInformation for the type's canonical string (D-23); (c) relationship targets that
+never appear as occurrences mint into `external_symbols` (fresh and cache-served
+documents symmetrically); (d) relationships are emitted pre-canonicalized (ascending
+target sort + flag OR-merge, the Go `CanonicalizeRelationships` port); (e) external
+protocols (`Equatable`, `CustomStringConvertible`, …) resolve to the frozen Swift-module
+form (`scip-swift swift Swift <pin> Equatable#`) via the stdlib-protocol USR parser
+rules, with system-ness from the parse. The suite also pins the NON-edges (implicit
+default-implementation occurrences at conformance-declaration lines contribute no
+relationship) and the corpus invariants (flags, ascending target order, one row per
+symbol/target pair) against the committed expectation table
+`Fixtures/HierarchiesFixture/relationship-table.json`. Regenerate that table with
+`UPDATE_RELATIONSHIP_TABLE=1 swift test --filter RelationshipParity`, under the pinned
+toolchain only (same discipline as the snapshot goldens: relationship rows are
+toolchain-sensitive data).
 
 ### Import occurrences (`ImportOccurrence`, SYM-04)
 
@@ -260,6 +275,11 @@ method occurrences carry it), so marking stays correct either way. The
 both directions and pins the composed bit values on concrete sites.
 
 ### Clean-runner reproducibility (`CleanRunner`, PROJ-01)
+
+A cache written under symbol
+format 4 is wholesale-invalidated by the next run (the manifest gate; the current
+emitted-byte format version is 5 — see `SymbolFormatVersion` in
+`Sources/scip-swift/Caching/IndexManifest.swift`).
 
 `scip-swift index` on a cold cache reproduces byte-identical output. The CLI default
 path (no `--cache-dir`/`--index-only`) is cold by construction — scratch, index DB, and
@@ -329,11 +349,18 @@ the common case for a real iOS app repo. If the underlying build command fails f
   ~24.5 MB — an accepted trade-off for this milestone (compiler-grade token extents without
   shipping a separate parser binary).
 - **No call-hierarchy role**: real `scip.proto`'s `SymbolRole` enum has no call-specific bit; call
-  sites are marked with the same `ReadAccess`/`WriteAccess` roles as any other reference.
-- **Minimal signatures**: reconstructed signatures carry the symbol name but lack parameter and
-  return types — IndexStoreDB's symbol data doesn't expose them.
-- **Relationships limited to overrides**: only override relationships are mapped; IndexStoreDB's
-  relation data doesn't cover the full SCIP relationship set.
+- **Relationships**: witness edges (`.overrideOf` → is_reference + is_implementation)
+  and type-level clause edges (baseOf/extendedBy harvest → is_implementation only,
+  attached to the type's SymbolInformation; retroactive conformances ride the
+  extension document). Accepted v1 limitation — the ObjC superclass fallback
+  (`ObjCSuperclassClauseMap`, D-21): a bounded, counted SwiftSyntax belt for class
+  clauses whose store record carries no `baseOf`; on the pinned toolchain the store
+  records the NSObject clause pairing itself, so the belt fires zero times on the
+  fixtures (unit-proven, counter surfaced in diagnostics). Accepted v1 Term
+  limitations: protocol-extension member USRs (`…PAAE…`/`…Rzl` shapes), extension-decl
+  `s:e:` USRs, and `c:objc` targets render as raw-USR fallback Terms (pinned as-is in
+  `relationship-table.json`; a parser rule would widen the format-version ripple for
+  no REL-01/REL-03 gain).
 - **USR stability across toolchain versions is not guaranteed by Apple — golden
   reproducibility is toolchain-pinned.** This project pins the Swift toolchain version it's
   built and tested against (see `.swift-version`); indexing with a different toolchain
