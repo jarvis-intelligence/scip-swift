@@ -198,6 +198,29 @@ struct ImportOccurrenceTests {
     }
   }
 
+  @Test("--no-demangle: module external symbols still carry their displayName (WR-02)")
+  func noDemangleRunStillNamesModuleSymbols() throws {
+    let index = try Self.sharedNoDemangleIndex()
+
+    // D-17 branch contract: the module displayName derives from the canonical string
+    // itself — pure string work, no demangler. Under demangle:false every module entry
+    // in external_symbols must still be registered AND named. (Non-module externals may
+    // stay opaque under --no-demangle — pre-existing behavior, out of scope here.)
+    let expectations: [(symbol: String, displayName: String)] = [
+      ("scip-swift swiftpm SchemeFixture . SchemeFixture/", "SchemeFixture"),
+      ("scip-swift swift Foundation \(Self.pin) Foundation/", "Foundation"),
+      ("scip-swift swift Testing \(Self.pin) Testing/", "Testing"),
+    ]
+    for expectation in expectations {
+      let registered = try #require(
+        index.externalSymbols.first { $0.symbol == expectation.symbol },
+        "\(expectation.symbol) must be registered for lint (missingSymbolForOccurrenceError)")
+      #expect(
+        registered.displayName == expectation.displayName,
+        "module symbols carry their own name under --no-demangle (got \"\(registered.displayName)\")")
+    }
+  }
+
   @Test("negative samples: zero Import roles at implicit/macro positions or non-import lines")
   func noImportRolesAtImplicitOrNonImportPositions() throws {
     let index = try Self.sharedIndex()
@@ -295,22 +318,33 @@ struct ImportOccurrenceTests {
   }
 
   /// One cached fixture build per test run — every test here asserts over the same
-  /// corpus (a real `swift build --build-tests`); one build is enough.
-  private static let indexBox = IndexBox()
+  /// corpus (a real `swift build --build-tests`); one build per demangle mode is enough.
+  private static let indexBox = IndexBox { BuiltIndex(try buildFixtureIndex(demangle: true)) }
+  private static let noDemangleIndexBox = IndexBox { BuiltIndex(try buildFixtureIndex(demangle: false)) }
 
   private static func sharedIndex() throws -> BuiltIndex {
     try indexBox.get()
   }
 
+  /// WR-02 (03 review): the --no-demangle corpus — same store shape, demangler nil'd.
+  private static func sharedNoDemangleIndex() throws -> BuiltIndex {
+    try noDemangleIndexBox.get()
+  }
+
   private final class IndexBox: @unchecked Sendable {
     private let lock = NSLock()
+    private let make: () throws -> BuiltIndex
     private var cached: BuiltIndex?
+
+    init(make: @escaping () throws -> BuiltIndex) {
+      self.make = make
+    }
 
     func get() throws -> BuiltIndex {
       lock.lock()
       defer { lock.unlock() }
       if let cached { return cached }
-      let built = BuiltIndex(try ImportOccurrenceTests.buildFixtureIndex())
+      let built = try make()
       cached = built
       return built
     }
@@ -318,8 +352,9 @@ struct ImportOccurrenceTests {
 
   /// Mirrors `ScipCLIGateTests.buildIndex` (private there): SwiftPMBuildRunner produces
   /// the index store, `swift build --build-tests` folds the test target into the same
-  /// store, then the in-process SCIPIndexBuilder emits the Scip_Index.
-  private static func buildFixtureIndex() throws -> Scip_Index {
+  /// store, then the in-process SCIPIndexBuilder emits the Scip_Index. `demangle`
+  /// selects the builder's mode (WR-02: the --no-demangle corpus reuses the same shape).
+  private static func buildFixtureIndex(demangle: Bool) throws -> Scip_Index {
     let fixtureRepoPath = Self.fixtureRepoPath()
     let fixtureBuildPath = (fixtureRepoPath as NSString).appendingPathComponent(".build")
     defer { try? FileManager.default.removeItem(atPath: fixtureBuildPath) }
@@ -350,7 +385,8 @@ struct ImportOccurrenceTests {
       indexStorePath: buildResult.indexStorePath,
       databasePath: (workDirectory as NSString).appendingPathComponent("index-db"),
       buildToolName: BuildTool.swiftpm.rawValue,
-      converterVersion: "test"
+      converterVersion: "test",
+      demangle: demangle
     )
     return try builder.build()
   }
