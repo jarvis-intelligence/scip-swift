@@ -194,9 +194,11 @@ struct RoleParityTests {
       (lib, "lhs.x == rhs.x && lhs.y == rhs.y", [Family.eqLhsParam, Family.eqRhsParam]),
       (lib, "Vec(x: lhs.x + rhs.x, y: lhs.y + rhs.y)",
        [Family.plusLhsParam, Family.plusRhsParam]),
-      // Subscript read at `vector[0]` — the property Term and the getter Term, both on
-      // the test-target module header (CR-01: fallback attribution is location-based).
-      (test, "vector[0] == 1", [Family.subscriptTermTests, Family.subscriptGetterTermTests]),
+      // Subscript read at `vector[0]` — the property Term and the getter Term. The raw-USR
+      // fallback is defined in this index (SchemeFixture), so the test-target reference takes
+      // the defining document's spelling and resolves to the definition; CR-01's
+      // location-based attribution applies only to fallbacks with no in-index definition.
+      (test, "vector[0] == 1", [Family.subscriptTerm, Family.subscriptGetterTerm]),
       // Deep-nesting section (03-02): reads of the stored property in the computed
       // getter bodies (the read-only `doubled` and `calibrated`'s get clause).
       (lib, "metric + metric", [Family.coreMetric]),
@@ -515,7 +517,6 @@ struct RoleParityTests {
   /// Hand-reviewable constants — the same strings the caret goldens carry.
   private enum Family {
     static let libraryPrefix = "scip-swift swiftpm SchemeFixture . "
-    static let testTargetPrefix = "scip-swift swiftpm SchemeFixtureTests . "
 
     // Property Terms (vars/lets).
     static let vecX = libraryPrefix + "Vec#x."
@@ -585,16 +586,11 @@ struct RoleParityTests {
       libraryPrefix + "`s:13SchemeFixture3VecVyS2icip5indexL_Sivp`.",
     ]
 
-    // Subscript Terms — raw-USR fallback under WR-01, on BOTH module headers: the
-    // declarations carry the SchemeFixture header, the test-target use sites carry the
-    // SchemeFixtureTests header (CR-01: fallback attribution stays location-based).
+    // Subscript Terms — raw-USR fallback under WR-01. The declarations are in this index, so
+    // declarations and test-target use sites share the defining SchemeFixture header.
     static let subscriptTerm = libraryPrefix + "`s:13SchemeFixture3VecVyS2icip`."
-    static let subscriptTermTests = testTargetPrefix + "`s:13SchemeFixture3VecVyS2icip`."
     static let subscriptGetterTerm = libraryPrefix + "`s:13SchemeFixture3VecVyS2icig`."
-    static let subscriptGetterTermTests = testTargetPrefix + "`s:13SchemeFixture3VecVyS2icig`."
-    static let subscriptTerms: Set<String> = [
-      subscriptTerm, subscriptTermTests, subscriptGetterTerm, subscriptGetterTermTests,
-    ]
+    static let subscriptTerms: Set<String> = [subscriptTerm, subscriptGetterTerm]
 
     // Enum-case Terms + the enum type.
     static let spectrumType = libraryPrefix + "Spectrum#"

@@ -101,6 +101,13 @@ enum SymbolFormatVersion {
   /// relationship targets mint into external_symbols, and stdlib-protocol USRs
   /// (`s:SQ`-family substitutions, `s:s<n><word>P` Swift-module implicit words, and their
   /// requirement members) canonicalize instead of falling back to raw-USR Terms.
+  /// Format 6 changes emitted occurrence and symbol bytes: definition occurrences carry
+  /// their declaration's enclosing range; colliding `private`/`fileprivate` declarations
+  /// carry an `@<discriminator>` on their own descriptor, with their members under it;
+  /// raw-USR fallbacks defined in the index use the defining document's module header at
+  /// every occurrence; locals' enclosing symbols name the correct overload `(+N)`; and
+  /// identifiers mangled with word substitutions decode to their full source names; and
+  /// member witness edges recorded only at an extension's conformance are kept.
   /// A bump wholesale-invalidates older caches via the same manifest gate.
-  static let current = 5
+  static let current = 6
 }

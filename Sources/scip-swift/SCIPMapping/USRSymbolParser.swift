@@ -38,6 +38,9 @@ enum USRSymbolParser {
     /// True when the entity's mangling carries the operator encoding marker (`<word>oi…`):
     /// the parsed word is the operator's mangled letters, not its source spelling.
     let isOperator: Bool
+    /// The entity's own private-context discriminator, when it was declared `private` or
+    /// `fileprivate`. Containers carry theirs on `Container.privateDiscriminator`.
+    var privateDiscriminator: String? = nil
   }
 
   /// Parses a USR. Returns nil on any miss — unparseable shapes, non-`s:` schemes, and
@@ -141,15 +144,17 @@ enum USRSymbolParser {
     /// owner module (SYM-02).
     let extendingModule: String?
     let isOperator: Bool
+    let privateDiscriminator: String?
 
     init(
       name: String, uninterpretedReaderTail: Bool, extendingModule: String? = nil,
-      isOperator: Bool = false
+      isOperator: Bool = false, privateDiscriminator: String? = nil
     ) {
       self.name = name
       self.uninterpretedReaderTail = uninterpretedReaderTail
       self.extendingModule = extendingModule
       self.isOperator = isOperator
+      self.privateDiscriminator = privateDiscriminator
     }
   }
 
@@ -190,6 +195,9 @@ enum USRSymbolParser {
         return Entity(name: word, uninterpretedReaderTail: false, extendingModule: extendingModule)
       }
 
+      // Keep the private discriminator off the name, so private containers retain their
+      // members. PrivateContextTable uses it when same-spelled private declarations collide.
+      let discriminator = cursor.consumePrivateDiscriminator()
       guard let next = cursor.peek() else { return nil }
 
       if next == "E" {
@@ -204,7 +212,9 @@ enum USRSymbolParser {
 
       if let kind = containerKind(for: next) {
         cursor.advance()
-        containers.append(CanonicalSymbolFormatter.Container(name: word, kind: kind))
+        containers.append(
+          CanonicalSymbolFormatter.Container(
+            name: word, kind: kind, privateDiscriminator: discriminator))
         continue
       }
 
@@ -218,13 +228,14 @@ enum USRSymbolParser {
       let isOperator = cursor.remaining().hasPrefix("oi")
       return Entity(
         name: word, uninterpretedReaderTail: false, extendingModule: extendingModule,
-        isOperator: isOperator)
+        isOperator: isOperator, privateDiscriminator: discriminator)
     }
 
     // The chain ended on a container: the innermost container is the entity itself.
     guard let innermost = containers.popLast() else { return nil }
     return Entity(
-      name: innermost.name, uninterpretedReaderTail: false, extendingModule: extendingModule)
+      name: innermost.name, uninterpretedReaderTail: false, extendingModule: extendingModule,
+      privateDiscriminator: innermost.privateDiscriminator)
   }
 
   private static func finish(
@@ -236,7 +247,8 @@ enum USRSymbolParser {
     guard !entity.uninterpretedReaderTail else { return nil }
     return ParsedUSR(
       module: module, isSystemModule: isSystem, containers: containers, name: entity.name,
-      extendingModule: entity.extendingModule, isOperator: entity.isOperator)
+      extendingModule: entity.extendingModule, isOperator: entity.isOperator,
+      privateDiscriminator: entity.privateDiscriminator)
   }
 
   /// Kind letters that may follow a word in container position.
@@ -456,6 +468,18 @@ enum USRSymbolParser {
       return true
     }
 
+    /// Consumes a `33_<32 hex>LL` private-context discriminator and returns its hex digits.
+    mutating func consumePrivateDiscriminator() -> String? {
+      var probe = self
+      guard let discriminator = probe.readWord(), discriminator.hasPrefix("_"),
+        discriminator.count == 33,
+        discriminator.dropFirst().allSatisfy({ $0.isASCII && $0.isHexDigit }),
+        probe.consume(prefix: "LL")
+      else { return nil }
+      self = probe
+      return String(discriminator.dropFirst())
+    }
+
     /// Peeks an `S`-prefixed stdlib substitution (two characters) without consuming it.
     func peekSubstitution() -> String? {
       guard index + 1 < scalars.count, scalars[index] == "S" else { return nil }
@@ -474,6 +498,12 @@ enum USRSymbolParser {
     /// (`00<length><punycode>`), decoded in place; a bare leading `0` introduces a
     /// word-substituted identifier (`0<parts>`), decoded from the word table.
     mutating func readWord() -> String? {
+      // The zero selects the production BEFORE reading its first literal's length.
+      // `07performC8IfNeeded` is not the seven-character identifier `perform`.
+      if peek() == "0", index + 1 < scalars.count, scalars[index + 1] != "0" {
+        advance()
+        return readSubstitutedWord()
+      }
       var digits = ""
       while let next = peek(), next.isNumber, next.isASCII {
         digits.append(next)
@@ -482,14 +512,8 @@ enum USRSymbolParser {
       guard !digits.isEmpty, digits.count <= 4 else { return nil }
       guard scalars.count - index > 0 else { return nil }
 
-      if digits == "0" {
-        let word = readSubstitutedWord()
-        if let word { wordTable.addWords(of: word) }
-        return word
-      }
-
       guard let word = readLengthPrefixedSegment(digits: digits) else { return nil }
-      wordTable.addWords(of: word)
+      if !digits.hasPrefix("00") { wordTable.addWords(of: word) }
       return word
     }
 
@@ -499,56 +523,44 @@ enum USRSymbolParser {
     /// over the words of every identifier mangled so far in this USR. A final word
     /// reference with no literal after it is terminated by a literal `0`.
     ///
-    /// An uppercase letter whose index names no mangled word is NOT part of the identifier
-    /// (the retroactive `E` marker directly after the last segment is exactly such a
-    /// letter), so the identifier ends there without consuming it. Known residual ambiguity
-    /// (T-02-01 fail-soft): with five or more mangled words a marker letter can alias a
-    /// valid reference index; such a USR mis-parses or misses into the D-06 fallback, never
-    /// into a crash.
+    /// Uppercase ends substitutions: consume exactly one final literal or zero, leaving
+    /// subsequent context/signature markers untouched. Register only literal segments,
+    /// immediately, so later references in this same identifier can reuse their words.
     private mutating func readSubstitutedWord() -> String? {
       var parts = ""
-      while let next = peek() {
-        if let ascii = next.asciiValue {
-          if ascii >= UInt8(ascii: "a"), ascii <= UInt8(ascii: "z") {
-            let index = Int(ascii - UInt8(ascii: "a"))
-            guard index < wordTable.count else { return nil }
-            parts += wordTable[index]
-            advance()
-            continue
-          }
-          if ascii >= UInt8(ascii: "A"), ascii <= UInt8(ascii: "Z") {
-            let index = Int(ascii - UInt8(ascii: "A"))
-            guard index < wordTable.count else { break }
-            parts += wordTable[index]
-            advance()
-            continue
-          }
+      var hasSubstitutions = true
+      repeat {
+        while hasSubstitutions, let next = peek(), next.isASCII, next.isLetter {
+          guard let ascii = next.asciiValue else { return nil }
+          let isLast = next.isUppercase
+          let wordIndex = Int(ascii - (isLast ? UInt8(ascii: "A") : UInt8(ascii: "a")))
+          guard wordIndex < wordTable.count else { return nil }
+          parts += wordTable[wordIndex]
+          advance()
+          if isLast { hasSubstitutions = false }
         }
-        if next.isNumber, next.isASCII {
-          var digits = ""
-          while let digit = peek(), digit.isNumber, digit.isASCII {
-            digits.append(digit)
-            advance()
-          }
-          if digits == "0" {
-            // The grammar's terminator: a final word reference with no literal after it
-            // (literal run-lengths never carry a leading zero, so a bare `0` cannot be one).
-            break
-          }
-          guard digits.count <= 4, let literal = readLengthPrefixedSegment(digits: digits)
-          else { return nil }
-          parts += literal
-          continue
+        if peek() == "0" {
+          guard !hasSubstitutions else { return nil }
+          advance()
+          break
         }
-        break
-      }
+        var digits = ""
+        while let digit = peek(), digit.isNumber, digit.isASCII {
+          digits.append(digit)
+          advance()
+        }
+        guard !digits.isEmpty, digits.count <= 4,
+          let literal = readLengthPrefixedSegment(digits: digits)
+        else { return nil }
+        parts += literal
+        wordTable.addWords(of: literal)
+      } while hasSubstitutions
       guard !parts.isEmpty else { return nil }
       return parts
     }
 
     /// Reads the payload after a digit prefix: a plain length-prefixed word, or a punycode
-    /// word when the prefix starts with `00`. Does not touch the word table — callers
-    /// register the assembled identifier once.
+    /// word when the prefix starts with `00`. Callers register only plain literal words.
     private mutating func readLengthPrefixedSegment(digits: String) -> String? {
       if digits.hasPrefix("00") {
         // Punycode word: the digits after `00` give the encoded length. The punycode output
@@ -592,7 +604,7 @@ enum USRSymbolParser {
       var previousWasUppercase = false
 
       func flush() {
-        if !current.isEmpty, !words.contains(current) {
+        if current.count >= 2, words.count < 26 {
           words.append(current)
         }
         current = ""
@@ -608,6 +620,7 @@ enum USRSymbolParser {
         if isUppercaseLetter, !previousWasUppercase, !current.isEmpty {
           flush()
         }
+        if current.isEmpty, character.isNumber { continue }
         current.append(character)
         previousWasUppercase = isUppercaseLetter
       }

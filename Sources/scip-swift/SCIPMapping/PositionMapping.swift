@@ -7,9 +7,10 @@ import IndexStoreDB
 /// per occurrence — 1-based line, 1-based UTF-8-byte column — not a start/end range. SCIP ranges
 /// are half-open `[start, end)` and 0-based. This converts the anchor point to 0-based and takes
 /// the end column from a SwiftSyntax token extent when the refiner resolved one (`exactEndColumn`,
-/// 0-based); otherwise the end column falls back to the symbol's display-name length (stopping at
+/// 0-based); otherwise the end column falls back to the source name's length (stopping at
 /// the first `(` for compound Swift names like `greet(name:)`, since only the base name `greet` is
-/// highlighted at the occurrence). See README "Known limitations".
+/// highlighted at the occurrence). Accessor display prefixes are excluded. The builder validates
+/// the resulting range against source bounds before emission.
 enum PositionMapping {
   static func singleLineRange(
     location: SymbolLocation,
@@ -32,6 +33,12 @@ enum PositionMapping {
   }
 
   private static func approximateTokenLength(displayName: String) -> Int {
-    displayName.prefix(while: { $0 != "(" }).utf8.count
+    let sourceName: Substring
+    if displayName.hasPrefix("getter:") || displayName.hasPrefix("setter:") {
+      sourceName = displayName.dropFirst(7)
+    } else {
+      sourceName = displayName[...]
+    }
+    return sourceName.prefix(while: { $0 != "(" }).utf8.count
   }
 }

@@ -43,11 +43,12 @@ struct PositionMappingTests {
     #expect(range.endCharacter != 24)
   }
 
-  @Test("nil exact end keeps today's approximation byte-for-byte")
+  @Test("fallback widths exclude accessor display-name prefixes")
   func approximationWhenNil() {
     let cases: [(displayName: String, start: Int32, expectedEnd: Int32)] = [
-      ("getter:name", 13, 24),
-      ("getter:名前", 4, 17),
+      ("getter:name", 13, 17),
+      ("getter:名前", 4, 10),
+      ("setter:name", 13, 17),
       ("greet(name:)", 5, 10),
       ("String", 17, 23),
       ("emoji", 4, 9),

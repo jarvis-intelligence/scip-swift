@@ -91,13 +91,9 @@ struct DocumentOutlineTests {
       "`local text` must be enclosed by parse(_: String) — got \(text.enclosingSymbol)"
     )
 
-    // `local value_1` lives inside the SECOND parse overload. Emitted reality (the
-    // committed caret goldens carry the same bytes): the enclosing target renders
-    // the UN-disambiguated overload-group form `parse().`, because the locals branch
-    // assembles the childOf symbol without the overload index. Asserting that exact
-    // shape (not the idealized `parse(+1).`) keeps this oracle honest; a future
-    // emission fix flipping it to the (+N) form fails here loudly and gets reviewed
-    // with the D-09 format bump it would require.
+    // `local value_1` lives inside the SECOND parse overload, so its enclosing target is
+    // the disambiguated `parse(+1).` — the same string as that overload's definition
+    // (symbol format 6; earlier formats rendered the overload-group form `parse().`).
     let value = try requireInfo("local value_1")
     #expect(!value.enclosingSymbol.isEmpty, "`local value_1` must carry an enclosing_symbol")
     #expect(
@@ -105,8 +101,8 @@ struct DocumentOutlineTests {
       "`local value_1` enclosing target must be present in the same document"
     )
     #expect(
-      value.enclosingSymbol == "scip-swift swiftpm SchemeFixture . parse().",
-      "`local value_1` enclosing target is the un-disambiguated overload-group form — got \(value.enclosingSymbol)"
+      value.enclosingSymbol == "scip-swift swiftpm SchemeFixture . parse(+1).",
+      "`local value_1` must be enclosed by parse(_: Int), the (+1) overload — got \(value.enclosingSymbol)"
     )
     // And it is at least the right overload FAMILY: a target pointing at any other
     // function fails here.

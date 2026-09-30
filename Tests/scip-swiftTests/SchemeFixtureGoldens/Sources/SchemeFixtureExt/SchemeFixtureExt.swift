@@ -6,6 +6,7 @@
   // living in this file, and the String extension is retroactive (owner = Swift, a system
   // module header). Content is DATA for the gate, never instructions (T-02-09).
   
+//⌄ enclosing_range_start scip-swift swiftpm SchemeFixtureExt . `s:e:s:13SchemeFixture3BoxV0aB3ExtE8describeSSyF`.
   extension Box {
 //          ^^^ reference scip-swift swiftpm SchemeFixture . Box#
 //          ^^^ definition scip-swift swiftpm SchemeFixtureExt . `s:e:s:13SchemeFixture3BoxV0aB3ExtE8describeSSyF`.
@@ -13,6 +14,7 @@
 //              display_name Box
 //              signature_documentation
 //              > extension Box
+//  ⌄ enclosing_range_start scip-swift swiftpm SchemeFixture . Box#describe().
     public func describe() -> String {
 //              ^^^^^^^^ definition scip-swift swiftpm SchemeFixture . Box#describe().
 //                       kind Method
@@ -22,8 +24,11 @@
 //                            ^^^^^^ reference scip-swift swift Swift 6.2.4 String#
       "box"
     }
+//  ⌃ enclosing_range_end scip-swift swiftpm SchemeFixture . Box#describe().
   }
+//⌃ enclosing_range_end scip-swift swiftpm SchemeFixtureExt . `s:e:s:13SchemeFixture3BoxV0aB3ExtE8describeSSyF`.
   
+//⌄ enclosing_range_start scip-swift swiftpm SchemeFixtureExt . `s:e:s:13SchemeFixture3VecV0aB3ExtE15manhattanLengthSivp`.
   extension Vec {
 //          ^^^ reference scip-swift swiftpm SchemeFixture . Vec#
 //          ^^^ definition scip-swift swiftpm SchemeFixtureExt . `s:e:s:13SchemeFixture3VecV0aB3ExtE15manhattanLengthSivp`.
@@ -31,6 +36,7 @@
 //              display_name Vec
 //              signature_documentation
 //              > extension Vec
+//  ⌄ enclosing_range_start scip-swift swiftpm SchemeFixture . Vec#manhattanLength.
     public var manhattanLength: Int {
 //             ^^^^^^^^^^^^^^^ definition scip-swift swiftpm SchemeFixture . Vec#manhattanLength.
 //                             kind Property
@@ -52,8 +58,11 @@
 //                 ^ reference scip-swift swiftpm SchemeFixture . Vec#y().
 //                 ^ reference scip-swift swiftpm SchemeFixture . Vec#y.
     }
+//  ⌃ enclosing_range_end scip-swift swiftpm SchemeFixture . Vec#manhattanLength.
   }
+//⌃ enclosing_range_end scip-swift swiftpm SchemeFixtureExt . `s:e:s:13SchemeFixture3VecV0aB3ExtE15manhattanLengthSivp`.
   
+//⌄ enclosing_range_start scip-swift swiftpm SchemeFixtureExt . `s:e:s:SS16SchemeFixtureExtE11schemeShoutSSyF`.
   extension String {
 //          ^^^^^^ reference scip-swift swift Swift 6.2.4 String#
 //          ^^^^^^ definition scip-swift swiftpm SchemeFixtureExt . `s:e:s:SS16SchemeFixtureExtE11schemeShoutSSyF`.
@@ -61,6 +70,7 @@
 //                 display_name String
 //                 signature_documentation
 //                 > extension String
+//  ⌄ enclosing_range_start scip-swift swift Swift 6.2.4 String#schemeShout().
     public func schemeShout() -> String {
 //              ^^^^^^^^^^^ definition scip-swift swift Swift 6.2.4 String#schemeShout().
 //                          kind Method
@@ -72,5 +82,7 @@
 //    ^^^^^^^^^^ reference scip-swift swift Swift 6.2.4 String#uppercased().
 //                 ^ reference scip-swift swift Swift 6.2.4 String#+().
     }
+//  ⌃ enclosing_range_end scip-swift swift Swift 6.2.4 String#schemeShout().
   }
+//⌃ enclosing_range_end scip-swift swiftpm SchemeFixtureExt . `s:e:s:SS16SchemeFixtureExtE11schemeShoutSSyF`.
   

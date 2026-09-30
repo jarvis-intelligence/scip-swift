@@ -14,8 +14,9 @@ struct SwiftSyntaxRefiner {
 
   private let tokenEndColumns: [Int: [Int: Int]]
   private let docComments: [Int: [Int: String]]
-  private let source: String
-  private let syntaxTree: SourceFileSyntax
+  private let declarationRanges: [Int: [Int: [Int32]]]
+  private let projectedTokens: [Int: [Range<Int>]]
+  let sourceBounds: SourceBounds
 
   init?(filePath: String) {
     guard let source = try? String(contentsOfFile: filePath, encoding: .utf8) else { return nil }
@@ -31,6 +32,7 @@ struct SwiftSyntaxRefiner {
     Self.parseCounts[filePath, default: 0] += 1
     Self.parseCountsGuard.unlock()
     var map: [Int: [Int: Int]] = [:]
+    var projected: [Int: [Range<Int>]] = [:]
     for token in tree.tokens(viewMode: .sourceAccurate) {
       let start = token.positionAfterSkippingLeadingTrivia.utf8Offset
       // endPosition includes trailing trivia, which would over-extend every token by the
@@ -39,25 +41,37 @@ struct SwiftSyntaxRefiner {
       let line = Self.line(ofOffset: start, lineStarts: lineStarts)
       let lineStart = lineStarts[line - 1]
       map[line, default: [:]][start - lineStart] = end - lineStart
+      if token.text.hasPrefix("$") {
+        projected[line, default: []].append((start - lineStart)..<(end - lineStart))
+      }
     }
 
     var docs: [Int: [Int: String]] = [:]
+    var ranges: [Int: [Int: [Int32]]] = [:]
     for decl in Self.declarations(in: Syntax(tree)) {
-      guard let first = decl.firstToken(viewMode: .sourceAccurate),
-        let doc = Self.docComment(from: first.leadingTrivia)
-      else { continue }
+      let doc = decl.firstToken(viewMode: .sourceAccurate).flatMap {
+        Self.docComment(from: $0.leadingTrivia)
+      }
+      let start = decl.positionAfterSkippingLeadingTrivia.utf8Offset
+      let end = decl.endPositionBeforeTrailingTrivia.utf8Offset
+      let startLine = Self.line(ofOffset: start, lineStarts: lineStarts)
+      let endLine = Self.line(ofOffset: end, lineStarts: lineStarts)
+      let range = [startLine - 1, start - lineStarts[startLine - 1],
+                   endLine - 1, end - lineStarts[endLine - 1]].map(Int32.init)
       for nameToken in Self.nameTokens(of: decl) {
         let position = nameToken.positionAfterSkippingLeadingTrivia
         let line = Self.line(ofOffset: position.utf8Offset, lineStarts: lineStarts)
         let lineStart = lineStarts[line - 1]
         docs[line, default: [:]][position.utf8Offset - lineStart] = doc
+        ranges[line, default: [:]][position.utf8Offset - lineStart] = range
       }
     }
 
     tokenEndColumns = map
     docComments = docs
-    self.source = source
-    self.syntaxTree = tree
+    declarationRanges = ranges
+    projectedTokens = projected
+    sourceBounds = SourceBounds(source: source)
   }
 
   /// Number of `Parser.parse` calls recorded for `filePath` — the DOCS-03 exactly-once proof.
@@ -73,6 +87,24 @@ struct SwiftSyntaxRefiner {
   func exactEndColumn(line: Int, utf8Column: Int) -> Int? {
     guard line >= 1, utf8Column >= 1 else { return nil }
     return tokenEndColumns[line]?[utf8Column - 1]
+  }
+
+  /// Only projected identifiers admit an interior anchor; ordinary lookup stays exact.
+  func tokenRange(line: Int, utf8Column: Int) -> Range<Int>? {
+    let column = utf8Column - 1
+    if let token = projectedTokens[line]?.first(where: { $0.contains(column) }) {
+      return token
+    }
+    guard let end = exactEndColumn(line: line, utf8Column: utf8Column) else { return nil }
+    return column..<end
+  }
+
+  /// Exact declaration anchors only: expansion sites never inherit a neighbour's body.
+  func enclosingRange(line: Int, utf8Column: Int) -> [Int32]? {
+    guard let range = declarationRanges[line]?[utf8Column - 1],
+      sourceBounds.contains(range: range)
+    else { return nil }
+    return range
   }
 
   /// Same lookup contract as `exactEndColumn`: 1-based IndexStoreDB inputs over the 0-based
@@ -104,6 +136,9 @@ struct SwiftSyntaxRefiner {
     }
     if let initializer = decl.as(InitializerDeclSyntax.self) {
       return [initializer.initKeyword]
+    }
+    if let subscriptDecl = decl.as(SubscriptDeclSyntax.self) {
+      return [subscriptDecl.subscriptKeyword]
     }
     if let deinitializer = decl.as(DeinitializerDeclSyntax.self) {
       return [deinitializer.deinitKeyword]

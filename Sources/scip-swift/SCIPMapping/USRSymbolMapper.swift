@@ -179,6 +179,10 @@ enum USRSymbolMapper {
       break
     }
     switch symbol.subKind {
+    case .swiftGenericTypeParam:
+      // Generic parameter USRs carry their name in the opaque local-context tail.
+      // The compiler's short name is the source identifier, not the enclosing function.
+      return symbol.name.isEmpty ? nil : symbol.name
     case .accessorSetter, .swiftAccessorWillSet, .swiftAccessorDidSet,
       .swiftAccessorMutableAddressor:
       return parsed.name.isEmpty ? nil : "\(parsed.name)="
@@ -198,11 +202,14 @@ enum USRSymbolMapper {
 final class SymbolMappingDiagnostics {
   static let exampleLimit = 5
 
-  private(set) var fallbackCount = 0
+  private var recordedUSRs: Set<String> = []
   private var fallbackExamples: [String] = []
 
+  /// Distinct USRs emitted through the fallback; a USR used many times counts once.
+  var fallbackCount: Int { recordedUSRs.count }
+
   func recordFallback(usr: String) {
-    fallbackCount += 1
+    guard recordedUSRs.insert(usr).inserted else { return }
     if fallbackExamples.count < Self.exampleLimit {
       fallbackExamples.append(usr)
     }

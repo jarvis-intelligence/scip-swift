@@ -10,6 +10,8 @@
   // code compiles this target into the same index store (the gate builds with --build-tests),
   // so Tests/SchemeFixtureTests/SchemeFixtureTests.swift is an indexed document too.
   
+//⌄ enclosing_range_start scip-swift swiftpm SchemeFixtureTests . `s:18SchemeFixtureTestsAAVABycfc`.
+//⌄ enclosing_range_start scip-swift swiftpm SchemeFixtureTests . `s:18SchemeFixtureTestsAAV`.
   @Suite("SchemeFixture exercises every category end-to-end")
 //^ reference scip-swift swift Testing 6.2.4 Testing/
 //^ definition scip-swift swiftpm SchemeFixtureTests . `s:18SchemeFixtureTestsAAV0049$s18SchemeFixtureTestsAA5SuitefMm_4__$fMu__GpHDGbO19__testContentRecords6UInt32V4kind_AG9reserved1SbSv_S2VSgSutXCSg8accessorSu7contextSu9reserved2tvgZ`.
@@ -85,6 +87,7 @@
 //                          display_name SchemeFixtureTests.SchemeFixtureTests
 //                          signature_documentation
 //                          > struct SchemeFixtureTests
+//  ⌄ enclosing_range_start scip-swift swiftpm SchemeFixtureTests . `s:18SchemeFixtureTestsAAV18exerciseCategoriesyyF`.
     @Test("overloads, operators, extensions, and Unicode identifiers behave")
 //  ^ reference scip-swift swift Swift 6.2.4 Void#
 //  ^ reference scip-swift swift Testing 6.2.4 Testing/
@@ -265,13 +268,13 @@
       #expect(vector[0] == 1)
 //    ^ reference scip-swift swift Swift 6.2.4 Int#`==`().
 //    ^ reference scip-swift swift Testing 6.2.4 Testing/
-//    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:13SchemeFixture3VecVyS2icig`.
-//    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:13SchemeFixture3VecVyS2icip`.
+//    ^ reference scip-swift swiftpm SchemeFixture . `s:13SchemeFixture3VecVyS2icig`.
+//    ^ reference scip-swift swiftpm SchemeFixture . `s:13SchemeFixture3VecVyS2icip`.
 //    ^ reference scip-swift swiftpm SchemeFixtureTests . `s:Sa12arrayLiteralSayxGxd_tcfc`.
 //    ^ reference scip-swift swiftpm Testing . SourceLocation#
 //     ^^^^^^ reference scip-swift swiftpm Testing . expect!
-//                  ^ reference scip-swift swiftpm SchemeFixtureTests . `s:13SchemeFixture3VecVyS2icig`.
-//                  ^ reference scip-swift swiftpm SchemeFixtureTests . `s:13SchemeFixture3VecVyS2icip`.
+//                  ^ reference scip-swift swiftpm SchemeFixture . `s:13SchemeFixture3VecVyS2icig`.
+//                  ^ reference scip-swift swiftpm SchemeFixture . `s:13SchemeFixture3VecVyS2icip`.
 //                      ^^ reference scip-swift swift Swift 6.2.4 Int#`==`().
       #expect(conditionallyCompiled())
 //    ^ reference scip-swift swift Testing 6.2.4 Testing/
@@ -384,5 +387,8 @@
 //                  ^ reference scip-swift swiftpm SchemeFixture . Vec#x.
 //                    ^^ reference scip-swift swift Swift 6.2.4 Int#`==`().
     }
+//  ⌃ enclosing_range_end scip-swift swiftpm SchemeFixtureTests . `s:18SchemeFixtureTestsAAV18exerciseCategoriesyyF`.
   }
+//⌃ enclosing_range_end scip-swift swiftpm SchemeFixtureTests . `s:18SchemeFixtureTestsAAVABycfc`.
+//⌃ enclosing_range_end scip-swift swiftpm SchemeFixtureTests . `s:18SchemeFixtureTestsAAV`.
   

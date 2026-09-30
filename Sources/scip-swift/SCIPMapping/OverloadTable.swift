@@ -41,8 +41,14 @@ final class OverloadTable {
   /// Groups retained for the cache-validation fingerprint (02-02 Task 3): group key → member
   /// USRs in assigned (source) order, groups themselves sorted by key — a deterministic shape.
   private let orderedGroups: [(key: String, usrs: [String])]
+  /// The private-context renaming the group keys were built with; symbol assembly applies the
+  /// same renaming, so group keys and emitted strings agree.
+  let privateContexts: PrivateContextTable
 
-  init(definitions: [Definition]) {
+  init(
+    definitions: [Definition], privateContexts: PrivateContextTable = PrivateContextTable(parsed: [])
+  ) {
+    self.privateContexts = privateContexts
     struct Member {
       let usr: String
       let relativePath: String

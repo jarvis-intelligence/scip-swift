@@ -154,9 +154,9 @@ struct IndexManifestTests {
       packageManifestFingerprint: ""))
   }
 
-  @Test("the format constant is 5 — relationship bytes: type-level edges, relationship-target minting, stdlib-protocol forms (04-02)")
+  @Test("the format constant is 6 — enclosing ranges, disambiguated privates, in-index fallback spelling, overload-exact enclosing symbols")
   func formatConstantIsCurrent() {
-    #expect(SymbolFormatVersion.current == 5)
+    #expect(SymbolFormatVersion.current == 6)
   }
 
   @Test("old manifest without symbolFormatVersion fails decode — decode failure means invalidation (D-09)")

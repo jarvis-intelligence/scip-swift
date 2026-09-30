@@ -5,20 +5,25 @@
   import Foundation
 //       ^^^^^^^^^^ reference scip-swift swift Foundation 6.2.4 Foundation/
   
+//⌄ enclosing_range_start scip-swift swiftpm HierCore . HierDrawable#
   protocol HierDrawable {
 //         ^^^^^^^^^^^^ definition scip-swift swiftpm HierCore . HierDrawable#
 //                      kind Protocol
 //                      display_name HierCore.HierDrawable
 //                      signature_documentation
 //                      > protocol HierDrawable
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . HierDrawable#draw().
     func draw()
 //       ^^^^ definition scip-swift swiftpm HierCore . HierDrawable#draw().
 //            kind Method
 //            display_name HierCore.HierDrawable.draw() -> ()
 //            signature_documentation
 //            > func draw()
+//            ⌃ enclosing_range_end scip-swift swiftpm HierCore . HierDrawable#draw().
   }
+//⌃ enclosing_range_end scip-swift swiftpm HierCore . HierDrawable#
   
+//⌄ enclosing_range_start scip-swift swiftpm HierCore . HierShape#
   protocol HierShape: HierDrawable {
 //         ^^^^^^^^^ definition scip-swift swiftpm HierCore . HierShape#
 //                   kind Protocol
@@ -27,6 +32,7 @@
 //                   > protocol HierShape
 //                   relationship scip-swift swiftpm HierCore . HierDrawable# implementation
 //                    ^^^^^^^^^^^^ reference scip-swift swiftpm HierCore . HierDrawable#
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . HierShape#area.
     var area: Double { get }
 //      ^^^^ definition scip-swift swiftpm HierCore . HierShape#area.
 //           kind Property
@@ -39,7 +45,9 @@
 //                         display_name HierCore.HierShape.area.getter : Swift.Double
 //                         signature_documentation
 //                         > func getter:area
+//                         ⌃ enclosing_range_end scip-swift swiftpm HierCore . HierShape#area.
   
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . HierShape#describe().
     func describe() -> String
 //       ^^^^^^^^ definition scip-swift swiftpm HierCore . HierShape#describe().
 //                kind Method
@@ -47,8 +55,12 @@
 //                signature_documentation
 //                > func describe()
 //                     ^^^^^^ reference scip-swift swift Swift 6.2.4 String#
+//                          ⌃ enclosing_range_end scip-swift swiftpm HierCore . HierShape#describe().
   }
+//⌃ enclosing_range_end scip-swift swiftpm HierCore . HierShape#
   
+//⌄ enclosing_range_start scip-swift swiftpm HierCore . Circle#
+//⌄ enclosing_range_start scip-swift swiftpm HierCore . Circle#init().
   public struct Circle: HierShape {
 //              ^^^^^^ definition scip-swift swiftpm HierCore . Circle#
 //                     kind Struct
@@ -63,6 +75,9 @@
 //                     > init init(radius:)
 //              ^^^^^^ reference scip-swift swiftpm HierCore . `s:8HierCore0A5ShapePAAE8describeSSyF`.
 //                      ^^^^^^^^^ reference scip-swift swiftpm HierCore . HierShape#
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Circle#`radius=`().
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Circle#radius().
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Circle#radius.
     public let radius: Double
 //             ^^^^^^ definition scip-swift swiftpm HierCore . Circle#`radius=`().
 //                    kind Setter
@@ -80,7 +95,11 @@
 //                    signature_documentation
 //                    > var radius
 //                     ^^^^^^ reference scip-swift swift Swift 6.2.4 Double#
+//                          ⌃ enclosing_range_end scip-swift swiftpm HierCore . Circle#`radius=`().
+//                          ⌃ enclosing_range_end scip-swift swiftpm HierCore . Circle#radius().
+//                          ⌃ enclosing_range_end scip-swift swiftpm HierCore . Circle#radius.
   
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Circle#area.
     var area: Double { Double.pi * radius * radius }
 //      ^^^^ definition scip-swift swiftpm HierCore . Circle#area.
 //           kind Property
@@ -103,7 +122,9 @@
 //                                        ^ reference scip-swift swift Swift 6.2.4 Double#`*`().
 //                                          ^^^^^^ reference scip-swift swiftpm HierCore . Circle#radius().
 //                                          ^^^^^^ reference scip-swift swiftpm HierCore . Circle#radius.
+//                                                 ⌃ enclosing_range_end scip-swift swiftpm HierCore . Circle#area.
   
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Circle#draw().
     func draw() {}
 //       ^^^^ definition scip-swift swiftpm HierCore . Circle#draw().
 //            kind Method
@@ -111,8 +132,13 @@
 //            signature_documentation
 //            > func draw()
 //            relationship scip-swift swiftpm HierCore . HierDrawable#draw(). implementation reference
+//               ⌃ enclosing_range_end scip-swift swiftpm HierCore . Circle#draw().
   }
+//⌃ enclosing_range_end scip-swift swiftpm HierCore . Circle#
+//⌃ enclosing_range_end scip-swift swiftpm HierCore . Circle#init().
   
+//⌄ enclosing_range_start scip-swift swiftpm HierCore . Rect#
+//⌄ enclosing_range_start scip-swift swiftpm HierCore . Rect#init().
   struct Rect: HierShape, Equatable, CustomStringConvertible {
 //       ^^^^ definition scip-swift swiftpm HierCore . Rect#
 //            kind Struct
@@ -131,6 +157,9 @@
 //             ^^^^^^^^^ reference scip-swift swiftpm HierCore . HierShape#
 //                        ^^^^^^^^^ reference scip-swift swift Swift 6.2.4 Equatable#
 //                                   ^^^^^^^^^^^^^^^^^^^^^^^ reference scip-swift swift Swift 6.2.4 CustomStringConvertible#
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Rect#`width=`().
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Rect#width().
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Rect#width.
     let width: Double
 //      ^^^^^ definition scip-swift swiftpm HierCore . Rect#`width=`().
 //            kind Setter
@@ -148,6 +177,12 @@
 //            signature_documentation
 //            > var width
 //             ^^^^^^ reference scip-swift swift Swift 6.2.4 Double#
+//                  ⌃ enclosing_range_end scip-swift swiftpm HierCore . Rect#`width=`().
+//                  ⌃ enclosing_range_end scip-swift swiftpm HierCore . Rect#width().
+//                  ⌃ enclosing_range_end scip-swift swiftpm HierCore . Rect#width.
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Rect#`height=`().
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Rect#height().
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Rect#height.
     let height: Double
 //      ^^^^^^ definition scip-swift swiftpm HierCore . Rect#`height=`().
 //             kind Setter
@@ -165,7 +200,11 @@
 //             signature_documentation
 //             > var height
 //              ^^^^^^ reference scip-swift swift Swift 6.2.4 Double#
+//                   ⌃ enclosing_range_end scip-swift swiftpm HierCore . Rect#`height=`().
+//                   ⌃ enclosing_range_end scip-swift swiftpm HierCore . Rect#height().
+//                   ⌃ enclosing_range_end scip-swift swiftpm HierCore . Rect#height.
   
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Rect#area.
     var area: Double { width * height }
 //      ^^^^ definition scip-swift swiftpm HierCore . Rect#area.
 //           kind Property
@@ -184,7 +223,9 @@
 //                           ^ reference scip-swift swift Swift 6.2.4 Double#`*`().
 //                             ^^^^^^ reference scip-swift swiftpm HierCore . Rect#height().
 //                             ^^^^^^ reference scip-swift swiftpm HierCore . Rect#height.
+//                                    ⌃ enclosing_range_end scip-swift swiftpm HierCore . Rect#area.
   
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Rect#description.
     var description: String { "rect \(width)x\(height)" }
 //      ^^^^^^^^^^^ definition scip-swift swiftpm HierCore . Rect#description.
 //                  kind Property
@@ -203,7 +244,9 @@
 //                                    ^^^^^ reference scip-swift swiftpm HierCore . Rect#width.
 //                                             ^^^^^^ reference scip-swift swiftpm HierCore . Rect#height().
 //                                             ^^^^^^ reference scip-swift swiftpm HierCore . Rect#height.
+//                                                      ⌃ enclosing_range_end scip-swift swiftpm HierCore . Rect#description.
   
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Rect#`==`().
     static func == (lhs: Rect, rhs: Rect) -> Bool {
 //              ^^ definition scip-swift swiftpm HierCore . Rect#`==`().
 //                 kind StaticMethod
@@ -237,7 +280,9 @@
 //                                                ^^^^^^ reference scip-swift swiftpm HierCore . Rect#height().
 //                                                ^^^^^^ reference scip-swift swiftpm HierCore . Rect#height.
     }
+//  ⌃ enclosing_range_end scip-swift swiftpm HierCore . Rect#`==`().
   
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Rect#draw().
     func draw() {}
 //       ^^^^ definition scip-swift swiftpm HierCore . Rect#draw().
 //            kind Method
@@ -245,14 +290,21 @@
 //            signature_documentation
 //            > func draw()
 //            relationship scip-swift swiftpm HierCore . HierDrawable#draw(). implementation reference
+//               ⌃ enclosing_range_end scip-swift swiftpm HierCore . Rect#draw().
   }
+//⌃ enclosing_range_end scip-swift swiftpm HierCore . Rect#
+//⌃ enclosing_range_end scip-swift swiftpm HierCore . Rect#init().
   
+//⌄ enclosing_range_start scip-swift swiftpm HierCore . BaseWidget#
   class BaseWidget {
 //      ^^^^^^^^^^ definition scip-swift swiftpm HierCore . BaseWidget#
 //                 kind Class
 //                 display_name HierCore.BaseWidget
 //                 signature_documentation
 //                 > class BaseWidget
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . BaseWidget#`frame=`().
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . BaseWidget#frame().
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . BaseWidget#frame.
     var frame: String = "0,0,0,0"
 //      ^^^^^ definition scip-swift swiftpm HierCore . BaseWidget#`frame=`().
 //            kind Setter
@@ -270,22 +322,31 @@
 //            signature_documentation
 //            > var frame
 //             ^^^^^^ reference scip-swift swift Swift 6.2.4 String#
+//                              ⌃ enclosing_range_end scip-swift swiftpm HierCore . BaseWidget#`frame=`().
+//                              ⌃ enclosing_range_end scip-swift swiftpm HierCore . BaseWidget#frame().
+//                              ⌃ enclosing_range_end scip-swift swiftpm HierCore . BaseWidget#frame.
   
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . BaseWidget#init().
     init() {}
 //  ^^^^ definition scip-swift swiftpm HierCore . BaseWidget#init().
 //       kind Constructor
 //       display_name HierCore.BaseWidget.init() -> HierCore.BaseWidget
 //       signature_documentation
 //       > init init()
+//          ⌃ enclosing_range_end scip-swift swiftpm HierCore . BaseWidget#init().
   
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . BaseWidget#render().
     func render() {}
 //       ^^^^^^ definition scip-swift swiftpm HierCore . BaseWidget#render().
 //              kind Method
 //              display_name HierCore.BaseWidget.render() -> ()
 //              signature_documentation
 //              > func render()
+//                 ⌃ enclosing_range_end scip-swift swiftpm HierCore . BaseWidget#render().
   }
+//⌃ enclosing_range_end scip-swift swiftpm HierCore . BaseWidget#
   
+//⌄ enclosing_range_start scip-swift swiftpm HierCore . Square#
   class Square: BaseWidget {
 //      ^^^^^^ definition scip-swift swiftpm HierCore . Square#
 //             kind Class
@@ -294,6 +355,9 @@
 //             > class Square
 //             relationship scip-swift swiftpm HierCore . BaseWidget# implementation
 //              ^^^^^^^^^^ reference scip-swift swiftpm HierCore . BaseWidget#
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Square#`side=`().
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Square#side().
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Square#side.
     let side: Double
 //      ^^^^ definition scip-swift swiftpm HierCore . Square#`side=`().
 //           kind Setter
@@ -311,7 +375,11 @@
 //           signature_documentation
 //           > var side
 //            ^^^^^^ reference scip-swift swift Swift 6.2.4 Double#
+//                 ⌃ enclosing_range_end scip-swift swiftpm HierCore . Square#`side=`().
+//                 ⌃ enclosing_range_end scip-swift swiftpm HierCore . Square#side().
+//                 ⌃ enclosing_range_end scip-swift swiftpm HierCore . Square#side.
   
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Square#init().
     override init() {
 //           ^^^^ definition scip-swift swiftpm HierCore . Square#init().
 //                kind Constructor
@@ -325,7 +393,9 @@
       super.init()
 //          ^^^^ reference scip-swift swiftpm HierCore . BaseWidget#init().
     }
+//  ⌃ enclosing_range_end scip-swift swiftpm HierCore . Square#init().
   
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Square#frame.
     override var frame: String {
 //               ^^^^^ definition scip-swift swiftpm HierCore . Square#frame.
 //                     kind Property
@@ -349,7 +419,9 @@
 //        > func setter:frame
 //        relationship scip-swift swiftpm HierCore . BaseWidget#`frame=`(). implementation reference
     }
+//  ⌃ enclosing_range_end scip-swift swiftpm HierCore . Square#frame.
   
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Square#render().
     override func render() {}
 //                ^^^^^^ definition scip-swift swiftpm HierCore . Square#render().
 //                       kind Method
@@ -357,8 +429,11 @@
 //                       signature_documentation
 //                       > func render()
 //                       relationship scip-swift swiftpm HierCore . BaseWidget#render(). implementation reference
+//                          ⌃ enclosing_range_end scip-swift swiftpm HierCore . Square#render().
   }
+//⌃ enclosing_range_end scip-swift swiftpm HierCore . Square#
   
+//⌄ enclosing_range_start scip-swift swiftpm HierCore . RoundedSquare#
   class RoundedSquare: Square {
 //      ^^^^^^^^^^^^^ definition scip-swift swiftpm HierCore . RoundedSquare#
 //                    kind Class
@@ -373,6 +448,7 @@
 //                              signature_documentation
 //                              > init init()
 //                              relationship scip-swift swiftpm HierCore . Square#init(). implementation reference
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . RoundedSquare#render().
     override func render() {}
 //                ^^^^^^ definition scip-swift swiftpm HierCore . RoundedSquare#render().
 //                       kind Method
@@ -380,8 +456,11 @@
 //                       signature_documentation
 //                       > func render()
 //                       relationship scip-swift swiftpm HierCore . Square#render(). implementation reference
+//                          ⌃ enclosing_range_end scip-swift swiftpm HierCore . RoundedSquare#render().
   }
+//⌃ enclosing_range_end scip-swift swiftpm HierCore . RoundedSquare#
   
+//⌄ enclosing_range_start scip-swift swiftpm HierCore . `s:e:s:8HierCore0A5ShapePAAE8describeSSyF`.
   extension HierShape {
 //          ^^^^^^^^^ reference scip-swift swiftpm HierCore . HierShape#
 //          ^^^^^^^^^ definition scip-swift swiftpm HierCore . `s:e:s:8HierCore0A5ShapePAAE8describeSSyF`.
@@ -389,6 +468,7 @@
 //                    display_name HierShape
 //                    signature_documentation
 //                    > extension HierShape
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . `s:8HierCore0A5ShapePAAE8describeSSyF`.
     func describe() -> String { "shape" }
 //       ^^^^^^^^ definition scip-swift swiftpm HierCore . `s:8HierCore0A5ShapePAAE8describeSSyF`.
 //                kind Method
@@ -397,8 +477,11 @@
 //                > func describe()
 //                relationship scip-swift swiftpm HierCore . HierShape#describe(). implementation reference
 //                     ^^^^^^ reference scip-swift swift Swift 6.2.4 String#
+//                                      ⌃ enclosing_range_end scip-swift swiftpm HierCore . `s:8HierCore0A5ShapePAAE8describeSSyF`.
   }
+//⌃ enclosing_range_end scip-swift swiftpm HierCore . `s:e:s:8HierCore0A5ShapePAAE8describeSSyF`.
   
+//⌄ enclosing_range_start scip-swift swiftpm HierCore . Wheel#
   public struct Wheel {
 //              ^^^^^ definition scip-swift swiftpm HierCore . Wheel#
 //                    kind Struct
@@ -406,6 +489,9 @@
 //                    signature_documentation
 //                    > struct Wheel
 //                    relationship scip-swift swiftpm HierCore . HierShape# implementation
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Wheel#`spokes=`().
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Wheel#spokes().
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Wheel#spokes.
     public let spokes: Int
 //             ^^^^^^ definition scip-swift swiftpm HierCore . Wheel#`spokes=`().
 //                    kind Setter
@@ -423,7 +509,11 @@
 //                    signature_documentation
 //                    > var spokes
 //                     ^^^ reference scip-swift swift Swift 6.2.4 Int#
+//                       ⌃ enclosing_range_end scip-swift swiftpm HierCore . Wheel#`spokes=`().
+//                       ⌃ enclosing_range_end scip-swift swiftpm HierCore . Wheel#spokes().
+//                       ⌃ enclosing_range_end scip-swift swiftpm HierCore . Wheel#spokes.
   
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Wheel#init().
     public init(spokes: Int) {
 //         ^^^^ definition scip-swift swiftpm HierCore . Wheel#init().
 //              kind Constructor
@@ -439,8 +529,12 @@
 //         ^^^^^^ reference scip-swift swiftpm HierCore . Wheel#spokes.
 //                  ^^^^^^ reference scip-swift swiftpm HierCore . `s:8HierCore5WheelV6spokesACSi_tcfcADL_Sivp`.
     }
+//  ⌃ enclosing_range_end scip-swift swiftpm HierCore . Wheel#init().
   }
+//⌃ enclosing_range_end scip-swift swiftpm HierCore . Wheel#
   
+//⌄ enclosing_range_start scip-swift swiftpm HierCore . Wrapper#
+//⌄ enclosing_range_start scip-swift swiftpm HierCore . Wrapper#init().
   struct Wrapper<T> {
 //       ^^^^^^^ definition scip-swift swiftpm HierCore . Wrapper#
 //               kind Struct
@@ -459,6 +553,9 @@
 //                 display_name HierCore.Wrapper.T
 //                 signature_documentation
 //                 > typealias T
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Wrapper#`inner=`().
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Wrapper#inner().
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Wrapper#inner.
     let inner: T
 //      ^^^^^ definition scip-swift swiftpm HierCore . Wrapper#`inner=`().
 //            kind Setter
@@ -476,10 +573,16 @@
 //            signature_documentation
 //            > var inner
 //             ^ reference scip-swift swiftpm HierCore . Wrapper#T#
+//             ⌃ enclosing_range_end scip-swift swiftpm HierCore . Wrapper#`inner=`().
+//             ⌃ enclosing_range_end scip-swift swiftpm HierCore . Wrapper#inner().
+//             ⌃ enclosing_range_end scip-swift swiftpm HierCore . Wrapper#inner.
   }
+//⌃ enclosing_range_end scip-swift swiftpm HierCore . Wrapper#
+//⌃ enclosing_range_end scip-swift swiftpm HierCore . Wrapper#init().
   
   /// The D-21 ObjC-rooted superclass gap: NSObject-rooted clauses record no store `baseOf`;
   /// 04-02's bounded SwiftSyntax fallback supplies the superclass edge.
+//⌄ enclosing_range_start scip-swift swiftpm HierCore@objc(cs)ObjCAnimal . `HierCore@objc(cs)ObjCAnimal`#
   class ObjCAnimal: NSObject {
 //      ^^^^^^^^^^ reference scip-swift swiftpm HierCore . `c:objc(pl)NSObject(im)autorelease`.
 //      ^^^^^^^^^^ reference scip-swift swiftpm HierCore . `c:objc(pl)NSObject(im)class`.
@@ -520,6 +623,7 @@
 //                             signature_documentation
 //                             > init init()
 //                             relationship scip-swift swiftpm HierCore . `c:objc(cs)NSObject(im)init`. implementation reference
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore@objc(cs)ObjCAnimal(im)sound . `HierCore@objc(cs)ObjCAnimal(im)sound`().
     @objc func sound() -> String { "generic" }
 //             ^^^^^ definition scip-swift swiftpm HierCore@objc(cs)ObjCAnimal(im)sound . `HierCore@objc(cs)ObjCAnimal(im)sound`().
 //                   kind Method
@@ -527,8 +631,12 @@
 //                   signature_documentation
 //                   > func sound()
 //                        ^^^^^^ reference scip-swift swift Swift 6.2.4 String#
+//                                           ⌃ enclosing_range_end scip-swift swiftpm HierCore@objc(cs)ObjCAnimal(im)sound . `HierCore@objc(cs)ObjCAnimal(im)sound`().
   }
+//⌃ enclosing_range_end scip-swift swiftpm HierCore@objc(cs)ObjCAnimal . `HierCore@objc(cs)ObjCAnimal`#
   
+//⌄ enclosing_range_start scip-swift swiftpm HierCore . `🎨`#
+//⌄ enclosing_range_start scip-swift swiftpm HierCore . `🎨`#init().
   struct 🎨: HierShape {
 //       ^^^^ reference scip-swift swiftpm HierCore . `s:8HierCore0A5ShapePAAE8describeSSyF`.
 //       ^^^^ definition scip-swift swiftpm HierCore . `🎨`#
@@ -543,6 +651,7 @@
 //            signature_documentation
 //            > init init()
 //             ^^^^^^^^^ reference scip-swift swiftpm HierCore . HierShape#
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . `🎨`#area.
     var area: Double { 0 }
 //      ^^^^ definition scip-swift swiftpm HierCore . `🎨`#area.
 //           kind Property
@@ -556,7 +665,9 @@
 //                     display_name HierCore.🎨.area.getter : Swift.Double
 //                     signature_documentation
 //                     > func getter:area
+//                       ⌃ enclosing_range_end scip-swift swiftpm HierCore . `🎨`#area.
   
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . `🎨`#draw().
     func draw() {}
 //       ^^^^ definition scip-swift swiftpm HierCore . `🎨`#draw().
 //            kind Method
@@ -564,8 +675,12 @@
 //            signature_documentation
 //            > func draw()
 //            relationship scip-swift swiftpm HierCore . HierDrawable#draw(). implementation reference
+//               ⌃ enclosing_range_end scip-swift swiftpm HierCore . `🎨`#draw().
   }
+//⌃ enclosing_range_end scip-swift swiftpm HierCore . `🎨`#
+//⌃ enclosing_range_end scip-swift swiftpm HierCore . `🎨`#init().
   
+//⌄ enclosing_range_start scip-swift swiftpm HierCore . drawAll().
   func drawAll(_ items: [HierDrawable]) {
 //     ^^^^^^^ definition scip-swift swiftpm HierCore . drawAll().
 //             kind Function
@@ -582,7 +697,9 @@
 //         ^^^^ reference scip-swift swiftpm HierCore . HierDrawable#draw().
     }
   }
+//⌃ enclosing_range_end scip-swift swiftpm HierCore . drawAll().
   
+//⌄ enclosing_range_start scip-swift swiftpm HierCore . renderWidget().
   func renderWidget(_ widget: BaseWidget) {
 //     ^^^^^^^^^^^^ definition scip-swift swiftpm HierCore . renderWidget().
 //                  kind Function
@@ -597,7 +714,9 @@
     widget.render()
 //         ^^^^^^ reference scip-swift swiftpm HierCore . BaseWidget#render().
   }
+//⌃ enclosing_range_end scip-swift swiftpm HierCore . renderWidget().
   
+//⌄ enclosing_range_start scip-swift swiftpm HierCore . coreDriver().
   public func coreDriver() {
 //            ^^^^^^^^^^ definition scip-swift swiftpm HierCore . coreDriver().
 //                       kind Function
@@ -612,7 +731,9 @@
 //  ^^^^^^^ reference scip-swift swiftpm HierCore . drawAll().
 //          ^ reference scip-swift swiftpm HierCore . `s:Sa12arrayLiteralSayxGxd_tcfc`.
   }
+//⌃ enclosing_range_end scip-swift swiftpm HierCore . coreDriver().
   
+//⌄ enclosing_range_start scip-swift swiftpm HierCore . `s:e:s:8HierCore5WheelV4areaSdvp`.
   extension Wheel: HierShape {
 //          ^^^^^ reference scip-swift swiftpm HierCore . Wheel#
 //          ^^^^^ reference scip-swift swiftpm HierCore . `s:8HierCore0A5ShapePAAE8describeSSyF`.
@@ -622,6 +743,7 @@
 //                signature_documentation
 //                > extension Wheel
 //                 ^^^^^^^^^ reference scip-swift swiftpm HierCore . HierShape#
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Wheel#area.
     var area: Double { Double(spokes) }
 //      ^^^^ definition scip-swift swiftpm HierCore . Wheel#area.
 //           kind Property
@@ -639,7 +761,9 @@
 //                     ^^^^^^ reference scip-swift swiftpm HierCore . `s:SdySdSicfc`.
 //                            ^^^^^^ reference scip-swift swiftpm HierCore . Wheel#spokes().
 //                            ^^^^^^ reference scip-swift swiftpm HierCore . Wheel#spokes.
+//                                    ⌃ enclosing_range_end scip-swift swiftpm HierCore . Wheel#area.
   
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . Wheel#draw().
     func draw() {}
 //       ^^^^ definition scip-swift swiftpm HierCore . Wheel#draw().
 //            kind Method
@@ -647,8 +771,11 @@
 //            signature_documentation
 //            > func draw()
 //            relationship scip-swift swiftpm HierCore . HierDrawable#draw(). implementation reference
+//               ⌃ enclosing_range_end scip-swift swiftpm HierCore . Wheel#draw().
   }
+//⌃ enclosing_range_end scip-swift swiftpm HierCore . `s:e:s:8HierCore5WheelV4areaSdvp`.
   
+//⌄ enclosing_range_start scip-swift swiftpm HierCore . `s:e:s:8HierCore7WrapperVA2A0A5ShapeRzlE4areaSdvp`.
   extension Wrapper: HierShape, HierDrawable where T: HierShape {
 //          ^^^^^^^ reference scip-swift swiftpm HierCore . Wrapper#
 //          ^^^^^^^ reference scip-swift swiftpm HierCore . `s:8HierCore0A5ShapePAAE8describeSSyF`.
@@ -661,6 +788,7 @@
 //                              ^^^^^^^^^^^^ reference scip-swift swiftpm HierCore . HierDrawable#
 //                                                 ^ reference scip-swift swiftpm HierCore . Wrapper#T#
 //                                                    ^^^^^^^^^ reference scip-swift swiftpm HierCore . HierShape#
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . `s:8HierCore7WrapperVA2A0A5ShapeRzlE4areaSdvp`.
     var area: Double { inner.area }
 //      ^^^^ definition scip-swift swiftpm HierCore . `s:8HierCore7WrapperVA2A0A5ShapeRzlE4areaSdvp`.
 //           kind Property
@@ -678,7 +806,9 @@
 //                     ^^^^^ reference scip-swift swiftpm HierCore . Wrapper#inner.
 //                           ^^^^ reference scip-swift swiftpm HierCore . HierShape#area().
 //                           ^^^^ reference scip-swift swiftpm HierCore . HierShape#area.
+//                                ⌃ enclosing_range_end scip-swift swiftpm HierCore . `s:8HierCore7WrapperVA2A0A5ShapeRzlE4areaSdvp`.
   
+//  ⌄ enclosing_range_start scip-swift swiftpm HierCore . `s:8HierCore7WrapperVA2A0A5ShapeRzlE4drawyyF`.
     func draw() { inner.draw() }
 //       ^^^^ definition scip-swift swiftpm HierCore . `s:8HierCore7WrapperVA2A0A5ShapeRzlE4drawyyF`.
 //            kind Method
@@ -689,5 +819,7 @@
 //                ^^^^^ reference scip-swift swiftpm HierCore . Wrapper#inner().
 //                ^^^^^ reference scip-swift swiftpm HierCore . Wrapper#inner.
 //                      ^^^^ reference scip-swift swiftpm HierCore . HierDrawable#draw().
+//                             ⌃ enclosing_range_end scip-swift swiftpm HierCore . `s:8HierCore7WrapperVA2A0A5ShapeRzlE4drawyyF`.
   }
+//⌃ enclosing_range_end scip-swift swiftpm HierCore . `s:e:s:8HierCore7WrapperVA2A0A5ShapeRzlE4areaSdvp`.
   

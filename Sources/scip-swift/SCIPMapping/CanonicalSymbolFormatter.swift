@@ -40,6 +40,9 @@ enum CanonicalSymbolFormatter {
   struct Container {
     let name: String
     let kind: DeclKind
+    /// The compiler's private-context discriminator when this node was declared `private`
+    /// or `fileprivate` (`33_<hex>LL` in the USR); never rendered.
+    var privateDiscriminator: String? = nil
   }
 
   /// Everything needed to name a symbol; the Swift-side equivalent of the Go namer's

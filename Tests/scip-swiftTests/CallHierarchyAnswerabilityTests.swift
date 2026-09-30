@@ -257,7 +257,7 @@ struct CallHierarchyAnswerabilityTests {
       (Family.hierExtPath, hierExt, Family.extCaller, "func extCaller() {", [
         Family.coreDriver,
       ]),
-      (Family.hierExtPath, hierExt, Family.extCallerOfEmitted, "func extCallerOfCaller() {", [
+      (Family.hierExtPath, hierExt, Family.extCallerOfCaller, "func extCallerOfCaller() {", [
         Family.extCaller,
       ]),
     ]
@@ -288,15 +288,14 @@ struct CallHierarchyAnswerabilityTests {
       expectedOutgoing[row.symbol] = Set(row.callees)
     }
 
-    // The chain head's display name pins the one emitted-string quirk of the
-    // corpus (see Family.extCallerOfEmitted): the canonical string drops the
-    // trailing repeated word of `extCallerOfCaller`, the demangled display name
-    // does not.
-    let quirkInfo = index.documentSymbols[Family.hierExtPath]?
-      .first { $0.symbol == Family.extCallerOfEmitted }
+    // The chain head's USR repeats a word by substitution (see
+    // Family.extCallerOfCaller); its canonical string and display name both keep
+    // the full source identifier.
+    let chainHeadInfo = index.documentSymbols[Family.hierExtPath]?
+      .first { $0.symbol == Family.extCallerOfCaller }
     #expect(
-      quirkInfo?.displayName == "HierExt.extCallerOfCaller() -> ()",
-      "the extCallerOfCaller display name must stay truthful while its canonical string carries the word-substitution quirk — got \(quirkInfo?.displayName ?? "nil")"
+      chainHeadInfo?.displayName == "HierExt.extCallerOfCaller() -> ()",
+      "the extCallerOfCaller canonical string and display name must both name the source identifier — got \(chainHeadInfo?.displayName ?? "nil")"
     )
 
     // Direction A (outgoing): the derived function set equals the pinned
@@ -449,19 +448,19 @@ struct CallHierarchyAnswerabilityTests {
     }
   }
 
-  @Test("zero-emission guard: format stays 5 and relationships equal the committed table")
+  @Test("zero-emission guard: format stays 6 and relationships equal the committed table")
   func zeroEmissionGuard() throws {
     let index = try Self.sharedIndex()
 
-    // This plan changes NO emission: the format version stays 5 (a byte change
-    // would be a D-09 bump — out of scope here), and the relationships this
+    // This suite changes NO emission: the format version stays 6 (a byte change
+    // would be a D-09 bump), and the relationships this
     // suite's build produces are exactly the committed relationship-table.json
     // rows the RelationshipParity oracle pins over the same fixture build path.
     // Goldens byte-stability is proven by ScipCLIGate and Determinism in the
     // same single `swift test` CI step (the plan's Task 4 full-suite run).
     #expect(
-      SymbolFormatVersion.current == 5,
-      "SymbolFormatVersion.current must stay 5 in this plan — a change means emission drift"
+      SymbolFormatVersion.current == 6,
+      "SymbolFormatVersion.current must stay 6 — a change means emission drift"
     )
 
     let tablePath = (Self.fixtureRepoPath() as NSString)
@@ -910,18 +909,11 @@ struct CallHierarchyAnswerabilityTests {
     static let glowableGlow = ext + "Glowable#glow()."
     static let extCaller = ext + "extCaller()."
 
-    /// Emitted-reality pin (pre-existing, OUT OF SCOPE for 04-03 — fixing it
-    /// changes emitted bytes, i.e. a D-09 format bump): the USR of
-    /// `func extCallerOfCaller()` carries a MIXED word-substitution mangling
-    /// (`s:8HierExt011extCallerOfD0yyFd` — literal run `extCallerOf` plus a
-    /// final uppercase word reference `D` for the repeated trailing word), and
-    /// the parser's word reader consumes `011` as a single length prefix, so the
-    /// reconstructed canonical name drops the trailing "Caller". The canonical
-    /// string is `extCallerOf().` while the demangled display name stays
-    /// truthful. Call answerability is unaffected — the definition occurrence,
-    /// its exact positions, and every call edge over the symbol are intact.
-    /// Pinned as-is; recorded in 04-03-SUMMARY as a watch item.
-    static let extCallerOfEmitted = ext + "extCallerOf()."
+    /// The USR of `func extCallerOfCaller()` carries a mixed word-substitution
+    /// mangling (`s:8HierExt011extCallerOfD0yyFd` — literal run `extCallerOf`
+    /// plus a final uppercase word reference `D` for the repeated trailing
+    /// word). The zero-prefixed production decodes it to the full identifier.
+    static let extCallerOfCaller = ext + "extCallerOfCaller()."
   }
 
   // MARK: - Row identity

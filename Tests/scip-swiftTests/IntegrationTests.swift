@@ -402,18 +402,11 @@ struct IntegrationTests {
       "getter:value must not fall back to the approximate end 16 (anchor hit the token map)"
     )
 
-    // tailValue's anchor rides on the stale index (line 6 from the valid compile) but the
-    // corrupted content only has 6 lines and none starts a token at that anchor, so the lookup
-    // misses and the occurrence carries the name-length approximate end:
-    // 4 + "getter:tailValue".utf8.count == 20.
+    // The stale store places tailValue beyond the current source. Drop that occurrence.
     let getterTailValueEnds = document.occurrences
       .filter { $0.symbol == "scip-swift swiftpm BrokenSource . tailValue()." }
       .map(\.singleLineRange)
-    #expect(!getterTailValueEnds.isEmpty, "corrupted file must still emit getter:tailValue occurrences")
-    #expect(
-      getterTailValueEnds.contains { $0.line == 8 && $0.startCharacter == 4 && $0.endCharacter == 20 },
-      "getter:tailValue must carry the approximate end [8, 4..20) — its anchor missed the token map"
-    )
+    #expect(getterTailValueEnds.isEmpty, "stale ranges beyond EOF must be dropped")
   }
 
   @Test("DocumentationFixture end-to-end: docs, exclusions, accessor inheritance, one parse per file, cache pair")

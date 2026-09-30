@@ -97,10 +97,16 @@ to a persistent cache:
   reprocesses what changed.
 - The cache is invalidated wholesale when the Swift toolchain version, `scip-swift` version,
   indexstore-db revision, build backend, or the emitted symbol format version
-  (`symbolFormatVersion`, currently 5 — format 1 is the raw-USR era, format 2 the canonical
+  (`symbolFormatVersion`, currently 6 — format 1 is the raw-USR era, format 2 the canonical
   descriptor-chain scheme, format 3 composite path+content-hash cache keys, format 4 import
   occurrences + Test bits, format 5 relationship bytes: type-level is_implementation edges,
-  relationship-target external symbols, and stdlib-protocol canonical forms) changes
+  relationship-target external symbols, and stdlib-protocol canonical forms; format 6
+  declaration enclosing ranges on definitions, colliding `private`/`fileprivate` declarations
+  disambiguated as `` `Name@<discriminator>` `` with their members under that parent, raw-USR
+  fallbacks defined in the index spelled with the defining module at every occurrence,
+  locals' `enclosing_symbol` on the correct overload `(+N)`, word-substitution names now
+  decode fully, and member witness edges are kept when the conformance is declared in an
+  extension) changes
   (recorded in `manifest.json`). A manifest that fails
   to decode — e.g. written by an older engine without
   the current fields — is treated as no manifest: the cache is discarded wholesale, so
@@ -259,10 +265,8 @@ RelationshipParity, riding the same single `swift test` CI step):
   coreDriver → Circle init + drawAll`), dynamic dispatch (existential, class-virtual, and
   generic-constraint sites) asserted via the access bit + position, and corpus-wide
   attribution invariants (exactly-once, no phantom attribution, leaves empty). Documented
-  v1 shapes: occurrence-only fallback-Term call sites (`Double(spokes)`, array literals)
-  are not answerable by name, and the `extCallerOfCaller` canonical string carries a
-  word-substitution mis-parse (`extCallerOf`. — display name stays truthful) pinned
-  as-is; both are recorded watch items, not emission contracts.
+  v1 shape: occurrence-only fallback-Term call sites (`Double(spokes)`, array literals)
+  are not answerable by name; this is a recorded watch item, not an emission contract.
 - **`TypeHierarchyAnswerability`** (`Tests/scip-swiftTests/TypeHierarchyAnswerabilityTests.swift`,
   REL-03): supertypes(T) = the `is_implementation` targets on every SymbolInformation
   whose symbol is T (scip.proto's Dog/Animal Find-implementations semantics); subtypes
@@ -356,12 +360,18 @@ the common case for a real iOS app repo. If the underlying build command fails f
   canonical descriptor chain (`scip-swift swiftpm MyMod . Shape#resize(+1).`) parsed straight from
   the compiler's USR — never derived from the demangler, which stays display-only. A USR the
   parser cannot handle (exotic substitutions, parameters, malformed input) falls back to the raw
-  USR as a single escaped Term under the canonical module header; each run prints how many
-  symbols took that fallback. Known carried-forward scheme limitations (frozen with the Phase-1
-  spec):
+  USR as a single escaped Term under the canonical module header — the occurrence's module,
+  except that a fallback defined in the index uses the defining document's module at every
+  occurrence, so references resolve to it; each run prints how many symbols took that
+  fallback. Every compiler USR renders exactly one string. Known carried-forward scheme
+  limitations (frozen with the Phase-1 spec):
   - **Term-family retroactive collisions cannot carry `(+N)`** — the SCIP grammar allows
-    disambiguators only on Method descriptors, so retroactive property/let/case collisions
-    across declaring modules render the same string.
+    disambiguators only on Method descriptors. Identities that would still render the same
+    string (e.g. retroactive members from different declaring modules) get
+    `` `name@<hex>` `` on the colliding descriptor instead; colliding `private` declarations use
+    their compiler discriminator and keep their members under the disambiguated parent.
+    Private collisions are detected by spelling path regardless of kind, so a private var `x`
+    and a same-named `x()` elsewhere are both renamed: conservative, never a merged identity.
   - **A getter and a zero-arg method of the same name collapse to one `SymbolInformation`**
     (they render the identical string); the surviving Kind is the definition last in source
     order.
@@ -380,19 +390,20 @@ the common case for a real iOS app repo. If the underlying build command fails f
   - **Swift-Testing documents carry no local-property symbols** — the store emits no `.local`
     occurrences for test-file declarations on the pinned toolchain, so `enclosing_symbol`
     coverage in test documents is empty (the invariant holds trivially there).
-  - **`enclosing_symbol` targets render the un-disambiguated overload-group form** — the
-    locals branch assembles the `.childOf` symbol without the overload index, so a local
-    inside `parse(+1)` carries the `parse()` string. The target still resolves inside the
-    same document; adding `(+N)` would change emitted bytes (a `symbolFormatVersion` bump).
   - **Parameters are file-level raw-USR fallback Terms** (D-06), so they cannot nest under
     their enclosing function by symbol string; and structs without stored properties gain
     compiler-synthesized default `init()` definitions in the outline.
 
 - **Occurrence ranges**: IndexStoreDB (like the underlying IndexStore format) only records a
-  single anchor point per occurrence — not a start/end range. The end column is the exact
-  identifier-token extent from a `SwiftSyntax` parse of the file; the name-length approximation
-  remains only as a fallback for regions the parser cannot recover (e.g. severely malformed
-  syntax). Statically linking `SwiftSyntax`/`SwiftParser` grows the release binary from ~7 MB to
+  single anchor point per occurrence — not a start/end range. A `SwiftSyntax` parse of the file
+  supplies the exact identifier-token extent (an anchor inside a projected `$name` resolves to
+  that whole token) and, on definition occurrences, the declaration's `enclosing_range`
+  (attributes and body included) for types, extensions, functions, initializers, properties
+  with accessors and subscripts; synthetic macro anchors get no enclosing range. Where the
+  parser cannot recover a region (e.g. severely malformed syntax), the width falls back to the
+  source name's length, never an accessor display name such as `getter:name`. Every emitted
+  range is checked against the UTF-8 bounds of its source line; an occurrence whose stale
+  store position falls outside the current source is dropped. Statically linking `SwiftSyntax`/`SwiftParser` grows the release binary from ~7 MB to
   ~24.5 MB — an accepted trade-off for this milestone (compiler-grade token extents without
   shipping a separate parser binary).
 - **No call-hierarchy role**: real `scip.proto`'s `SymbolRole` enum has no call-specific bit; call

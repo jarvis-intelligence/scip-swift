@@ -46,7 +46,7 @@ struct USRSymbolParserTests {
     #expect(parsed.name == "greet")
   }
 
-  @Test("retroactive extension attributes to the owner module, never the declaring module")
+  @Test("unique retroactive extension retains its readable owner-module identity")
   func retroactiveExtensionAttributesToOwnerModule() throws {
     // s:SS17CapabilityFixtureE9spikeFlagSSyF: SS = String (Swift stdlib), 17CapabilityFixtureE
     // = the EXTENDING module. SYM-02: the emitted symbol uses the extended type's owner module
@@ -58,11 +58,9 @@ struct USRSymbolParserTests {
     #expect(parsed.name == "spikeFlag")
     #expect(parsed.extendingModule == "CapabilityFixture")
 
-    let symbol = try #require(
-      canonical(
-        "s:SS17CapabilityFixtureE9spikeFlagSSyF", name: "spikeFlag()", kind: .instanceMethod))
-    #expect(symbol == "scip-swift swift Swift \(toolchain) String#spikeFlag().")
-    #expect(!symbol.contains("CapabilityFixture"), "the declaring module must not appear")
+    #expect(canonical(
+      "s:SS17CapabilityFixtureE9spikeFlagSSyF", name: "spikeFlag()", kind: .instanceMethod)
+      == "scip-swift swift Swift \(toolchain) String#spikeFlag().")
   }
 
   @Test("same-module cross-file extension keeps the extended type's path")
@@ -92,11 +90,9 @@ struct USRSymbolParserTests {
     #expect(parsed.name == "describe")
     #expect(parsed.extendingModule == "SchemeFixtureExt")
 
-    let symbol = try #require(
-      canonical(
-        "s:13SchemeFixture3BoxV0aB3ExtE8describeSSyF", name: "describe()", kind: .instanceMethod)
-    )
-    #expect(symbol == "scip-swift swiftpm SchemeFixture . Box#describe().")
+    #expect(canonical(
+      "s:13SchemeFixture3BoxV0aB3ExtE8describeSSyF", name: "describe()", kind: .instanceMethod)
+      == "scip-swift swiftpm SchemeFixture . Box#describe().")
   }
 
   @Test("fully substituted extending module uses the trailing-0 terminator form")
@@ -337,6 +333,15 @@ struct USRSymbolParserTests {
 
   // MARK: - D-06 totality over adversarial input (T-02-01)
 
+  @Test("generic parameter names come from the compiler rather than the enclosing function")
+  func genericParameterSourceName() throws {
+    let parsed = try #require(USRSymbolParser.parse("s:4Test4ViewV4cardyyF"))
+    let symbol = makeSymbol(
+      usr: "s:generic-parameter", name: "Content", kind: .typealias,
+      subKind: .swiftGenericTypeParam)
+    #expect(USRSymbolMapper.sourceName(parsed: parsed, symbol: symbol) == "Content")
+  }
+
   @Test("rune soup, huge claimed lengths, and truncation never crash and return nil")
   func adversarialInputIsTotal() {
     let adversarial: [String] = [
@@ -375,6 +380,7 @@ struct USRSymbolParserTests {
     for i in 0..<7 {
       diagnostics.recordFallback(usr: "s:unparseable\(i)")
     }
+    diagnostics.recordFallback(usr: "s:unparseable0")  // a repeated USR counts once
     #expect(diagnostics.fallbackCount == 7)
     let summary = try! #require(diagnostics.summary)
     #expect(summary.hasPrefix("7 symbol(s) emitted via the raw-USR fallback"))

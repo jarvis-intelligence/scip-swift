@@ -178,7 +178,7 @@ struct IncrementalIntegrationTests {
     #expect(refreshedManifest.converterVersion == ScipSwiftVersion.version)
   }
 
-  @Test("a format-4 manifest (pre-04-02 relationship bytes) is wholesale-rejected under format 5")
+  @Test("a format-4 manifest (pre-04-02 relationship bytes) is wholesale-rejected under the current format")
   func format4ManifestIsWholesaleRejected() throws {
     // D-09 (04-02): format 5 carries relationship bytes (type-level is_implementation
     // edges, relationship-target external symbols, stdlib-protocol canonical forms).
@@ -338,8 +338,8 @@ struct IncrementalIntegrationTests {
 
   /// WR-03 fixture gate: content-hash-only document keys must not leak documents across paths.
   /// The fixture holds two byte-identical sources; the rename phase rewrites CopyA's path while
-  /// keeping its content. Both scenarios assert path-exact documents and overload-index
-  /// stability — the empirically observed defense is that any path change alters the build,
+  /// keeping its content. Both scenarios assert path-exact documents and distinct per-file
+  /// private identities — the empirically observed defense is that any path change alters the build,
   /// which changes the store revision and wholesale-invalidates the cache via the manifest.
   @Test("duplicate content and rename stay path-exact through the cache")
   func duplicateContentAndRenameStayPathExact() throws {
@@ -394,12 +394,31 @@ struct IncrementalIntegrationTests {
     try Self.assertRenamedShape(index: renamed)
   }
 
-  private static func markerOverloads(_ document: Scip_Document) -> Set<String> {
-    Set(
-      document.symbols
-        .map(\.symbol)
-        .filter { $0.contains("Marker") }
-        .filter { !$0.hasSuffix("Marker#") })
+  /// The document's private `Marker` type symbol, after asserting that it is defined in the
+  /// document and that every Marker member defined there lives under it. The two fixture files
+  /// each declare `private struct Marker`, so the type carries its file's disambiguator and no
+  /// member may hang off a bare, undefined `Marker#`.
+  private static func markerType(_ document: Scip_Document, label: String) throws -> String {
+    let symbols = document.symbols.map(\.symbol).filter { $0.contains("Marker") }
+    let types = symbols.filter { $0.hasSuffix("#") }
+    #expect(types.count == 1, "\(label): one Marker type per document, got \(types)")
+    let type = try #require(types.first)
+    #expect(
+      type.hasPrefix("scip-swift swiftpm DuplicateContent . `Marker@"),
+      "\(label): colliding private type must carry its disambiguator, got \(type)")
+    #expect(
+      document.occurrences.contains { $0.symbol == type && $0.symbolRoles & 1 != 0 },
+      "\(label): the Marker type must be defined in its own document")
+    for member in [type + "value.", type + "value().", type + "`value=`().", type + "init()."] {
+      #expect(symbols.contains(member), "\(label): missing \(member) in \(symbols)")
+    }
+    #expect(
+      symbols.allSatisfy { $0.hasPrefix(type) },
+      "\(label): every Marker member must live under \(type), got \(symbols)")
+    #expect(
+      !document.occurrences.contains { $0.symbol.hasSuffix(" . Marker#") },
+      "\(label): no occurrence may name the undefined bare Marker#")
+    return type
   }
 
   private static func assertDuplicateContentShape(index: Scip_Index, label: String) throws {
@@ -412,23 +431,14 @@ struct IncrementalIntegrationTests {
     )
     let copyA = try #require(index.documents.first { $0.relativePath.hasSuffix("CopyA.swift") })
     let copyB = try #require(index.documents.first { $0.relativePath.hasSuffix("CopyB.swift") })
-    let symbolsA = Set(copyA.symbols.map(\.symbol))
-    let symbolsB = Set(copyB.symbols.map(\.symbol))
-    let overloadsA = markerOverloads(copyA)
-    let overloadsB = markerOverloads(copyB)
-    #expect(overloadsA.contains("scip-swift swiftpm DuplicateContent . Marker()."))
-    #expect(symbolsA.contains("scip-swift swiftpm DuplicateContent . init()."))
-    #expect(overloadsB.contains("scip-swift swiftpm DuplicateContent . Marker(+1)."))
-    #expect(symbolsB.contains("scip-swift swiftpm DuplicateContent . init(+2)."))
-    // Disjointness is scoped to the Method family: both documents legitimately share the bare
-    // Term `Marker.` — Terms cannot carry (+N) under the frozen Phase-1 scheme (documented
-    // known limitation), so that collision is allowed and not a cache-leak signal.
-    let methodOverloadsA = overloadsA.filter { $0.contains("(") }
-    let methodOverloadsB = overloadsB.filter { $0.contains("(") }
+    let typeA = try markerType(copyA, label: "\(label) CopyA")
+    let typeB = try markerType(copyB, label: "\(label) CopyB")
     #expect(
-      methodOverloadsA.isDisjoint(with: methodOverloadsB),
-      "\(label) run: identical content must not collapse the two documents' overload sets"
-    )
+      typeA != typeB,
+      "\(label) run: identical content must not collapse the two documents' private types")
+    #expect(
+      Set(copyA.symbols.map(\.symbol)).isDisjoint(with: copyB.symbols.map(\.symbol)),
+      "\(label) run: identical content must not share any symbol between the documents")
   }
 
   private static func assertRenamedShape(index: Scip_Index) throws {
@@ -441,11 +451,11 @@ struct IncrementalIntegrationTests {
     )
     let renamed = try #require(
       index.documents.first { $0.relativePath.hasSuffix("CopyRenamed.swift") })
-    let overloads = markerOverloads(renamed)
+    let copyB = try #require(index.documents.first { $0.relativePath.hasSuffix("CopyB.swift") })
+    let renamedType = try markerType(renamed, label: "renamed")
     #expect(
-      overloads.contains("scip-swift swiftpm DuplicateContent . Marker(+1)."),
-      "renamed document must keep its overload index after the rename"
-    )
+      renamedType != (try markerType(copyB, label: "renamed-run CopyB")),
+      "renamed document must keep a Marker identity distinct from CopyB's")
   }
 
   private static func materializeFixtureCopy(_ fixtureName: String) throws -> String {
